@@ -1,0 +1,25 @@
+# Node/Next artifacts
+node_modules/
+.next/
+.out/
+.turbo/
+.vercel/
+dist/
+build/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Env
+.env
+.env.*
+
+# Supabase
+update_UI/supabase/.temp/

@@ -1,0 +1,213 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Updated color palette to futuristic neon/cyberpunk theme */
+:root {
+  /* Futuristic dark base with neon accents */
+  --background: 13 17 28;
+  --foreground: 226 232 240;
+  --card: 18 24 38;
+  --card-foreground: 226 232 240;
+  --primary: 94 234 212;
+  --primary-foreground: 13 17 28;
+  --secondary: 168 85 247;
+  --secondary-foreground: 255 255 255;
+  --muted: 30 41 59;
+  --muted-foreground: 148 163 184;
+  --accent: 236 72 153;
+  --accent-foreground: 255 255 255;
+  --success: 34 197 94;
+  --warning: 251 191 36;
+  --destructive: 239 68 68;
+  --border: 51 65 85;
+  --input: 51 65 85;
+  --ring: 94 234 212;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: oklch(0.11 0.02 264);
+  --foreground: oklch(0.92 0.01 264);
+  --card: oklch(0.14 0.02 264);
+  --card-foreground: oklch(0.92 0.01 264);
+  --popover: oklch(0.14 0.02 264);
+  --popover-foreground: oklch(0.92 0.01 264);
+  --primary: oklch(0.86 0.15 172);
+  --primary-foreground: oklch(0.11 0.02 264);
+  --secondary: oklch(0.64 0.28 294);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.24 0.02 264);
+  --muted-foreground: oklch(0.64 0.01 264);
+  --accent: oklch(0.58 0.24 335);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.58 0.23 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.28 0.02 264);
+  --input: oklch(0.28 0.02 264);
+  --ring: oklch(0.86 0.15 172);
+  --chart-1: oklch(0.64 0.28 294);
+  --chart-2: oklch(0.58 0.24 335);
+  --chart-3: oklch(0.86 0.15 172);
+  --chart-4: oklch(0.72 0.22 70);
+  --chart-5: oklch(0.66 0.26 210);
+  --sidebar: oklch(0.14 0.02 264);
+  --sidebar-foreground: oklch(0.92 0.01 264);
+  --sidebar-primary: oklch(0.86 0.15 172);
+  --sidebar-primary-foreground: oklch(0.11 0.02 264);
+  --sidebar-accent: oklch(0.24 0.02 264);
+  --sidebar-accent-foreground: oklch(0.92 0.01 264);
+  --sidebar-border: oklch(0.28 0.02 264);
+  --sidebar-ring: oklch(0.86 0.15 172);
+}
+
+@theme inline {
+  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Fixed spacing between utility classes for neon glow effects */
+  .primary-button {
+    @apply px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    box-shadow: 0 0 15px rgba(94, 234, 212, 0.3);
+  }
+
+  .primary-button:hover {
+    box-shadow: 0 0 25px rgba(94, 234, 212, 0.5);
+  }
+
+  .secondary-button {
+    @apply px-6 py-3 bg-card text-card-foreground font-semibold rounded-lg border border-border hover:bg-muted hover:border-primary/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+  }
+
+  .secondary-button:hover {
+    box-shadow: 0 0 15px rgba(94, 234, 212, 0.2);
+  }
+
+  .danger-button {
+    @apply px-6 py-3 bg-destructive text-destructive-foreground font-semibold rounded-lg hover:bg-destructive/90 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+  }
+
+  .danger-button:hover {
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.5);
+  }
+
+  /* Fixed card glow effects with proper CSS syntax */
+  .card {
+    @apply bg-card rounded-xl shadow-sm border border-border p-6 transition-all duration-200;
+  }
+
+  .card:hover {
+    box-shadow: 0 0 20px rgba(94, 234, 212, 0.1);
+    border-color: rgb(94 234 212 / 0.3);
+  }
+
+  .feature-card {
+    @apply bg-card rounded-xl shadow-sm border border-border p-8 hover:scale-105 transition-all duration-300;
+  }
+
+  .feature-card:hover {
+    box-shadow: 0 0 30px rgba(94, 234, 212, 0.2);
+    border-color: rgb(94 234 212 / 0.5);
+  }
+
+  .kpi-card {
+    @apply bg-card rounded-xl shadow-sm border border-border p-6 transition-all duration-200;
+  }
+
+  .kpi-card:hover {
+    box-shadow: 0 0 20px rgba(94, 234, 212, 0.15);
+    border-color: rgb(94 234 212 / 0.3);
+  }
+
+  .status-pill {
+    @apply px-3 py-1 text-sm font-medium rounded-full;
+  }
+
+  .page-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
+  }
+
+  .section {
+    @apply space-y-8;
+  }
+
+  .dark-section {
+    @apply bg-muted text-foreground;
+  }
+
+  /* Added animated gradient backgrounds for futuristic feel */
+  .neon-gradient {
+    background: linear-gradient(135deg, rgb(94, 234, 212) 0%, rgb(168, 85, 247) 100%);
+  }
+
+  .cyber-grid {
+    background-image: linear-gradient(rgba(94, 234, 212, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(94, 234, 212, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  /* Added animated gradient for upgrade button */
+  @keyframes gradient-x {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient-x {
+    animation: gradient-x 3s ease infinite;
+  }
+}
