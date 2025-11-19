@@ -43,9 +43,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const run = async () => {
       try {
         const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+
         if (user?.email) setUserEmail(user.email)
-      } catch {}
+
+        // Ensure each logged-in user has a Stripe customer row and metadata
+        if (user) {
+          const apiSecret = process.env.NEXT_PUBLIC_API_ROUTE_SECRET
+          if (apiSecret) {
+            const res = await fetch("/api/stripe/create-customer", {
+              method: "POST",
+              headers: { "x-api-route-secret": apiSecret },
+            })
+            if (!res.ok) {
+              console.error("Failed to ensure Stripe customer", await res.text())
+            }
+          } else {
+            console.warn("API route secret not set; skipping Stripe customer ensure")
+          }
+        }
+      } catch (err) {
+        console.error("Failed to initialize dashboard", err)
+      }
     }
     run()
     setMounted(true)

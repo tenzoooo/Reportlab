@@ -186,3 +186,22 @@ USING (
   bucket_id = 'experiment-files' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
+
+-- Credits balance per user
+CREATE TABLE IF NOT EXISTS public.user_credits (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  balance INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Credits ledger for traceability
+CREATE TABLE IF NOT EXISTS public.credit_ledger (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  delta INTEGER NOT NULL,
+  balance_after INTEGER NOT NULL,
+  type TEXT NOT NULL, -- e.g. 'purchase', 'usage', 'adjustment'
+  payment_intent_id TEXT,
+  checkout_session_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);

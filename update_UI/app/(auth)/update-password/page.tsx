@@ -23,10 +23,23 @@ export default function UpdatePasswordPage() {
     const run = async () => {
       try {
         const supabase = createClient()
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (error) throw error
+        const codeVerifierFromUrl = search?.get("code_verifier")
+        const codeVerifierFromStorage = typeof window !== "undefined" ? localStorage.getItem("supabase.auth.token-code-verifier") : null
+
+        // SupabaseのPKCEフローでは code_verifier が必要。ブラウザに残っていない場合は処理しても失敗するので案内を出す。
+        const codeVerifier = codeVerifierFromUrl || codeVerifierFromStorage
+        if (!codeVerifier) {
+          setError("リンクを開いたブラウザで再度お試しください。必要な認証情報が見つかりませんでした。")
+          return
+        }
+
+        const { error } = await supabase.auth.exchangeCodeForSession({ code, code_verifier: codeVerifier })
+        if (error) {
+          setError(error.message)
+          return
+        }
       } catch (e) {
-        console.error(e)
+        setError("セッションの復元に失敗しました。もう一度メールのリンクを開き直してください。")
       }
     }
     run()
@@ -128,4 +141,3 @@ export default function UpdatePasswordPage() {
     </div>
   )
 }
-
