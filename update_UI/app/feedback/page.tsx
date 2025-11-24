@@ -12,6 +12,22 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
+const CATEGORY_OPTIONS = [
+  { value: "新機能改善", label: "新機能・改善の提案" },
+  { value: "不具合", label: "不具合の報告" },
+  { value: "その他", label: "その他" },
+] as const
+
+type FeedbackCategory = (typeof CATEGORY_OPTIONS)[number]["value"]
+
+type SubmittedFeedback = {
+  name: string
+  email: string
+  status: FeedbackCategory
+  feedback: string
+  rating: number | null
+}
+
 export default function FeedbackPage() {
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
@@ -19,15 +35,49 @@ export default function FeedbackPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    category: "feature",
+    category: CATEGORY_OPTIONS[0].value,
     message: "",
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [submittedData, setSubmittedData] = useState<SubmittedFeedback | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // Here you would send the feedback to your backend
-    console.log("[v0] Feedback submitted:", { ...formData, rating })
-    setSubmitted(true)
+    setErrorMessage(null)
+    setIsSubmitting(true)
+
+    const payload: SubmittedFeedback = {
+      name: formData.name,
+      email: formData.email,
+      status: formData.category,
+      feedback: formData.message,
+      rating: rating || null,
+    }
+
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: "" }))
+        console.error("[v0] Failed to submit feedback", data)
+        setErrorMessage(data.error || "フィードバックの送信に失敗しました。時間をおいて再度お試しください。")
+        return
+      }
+      setSubmittedData(payload)
+      setSubmitted(true)
+    } catch (err) {
+      console.error("[v0] Unexpected error while submitting feedback", err)
+      setErrorMessage("予期せぬエラーが発生しました。時間をおいて再度お試しください。")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (submitted) {
@@ -45,6 +95,26 @@ export default function FeedbackPage() {
               <p className="text-muted-foreground mb-6">
                 貴重なご意見をいただき、ありがとうございます。サービス改善の参考にさせていただきます。
               </p>
+              {submittedData && (
+                <div className="text-left space-y-4 mb-6">
+                  <div>
+                    <p className="text-sm text-muted-foreground">お名前</p>
+                    <p className="font-medium">{submittedData.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">メールアドレス</p>
+                    <p className="font-medium">{submittedData.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">ステータス</p>
+                    <p className="font-medium">{submittedData.status}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">要件</p>
+                    <p className="font-medium whitespace-pre-wrap">{submittedData.feedback}</p>
+                  </div>
+                </div>
+              )}
               <Link href="/dashboard">
                 <Button className="w-full">ダッシュボードに戻る</Button>
               </Link>
@@ -139,33 +209,36 @@ export default function FeedbackPage() {
                   <select
                     id="category"
                     value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value as FeedbackCategory })}
                     className="w-full px-3 py-2 border border-input rounded-lg bg-background"
+                    required
                   >
-                    <option value="feature">新機能の提案</option>
-                    <option value="bug">不具合の報告</option>
-                    <option value="improvement">改善の提案</option>
-                    <option value="other">その他</option>
+                    {CATEGORY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 {/* Message */}
                 <div className="space-y-2">
-                  <Label htmlFor="message">詳細</Label>
+                  <Label htmlFor="message">要件</Label>
                   <Textarea
                     id="message"
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    placeholder="具体的なご意見やご要望をお聞かせください..."
+                    placeholder="具体的な要件やご要望をお聞かせください..."
                     rows={6}
                     required
                   />
                 </div>
 
                 {/* Submit Button */}
-                <Button type="submit" className="w-full" size="lg">
+                {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
+                <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
                   <Send className="h-4 w-4 mr-2" />
-                  送信する
+                  {isSubmitting ? "送信中..." : "送信する"}
                 </Button>
               </form>
             </CardContent>

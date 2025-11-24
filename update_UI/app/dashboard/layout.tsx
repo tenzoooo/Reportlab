@@ -89,11 +89,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       href: "/dashboard/reports/new",
       icon: Plus,
     },
+    /*
     {
       title: "テンプレ検証",
       href: "/dashboard/template-playground",
       icon: FlaskConical,
     },
+    */
     {
       title: "設定",
       href: "/dashboard/settings",

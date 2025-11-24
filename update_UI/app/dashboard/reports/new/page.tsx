@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
   ArrowUp,
   ArrowDown,
+  Lock,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -41,17 +42,23 @@ const PROCESSING_STEPS: ProcessingStep[] = [
   { label: "最終チェック中...", duration: 1000 },
 ]
 
+const PROCESSING_STORAGE_KEY = "reportlab:processing-state"
+const PROCESSING_TOTAL_DURATION = PROCESSING_STEPS.reduce((sum, step) => sum + step.duration, 0)
+
+type StorageCategory = "experiment-data" | "table-json"
+
 const generateSafeStoragePath = (
   userId: string,
   reportId: string,
   originalName: string,
-  fallbackExt = "pdf"
+  fallbackExt = "pdf",
+  category: StorageCategory = "experiment-data"
 ) => {
   const normalizedFallback = fallbackExt.replace(/[^a-z0-9]/gi, "").toLowerCase() || "dat"
   const [, extMatch] = originalName.toLowerCase().match(/\.([a-z0-9]+)$/) ?? []
   const fileExt = extMatch || normalizedFallback
   const uniqueId = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : Math.random().toString(36).slice(2)
-  return `${userId}/${reportId}/${uniqueId}.${fileExt}`
+  return `${userId}/${reportId}/${category}/${uniqueId}.${fileExt}`
 }
 
 const isUploadDebugEnabled = process.env.NEXT_PUBLIC_ENABLE_UPLOAD_DEBUG === "true"
@@ -142,6 +149,37 @@ const getImageFallbackExtension = (file: File) => {
   return "png"
 }
 
+type ProcessingState = {
+  reportId: string
+  startedAt: number
+}
+
+const persistProcessingState = (state: ProcessingState) => {
+  if (typeof window === "undefined") return
+  window.localStorage.setItem(PROCESSING_STORAGE_KEY, JSON.stringify(state))
+}
+
+const clearProcessingState = () => {
+  if (typeof window === "undefined") return
+  window.localStorage.removeItem(PROCESSING_STORAGE_KEY)
+}
+
+const restoreProcessingState = (): ProcessingState | null => {
+  if (typeof window === "undefined") return null
+  const raw = window.localStorage.getItem(PROCESSING_STORAGE_KEY)
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as ProcessingState
+    if (parsed?.reportId && typeof parsed.startedAt === "number") {
+      return parsed
+    }
+  } catch (err) {
+    console.error("Failed to parse processing state", err)
+  }
+  clearProcessingState()
+  return null
+}
+
 export default function NewReportPage() {
   const router = useRouter()
   const [experimentPdf, setExperimentPdf] = useState<File | null>(null)
@@ -158,13 +196,33 @@ export default function NewReportPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string>("")
+  const [processingStart, setProcessingStart] = useState<number | null>(null)
+  const [processingReportId, setProcessingReportId] = useState<string | null>(null)
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
 
   const searchParams = useSearchParams()
   const resumeReportId = searchParams.get("reportId")
+  const activeResumeId = resumeReportId || processingReportId
+
+  useEffect(() => {
+    const restored = restoreProcessingState()
+    if (!restored) return
+    if (!resumeReportId) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set("reportId", restored.reportId)
+      router.replace(`?${params.toString()}`)
+    }
+    setProcessingReportId(restored.reportId)
+    setProcessingStart(restored.startedAt)
+    setIsProcessing(true)
+    setCurrentStep(0)
+    setProgress(0)
+  }, [resumeReportId, router, searchParams])
 
   useEffect(() => {
     const loadDraft = async () => {
-      if (!resumeReportId) return
+      if (!activeResumeId) return
       try {
         const supabase = createClient()
         const {
@@ -172,10 +230,26 @@ export default function NewReportPage() {
         } = await supabase.auth.getSession()
         if (!session) return
 
+        // Fetch subscription plan from profiles
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", session.user.id) // Fixed: use 'id' not 'user_id'
+          .single()
+
+        console.log("[FRONTEND] Fetched profile:", profile)
+        console.log("[FRONTEND] Profile error:", profileError)
+
+        if (profile?.plan === "premium") {
+          setSubscriptionPlan("premium")
+        } else {
+          setSubscriptionPlan("free")
+        }
+
         const { data: report } = await supabase
           .from("reports")
           .select("id, title, status")
-          .eq("id", resumeReportId)
+          .eq("id", activeResumeId)
           .eq("user_id", session.user.id)
           .maybeSingle()
 
@@ -186,7 +260,7 @@ export default function NewReportPage() {
         const { data: files } = await supabase
           .from("experiment_data")
           .select("file_name, file_type, file_url")
-          .eq("report_id", resumeReportId)
+          .eq("report_id", activeResumeId)
           .order("uploaded_at", { ascending: true })
 
         if (files && files.length > 0) {
@@ -202,7 +276,65 @@ export default function NewReportPage() {
       }
     }
     loadDraft()
-  }, [resumeReportId])
+  }, [activeResumeId])
+
+  // Fetch subscription plan on mount even if not resuming
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", session.user.id) // Fixed: use 'id' not 'user_id'
+        .single()
+
+      if (profile?.plan === "premium") {
+        setSubscriptionPlan("premium")
+      } else {
+        setSubscriptionPlan("free")
+      }
+    }
+    fetchSubscription()
+  }, [])
+
+  useEffect(() => {
+    if (!processingStart || !processingReportId) return
+
+    let timer: number
+    const tick = () => {
+      const elapsed = Date.now() - processingStart
+      const clampedElapsed = Math.min(elapsed, PROCESSING_TOTAL_DURATION)
+      const progressValue = Math.min((clampedElapsed / PROCESSING_TOTAL_DURATION) * 100, 100)
+      setProgress(progressValue)
+
+      let cumulative = 0
+      let stepIndex = PROCESSING_STEPS.length - 1
+      for (let i = 0; i < PROCESSING_STEPS.length; i += 1) {
+        cumulative += PROCESSING_STEPS[i].duration
+        if (clampedElapsed <= cumulative) {
+          stepIndex = i
+          break
+        }
+      }
+      setCurrentStep(stepIndex)
+
+      if (elapsed >= PROCESSING_TOTAL_DURATION) {
+        clearProcessingState()
+        router.push(`/dashboard/reports/${processingReportId}`)
+        return
+      }
+
+      timer = window.setTimeout(tick, 100)
+    }
+
+    tick()
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [processingStart, processingReportId, router])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -246,12 +378,25 @@ export default function NewReportPage() {
     setExperimentPdf(null)
   }
 
+  const addImageFiles = (files: File[]) => {
+    const normalized = files
+      .filter((file) => isImageFile(file))
+      .map((file, index) => {
+        if (file.name) return file
+        const ext = getImageFallbackExtension(file)
+        return new File([file], `pasted-image-${Date.now()}-${index + 1}.${ext}`, {
+          type: file.type || `image/${ext}`,
+        })
+      })
+    if (normalized.length > 0) {
+      setFigureImages((prev) => [...prev, ...normalized])
+    }
+  }
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
-    const imageFiles = Array.from(e.target.files).filter((file) => isImageFile(file))
-    if (imageFiles.length > 0) {
-      setFigureImages((prev) => [...prev, ...imageFiles])
-    }
+    const imageFiles = Array.from(e.target.files)
+    addImageFiles(imageFiles)
     e.target.value = ""
   }
 
@@ -267,10 +412,8 @@ export default function NewReportPage() {
   const handleImageDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsImageDragging(false)
-    const droppedFiles = Array.from(e.dataTransfer.files).filter((file) => isImageFile(file))
-    if (droppedFiles.length > 0) {
-      setFigureImages((prev) => [...prev, ...droppedFiles])
-    }
+    const droppedFiles = Array.from(e.dataTransfer.files)
+    addImageFiles(droppedFiles)
   }
 
   const removeImage = (index: number) => {
@@ -306,6 +449,17 @@ export default function NewReportPage() {
   const clearTables = () => setPastedTables([])
   const removeTable = (id: string) => setPastedTables((prev) => prev.filter((t) => t.id !== id))
 
+  const handleImagePasteBoxPaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    const files = Array.from(event.clipboardData?.items ?? [])
+      .filter((item) => item.kind === "file")
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => Boolean(file && isImageFile(file)))
+    if (files.length > 0) {
+      event.preventDefault()
+      addImageFiles(files)
+    }
+  }
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B"
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
@@ -314,6 +468,8 @@ export default function NewReportPage() {
 
   const handleSubmit = async () => {
     if ((!experimentPdf && !existingPdf) || !reportTitle) return
+
+    clearProcessingState()
 
     debugUpload("handleSubmit:start", {
       hasPdf: Boolean(experimentPdf || existingPdf),
@@ -328,9 +484,6 @@ export default function NewReportPage() {
     setIsProcessing(true)
     setProgress(0)
     setCurrentStep(0)
-
-    let totalProgress = 0
-    const totalDuration = PROCESSING_STEPS.reduce((sum, step) => sum + step.duration, 0)
 
     const supabase = createClient()
     const {
@@ -347,72 +500,79 @@ export default function NewReportPage() {
 
     debugUpload("handleSubmit:session", { userId: session.user.id })
 
-      let reportId = resumeReportId || ""
+    let reportId = resumeReportId || ""
 
+    try {
+      setCurrentStep(0)
       // 1) レポート作成（DB） もしくは既存下書きを再利用
-      try {
-        setCurrentStep(0)
-        if (!resumeReportId) {
-          const { data: inserted, error: insertError } = await supabase
-            .from("reports")
-            .insert([
-              { title: reportTitle, user_id: session.user.id, status: "draft" as const },
-            ])
-            .select("id")
-            .single()
+      if (!resumeReportId) {
+        const { data: inserted, error: insertError } = await supabase
+          .from("reports")
+          .insert([{ title: reportTitle, user_id: session.user.id, status: "draft" as const }])
+          .select("id")
+          .single()
 
-          if (insertError || !inserted) throw new Error(insertError?.message ?? "Failed to create report")
+        if (insertError || !inserted) throw new Error(insertError?.message ?? "Failed to create report")
+        reportId = inserted.id as string
+      } else {
+        reportId = resumeReportId
+      }
+      debugUpload("handleSubmit:report-created", { reportId })
 
-          reportId = inserted.id as string
-        } else {
-          reportId = resumeReportId
+      // 2) PDFをStorageにアップロード
+      if (experimentPdf) {
+        setCurrentStep(1)
+        const storagePath = generateSafeStoragePath(
+          session.user.id,
+          reportId,
+          experimentPdf.name,
+          "pdf",
+          "experiment-data"
+        )
+        debugUpload("handleSubmit:upload:start", { storagePath })
+        const { error: uploadError } = await supabase.storage
+          .from("experiment-files")
+          .upload(storagePath, experimentPdf, {
+            contentType: experimentPdf.type || "application/pdf",
+            upsert: true,
+          })
+        if (uploadError) {
+          debugUpload("handleSubmit:upload:error", uploadError)
+          throw new Error(uploadError.message)
         }
-        debugUpload("handleSubmit:report-created", { reportId })
+        debugUpload("handleSubmit:upload:success", { storagePath })
 
-        // 2) PDFをStorageにアップロード
-        if (experimentPdf) {
-          setCurrentStep(1)
-          // Save with original filename so the stored key matches what we later sign for Dify (PDF URL)
-          const storagePath = generateSafeStoragePath(session.user.id, reportId, experimentPdf.name)
-          debugUpload("handleSubmit:upload:start", { storagePath })
-          const { error: uploadError } = await supabase.storage
-            .from("experiment-files")
-            .upload(storagePath, experimentPdf, {
-              contentType: experimentPdf.type || "application/pdf",
-              upsert: true,
-            })
-          if (uploadError) {
-            debugUpload("handleSubmit:upload:error", uploadError)
-            throw new Error(uploadError.message)
-          }
-          debugUpload("handleSubmit:upload:success", { storagePath })
-
-          // 3) experiment_data 登録（ファイルタイプはスキーマの都合上 "word" を使用）
-          setCurrentStep(2)
-          const { error: fileInsertError } = await supabase.from("experiment_data").insert([
-            {
-              report_id: reportId,
-              file_name: experimentPdf.name,
-              file_type: "word", // PDFでもドキュメントとして扱う
-              file_url: storagePath,
-            },
-          ])
-          if (fileInsertError) {
-            debugUpload("handleSubmit:experiment-data:error", fileInsertError)
-            throw new Error(fileInsertError.message)
-          }
-          debugUpload("handleSubmit:experiment-data:success", { reportId, storagePath })
+        setCurrentStep(2)
+        const { error: fileInsertError } = await supabase.from("experiment_data").insert([
+          {
+            report_id: reportId,
+            file_name: experimentPdf.name,
+            file_type: "word", // PDFでもドキュメントとして扱う
+            file_url: storagePath,
+          },
+        ])
+        if (fileInsertError) {
+          debugUpload("handleSubmit:experiment-data:error", fileInsertError)
+          throw new Error(fileInsertError.message)
         }
+        debugUpload("handleSubmit:experiment-data:success", { reportId, storagePath })
+      }
 
-        // 3.4) 貼り付け表を JSON としてアップロード（任意）
-        if (pastedTables.length > 0) {
-          for (let i = 0; i < pastedTables.length; i++) {
-            const table = pastedTables[i]
+      // 3.4) 貼り付け表を JSON としてアップロード（任意）
+      if (pastedTables.length > 0) {
+        for (let i = 0; i < pastedTables.length; i += 1) {
+          const table = pastedTables[i]
           const jsonBlob = new Blob([JSON.stringify({ rows: table.rows }, null, 2)], {
             type: "application/json",
           })
           const tableFile = new File([jsonBlob], `table-${i + 1}.json`, { type: "application/json" })
-          const tableStoragePath = generateSafeStoragePath(session.user.id, reportId, tableFile.name, "json")
+          const tableStoragePath = generateSafeStoragePath(
+            session.user.id,
+            reportId,
+            tableFile.name,
+            "json",
+            "table-json"
+          )
           debugUpload("handleSubmit:table-upload:start", { index: i, tableStoragePath })
           // eslint-disable-next-line no-await-in-loop
           const { error: tableUploadError } = await supabase.storage
@@ -446,14 +606,15 @@ export default function NewReportPage() {
 
       // 3.5) 図の画像を追加でアップロード
       if (figureImages.length > 0) {
-        for (let i = 0; i < figureImages.length; i++) {
+        for (let i = 0; i < figureImages.length; i += 1) {
           const imageFile = figureImages[i]
           const fallbackExt = getImageFallbackExtension(imageFile)
           const imageStoragePath = generateSafeStoragePath(
             session.user.id,
             reportId,
             imageFile.name,
-            fallbackExt
+            fallbackExt,
+            "experiment-data"
           )
           debugUpload("handleSubmit:image-upload:start", { index: i, imageStoragePath })
           // eslint-disable-next-line no-await-in-loop
@@ -508,86 +669,57 @@ export default function NewReportPage() {
       }
       debugUpload("handleSubmit:generate-api:success", { reportId })
 
-      // 疑似進捗を最後まで進めた後、詳細ページへ
-      for (let i = 0; i < PROCESSING_STEPS.length; i++) {
-        setCurrentStep(i)
-        const step = PROCESSING_STEPS[i]
-
-        const stepProgressIncrement = (step.duration / totalDuration) * 100
-        const startProgress = totalProgress
-        const endProgress = totalProgress + stepProgressIncrement
-
-        const stepStartTime = Date.now()
-
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise<void>((resolve) => {
-          const interval = setInterval(() => {
-            const elapsed = Date.now() - stepStartTime
-            const stepProgress = Math.min(elapsed / step.duration, 1)
-            const currentProgress = startProgress + stepProgressIncrement * stepProgress
-
-            setProgress(Math.min(currentProgress, 100))
-
-            if (elapsed >= step.duration) {
-              clearInterval(interval)
-              resolve()
-            }
-          }, 50)
-        })
-
-        totalProgress = endProgress
-      }
-
-      setProgress(100)
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      router.push(`/dashboard/reports/${reportId}`)
+      const startedAt = Date.now()
+      setProcessingReportId(reportId)
+      setProcessingStart(startedAt)
+      setIsProcessing(true)
+      setCurrentStep(0)
+      setProgress(0)
+      persistProcessingState({ reportId, startedAt })
       return
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       debugUpload("handleSubmit:failed", { error: message, detail: e })
+      clearProcessingState()
+      setProcessingReportId(null)
+      setProcessingStart(null)
+      setIsProcessing(false)
       setError(message)
     } finally {
       setIsUploading(false)
-      setIsProcessing(false)
       debugUpload("handleSubmit:finished")
     }
+  }
 
-    // 旧: 疑似進捗のみ
-    for (let i = 0; i < PROCESSING_STEPS.length; i++) {
-      setCurrentStep(i)
-      const step = PROCESSING_STEPS[i]
+  useEffect(() => {
+    const handleGlobalPaste = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target?.closest("#table-paste-area") || target?.closest("#image-paste-box")) return
 
-      const stepProgressIncrement = (step.duration / totalDuration) * 100
-      const startProgress = totalProgress
-      const endProgress = totalProgress + stepProgressIncrement
+      const files = Array.from(event.clipboardData?.items ?? [])
+        .filter((item) => item.kind === "file")
+        .map((item) => item.getAsFile())
+        .filter((file): file is File => Boolean(file && isImageFile(file)))
 
-      const stepStartTime = Date.now()
-
-      await new Promise<void>((resolve) => {
-        const interval = setInterval(() => {
-          const elapsed = Date.now() - stepStartTime
-          const stepProgress = Math.min(elapsed / step.duration, 1)
-          const currentProgress = startProgress + stepProgressIncrement * stepProgress
-
-          setProgress(Math.min(currentProgress, 100))
-
-          if (elapsed >= step.duration) {
-            clearInterval(interval)
-            resolve()
-          }
-        }, 50)
-      })
-
-      totalProgress = endProgress
+      if (files.length > 0) {
+        event.preventDefault()
+        addImageFiles(files)
+      }
     }
 
-    setProgress(100)
+    window.addEventListener("paste", handleGlobalPaste)
+    return () => {
+      window.removeEventListener("paste", handleGlobalPaste)
+    }
+  }, [])
 
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    router.push("/dashboard/reports")
-  }
+  useEffect(() => {
+    const urls = figureImages.map((file) => URL.createObjectURL(file))
+    setImagePreviews(urls)
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [figureImages])
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -653,13 +785,12 @@ export default function NewReportPage() {
                     {PROCESSING_STEPS.map((step, index) => (
                       <div
                         key={index}
-                        className={`flex items-center space-x-2 text-xs ${
-                          index < currentStep
-                            ? "text-primary"
-                            : index === currentStep
-                              ? "text-foreground font-semibold"
-                              : "text-muted-foreground"
-                        }`}
+                        className={`flex items-center space-x-2 text-xs ${index < currentStep
+                          ? "text-primary"
+                          : index === currentStep
+                            ? "text-foreground font-semibold"
+                            : "text-muted-foreground"
+                          }`}
                       >
                         {index < currentStep ? (
                           <CheckCircle2 className="w-4 h-4" />
@@ -689,16 +820,15 @@ export default function NewReportPage() {
                     実験書のPDFファイルをアップロードしてください。AIが内容を解析してレポートを自動生成します。
                   </p>
 
-                {!experimentPdf ? (
-                  <div
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                      className={`border-2 border-dashed rounded-lg transition-all duration-300 text-center py-6 px-4 mx-1 my-0 bg-card ${
-                        isDragging
-                          ? "border-primary bg-primary/10 scale-[1.02]"
-                          : "border-border bg-muted/30 hover:bg-muted/50"
-                      }`}
+                  {!experimentPdf ? (
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`border-2 border-dashed rounded-lg transition-all duration-300 text-center py-6 px-4 mx-1 my-0 bg-card ${isDragging
+                        ? "border-primary bg-primary/10 scale-[1.02]"
+                        : "border-border bg-muted/30 hover:bg-muted/50"
+                        }`}
                     >
                       <motion.div
                         initial={{ scale: 1 }}
@@ -758,159 +888,227 @@ export default function NewReportPage() {
                   )}
                 </div>
 
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold text-card-foreground">Excel表を貼り付け（任意）</Label>
+                <div className="space-y-3 relative">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold text-card-foreground">Excel表を貼り付け（任意）</Label>
+                    {subscriptionPlan !== "premium" && (
+                      <div className="flex items-center text-amber-500 text-xs font-semibold">
+                        <Lock className="w-3 h-3 mr-1" />
+                        Premium限定
+                      </div>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     コピーした表を貼り付けると参照用データとして保存されます。複数貼り付けると順番に追加されます。
                   </p>
-                  <textarea
-                    className="w-full rounded-md border px-3 py-2 text-sm"
-                    rows={4}
-                    placeholder="ここに Ctrl/Cmd+V で貼り付け"
-                    onPaste={handleTablePaste}
-                  />
-                {pastedTables.length > 0 ? (
-                  <div className="space-y-3">
-                    {pastedTables.map((table, idx) => (
-                        <div key={table.id} className="overflow-x-auto rounded-md border bg-muted/30">
-                          <div className="flex items-center justify-between border-b px-3 py-2 text-sm font-semibold">
-                            <span>
-                              表 {idx + 1}（{table.rows.length} 行）
-                            </span>
-                            <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeTable(table.id)}>
-                              削除
-                            </Button>
-                          </div>
-                          <table className="w-full border-collapse text-sm">
-                            <tbody>
-                              {table.rows.slice(0, 6).map((row, rowIndex) => (
-                                <tr key={rowIndex} className="divide-x border-b last:border-b-0">
-                                  {row.map((cell, cellIndex) => (
-                                    <td key={cellIndex} className="px-2 py-1">
-                                      {cell || <span className="text-muted-foreground">（空）</span>}
-                                    </td>
+
+                  {subscriptionPlan === "premium" ? (
+                    <>
+                      <textarea
+                        id="table-paste-area"
+                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        rows={4}
+                        placeholder="ここに Ctrl/Cmd+V で貼り付け"
+                        onPaste={handleTablePaste}
+                      />
+                      {pastedTables.length > 0 ? (
+                        <div className="space-y-3">
+                          {pastedTables.map((table, idx) => (
+                            <div key={table.id} className="overflow-x-auto rounded-md border bg-muted/30">
+                              <div className="flex items-center justify-between border-b px-3 py-2 text-sm font-semibold">
+                                <span>
+                                  表 {idx + 1}（{table.rows.length} 行）
+                                </span>
+                                <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeTable(table.id)}>
+                                  削除
+                                </Button>
+                              </div>
+                              <table className="w-full border-collapse text-sm">
+                                <tbody>
+                                  {table.rows.slice(0, 6).map((row, rowIndex) => (
+                                    <tr key={rowIndex} className="divide-x border-b last:border-b-0">
+                                      {row.map((cell, cellIndex) => (
+                                        <td key={cellIndex} className="px-2 py-1">
+                                          {cell || <span className="text-muted-foreground">（空）</span>}
+                                        </td>
+                                      ))}
+                                    </tr>
                                   ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                          {table.rows.length > 6 && (
-                            <p className="px-2 py-1 text-xs text-muted-foreground">先頭6行を表示しています。全 {table.rows.length} 行。</p>
-                          )}
+                                </tbody>
+                              </table>
+                              {table.rows.length > 6 && (
+                                <p className="px-2 py-1 text-xs text-muted-foreground">先頭6行を表示しています。全 {table.rows.length} 行。</p>
+                              )}
+                            </div>
+                          ))}
+                          <Button variant="outline" size="sm" onClick={clearTables}>
+                            すべてクリア
+                          </Button>
                         </div>
-                      ))}
-                    <Button variant="outline" size="sm" onClick={clearTables}>
-                      すべてクリア
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">ここに貼り付けると表データとして保存します。</p>
-                )}
-                {existingTables.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    既存の表: {existingTables.map((t) => t.name).join(", ")}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="image-upload" className="text-base font-semibold text-card-foreground">
-                  実験結果の画像（任意）
-                </Label>
-                  <input id="image-upload" type="file" multiple accept="image/*" onChange={handleImageSelect} className="sr-only" />
-                  <p className="text-sm text-muted-foreground mb-3">
-                    図キャプションの直前に表示したい実験結果の画像をアップロードしてください。アップロードした順番でレポートに挿入されます（後から並べ替え可能）。
-                  </p>
-                  <div
-                    onDragOver={handleImageDragOver}
-                    onDragLeave={handleImageDragLeave}
-                    onDrop={handleImageDrop}
-                    className={`border-2 border-dashed rounded-lg transition-all duration-300 py-5 px-4 bg-card ${
-                      isImageDragging ? "border-primary bg-primary/10 scale-[1.01]" : "border-border bg-muted/30 hover:bg-muted/50"
-                    }`}
-                  >
-                    <div className="flex flex-col items-center text-center space-y-2">
-                      <ImagePlus className="w-10 h-10 text-muted-foreground" />
-                      <p className="font-semibold text-card-foreground">画像をドラッグ&ドロップ</p>
-                      <p className="text-xs text-muted-foreground">JPG / PNG / HEIC などの画像ファイルに対応</p>
-                      <label htmlFor="image-upload">
-                        <Button variant="outline" size="sm" className="cursor-pointer mt-2 bg-transparent hover:bg-primary/10" asChild>
-                          <span>画像を選択</span>
-                        </Button>
-                      </label>
-                    </div>
-                  </div>
-
-                {figureImages.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-xs text-muted-foreground">
-                      下のリストの順番通りにレポートへ図が挿入されます。上下ボタンで並べ替え、×で削除できます。
-                    </p>
-                      <div className="space-y-2">
-                        {figureImages.map((file, index) => (
-                          <motion.div
-                            key={`${file.name}-${index}-${file.size}`}
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="flex items-center justify-between p-4 border rounded-lg bg-card/80"
-                          >
-                            <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-primary/10 rounded-lg">
-                                <ImageIcon className="w-5 h-5 text-primary" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-foreground">{file.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  図{index + 1}・{formatFileSize(file.size)}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                disabled={index === 0}
-                                onClick={() => moveImage(index, "up")}
-                                aria-label="ひとつ上に移動"
-                              >
-                                <ArrowUp className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                disabled={index === figureImages.length - 1}
-                                onClick={() => moveImage(index, "down")}
-                                aria-label="ひとつ下に移動"
-                              >
-                                <ArrowDown className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => removeImage(index)}
-                                aria-label="削除"
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </motion.div>
-                        ))}
+                      ) : (
+                        <p className="text-xs text-muted-foreground">ここに貼り付けると表データとして保存します。</p>
+                      )}
+                      {existingTables.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          既存の表: {existingTables.map((t) => t.name).join(", ")}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="relative rounded-md border border-dashed p-6 bg-muted/30 flex flex-col items-center justify-center text-center space-y-3">
+                      <Lock className="w-8 h-8 text-muted-foreground" />
+                      <div>
+                        <p className="font-semibold text-foreground">この機能はPremiumプラン限定です</p>
+                        <p className="text-sm text-muted-foreground mt-1">Excelの表データを直接貼り付けて、レポートの参照データとして利用できます。</p>
                       </div>
+                      <Button variant="default" size="sm" onClick={() => router.push("/dashboard/settings?tab=subscription")}>
+                        Premiumにアップグレード
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2 relative">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="image-upload" className="text-base font-semibold text-card-foreground">
+                      実験結果の画像（任意）
+                    </Label>
+                    {subscriptionPlan !== "premium" && (
+                      <div className="flex items-center text-amber-500 text-xs font-semibold">
+                        <Lock className="w-3 h-3 mr-1" />
+                        Premium限定
+                      </div>
+                    )}
                   </div>
-                )}
-                {figureImages.length === 0 && existingImages.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    既存の画像: {existingImages.map((img) => img.name).join(", ")}
-                  </p>
-                )}
-              </div>
+
+                  {subscriptionPlan === "premium" ? (
+                    <>
+                      <input id="image-upload" type="file" multiple accept="image/*" onChange={handleImageSelect} className="sr-only" />
+                      <p className="text-sm text-muted-foreground">
+                        図キャプションの直前に表示したい実験結果の画像をアップロードしてください。アップロードした順番でレポートに挿入されます（後から並べ替え可能）。
+                      </p>
+                      <div
+                        id="image-paste-box"
+                        className="mt-2 flex flex-col gap-2 border rounded-lg p-3 bg-muted/40"
+                        onPaste={handleImagePasteBoxPaste}
+                        tabIndex={0}
+                        role="textbox"
+                        aria-label="画像の貼り付け"
+                      >
+                        <p className="text-xs font-semibold text-card-foreground">ここに Ctrl/Cmd+V で画像を貼り付け</p>
+                        <p className="text-xs text-muted-foreground">
+                          スクリーンショットやグラフ画像をコピーして、このボックスを選択した状態で貼り付けてください。ページ上のどこで貼り付けても画像として追加されます。
+                        </p>
+                      </div>
+                      <div
+                        onDragOver={handleImageDragOver}
+                        onDragLeave={handleImageDragLeave}
+                        onDrop={handleImageDrop}
+                        className={`border-2 border-dashed rounded-lg transition-all duration-300 py-5 px-4 bg-card ${isImageDragging ? "border-primary bg-primary/10 scale-[1.01]" : "border-border bg-muted/30 hover:bg-muted/50"
+                          }`}
+                      >
+                        <div className="flex flex-col items-center text-center space-y-2">
+                          <ImagePlus className="w-10 h-10 text-muted-foreground" />
+                          <p className="font-semibold text-card-foreground">画像をドラッグ&ドロップ</p>
+                          <p className="text-xs text-muted-foreground">JPG / PNG / HEIC などの画像ファイルに対応</p>
+                          <label htmlFor="image-upload">
+                            <Button variant="outline" size="sm" className="cursor-pointer mt-2 bg-transparent hover:bg-primary/10" asChild>
+                              <span>画像を選択</span>
+                            </Button>
+                          </label>
+                        </div>
+                      </div>
+
+                      {figureImages.length > 0 && (
+                        <div className="space-y-3">
+                          <p className="text-xs text-muted-foreground">
+                            下のリストの順番通りにレポートへ図が挿入されます。上下ボタンで並べ替え、×で削除できます。
+                          </p>
+                          <div className="space-y-2">
+                            {figureImages.map((file, index) => (
+                              <motion.div
+                                key={`${file.name}-${index}-${file.size}`}
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex items-center justify-between p-4 border rounded-lg bg-card/80"
+                              >
+                                <div className="flex items-center space-x-3 w-full">
+                                  <div className="relative h-16 w-20 overflow-hidden rounded-md bg-muted border">
+                                    {imagePreviews[index] ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={imagePreviews[index]} alt={file.name} className="h-full w-full object-cover" />
+                                    ) : (
+                                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                                        <ImageIcon className="w-5 h-5" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-foreground break-all">{file.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      図{index + 1}・{formatFileSize(file.size)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    disabled={index === 0}
+                                    onClick={() => moveImage(index, "up")}
+                                    aria-label="ひとつ上に移動"
+                                  >
+                                    <ArrowUp className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    disabled={index === figureImages.length - 1}
+                                    onClick={() => moveImage(index, "down")}
+                                    aria-label="ひとつ下に移動"
+                                  >
+                                    <ArrowDown className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => removeImage(index)}
+                                    aria-label="削除"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {figureImages.length === 0 && existingImages.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          既存の画像: {existingImages.map((img) => img.name).join(", ")}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="relative rounded-md border border-dashed p-6 bg-muted/30 flex flex-col items-center justify-center text-center space-y-3">
+                      <Lock className="w-8 h-8 text-muted-foreground" />
+                      <div>
+                        <p className="font-semibold text-foreground">この機能はPremiumプラン限定です</p>
+                        <p className="text-sm text-muted-foreground mt-1">実験結果の画像をアップロードして、レポート内に自動挿入できます。</p>
+                      </div>
+                      <Button variant="default" size="sm" onClick={() => router.push("/dashboard/settings?tab=subscription")}>
+                        Premiumにアップグレード
+                      </Button>
+                    </div>
+                  )}
+                </div>
 
                 {experimentPdf && (
                   <motion.div

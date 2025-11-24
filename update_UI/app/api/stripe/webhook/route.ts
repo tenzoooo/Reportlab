@@ -1,211 +1,207 @@
-import { NextRequest, NextResponse } from "next/server"
-import { createClient as createAdminClient } from "@supabase/supabase-js"
-import Stripe from "stripe"
 import { getStripeClient } from "@/lib/stripe/client"
-import { logError, logInfo, logRequest } from "@/lib/server/logger"
-import { randomUUID } from "node:crypto"
+import { createClient } from "@supabase/supabase-js"
+import { headers } from "next/headers"
+import { NextResponse } from "next/server"
+import Stripe from "stripe"
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-const getAdminClient = () => {
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Supabase admin credentials are not configured")
-  }
-  return createAdminClient(supabaseUrl, serviceRoleKey)
-}
-
-const mergeUserMetadata = async (userId: string, updates: Record<string, unknown>) => {
-  const admin = getAdminClient()
-  const { data: userData, error: fetchError } = await admin.auth.admin.getUserById(userId)
-  if (fetchError || !userData?.user) {
-    throw fetchError ?? new Error("Target user not found")
-  }
-
-  const currentMetadata = userData.user.user_metadata ?? {}
-  const mergedMetadata = { ...currentMetadata, ...updates }
-  const { error: updateError } = await admin.auth.admin.updateUserById(userId, {
-    user_metadata: mergedMetadata,
-  })
-
-  if (updateError) {
-    throw updateError
-  }
-}
-
-const upsertStripeCustomer = async (admin: ReturnType<typeof createAdminClient>, userId: string, customerId: string) => {
-  const { error } = await admin
-    .from("stripe_customers")
-    .upsert({ user_id: userId, stripe_customer_id: customerId, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
-  if (error) {
-    throw error
-  }
-}
-
-const upsertPublicUserStripeCustomer = async (admin: ReturnType<typeof createAdminClient>, userId: string, customerId: string) => {
-  const { data, error: fetchError } = await admin.auth.admin.getUserById(userId)
-  if (fetchError || !data?.user) {
-    throw fetchError ?? new Error("Target user not found for public.users upsert")
-  }
-
-  const email = data.user.email
-  if (!email) {
-    throw new Error("Missing email for public.users upsert")
-  }
-
-  const { error } = await admin
-    .from("users")
-    .upsert({ id: userId, email, stripe_customer_id: customerId, updated_at: new Date().toISOString() }, { onConflict: "id" })
-
-  if (error) {
-    throw error
-  }
-}
-
-const mapSubscriptionStatus = (status: Stripe.Subscription.Status): "premium" | "free" => {
-  switch (status) {
-    case "active":
-    case "trialing":
-    case "past_due":
-      return "premium"
-    default:
-      return "free"
-  }
-}
-
-const extractCustomerId = (
-  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null
-): string | undefined => {
-  if (!customer) return undefined
-  if (typeof customer === "string") return customer
-  return "id" in customer ? customer.id : undefined
-}
-
-const handleCheckoutCompleted = async (session: Stripe.Checkout.Session) => {
-  const userId = session.metadata?.supabaseUserId
-  const customerId = extractCustomerId(session.customer)
-
-  if (!userId) {
-    logInfo("stripe:webhook:checkout-missing-user", { sessionId: session.id })
-    return
-  }
-
-  const credits = Number(session.metadata?.creditsPurchased ?? session.metadata?.credits)
-  if (!Number.isFinite(credits) || credits <= 0) {
-    logInfo("stripe:webhook:checkout-missing-credits", { sessionId: session.id, credits })
-  }
-
-  const admin = getAdminClient()
-  if (customerId) {
-    await mergeUserMetadata(userId, { stripe_customer_id: customerId })
-    await upsertStripeCustomer(admin, userId, customerId)
-    await upsertPublicUserStripeCustomer(admin, userId, customerId)
-  }
-
-  if (Number.isFinite(credits) && credits > 0) {
-    await creditUserBalance(admin, userId, credits, {
-      payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : undefined,
-      checkout_session_id: session.id,
-    })
-  }
-}
-
-const creditUserBalance = async (
-  admin: ReturnType<typeof createAdminClient>,
-  userId: string,
-  deltaCredits: number,
-  opts: { payment_intent_id?: string; checkout_session_id?: string }
-) => {
-  if (!Number.isFinite(deltaCredits) || deltaCredits <= 0) {
-    return
-  }
-
-  const { data: existingBalance, error: balanceError } = await admin
-    .from("user_credits")
-    .select("balance")
-    .eq("user_id", userId)
-    .maybeSingle()
-
-  if (balanceError) {
-    throw balanceError
-  }
-
-  const current = Number(existingBalance?.balance ?? 0)
-  const nextBalance = current + deltaCredits
-
-  const { error: upsertError } = await admin.from("user_credits").upsert(
-    {
-      user_id: userId,
-      balance: nextBalance,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" }
-  )
-  if (upsertError) {
-    throw upsertError
-  }
-
-  const ledgerRow = {
-    id: randomUUID(),
-    user_id: userId,
-    delta: deltaCredits,
-    balance_after: nextBalance,
-    type: "purchase",
-    payment_intent_id: opts.payment_intent_id ?? null,
-    checkout_session_id: opts.checkout_session_id ?? null,
-    created_at: new Date().toISOString(),
-  }
-
-  const { error: ledgerError } = await admin.from("credit_ledger").insert(ledgerRow)
-  if (ledgerError) {
-    throw ledgerError
-  }
-}
-
-export async function POST(request: NextRequest) {
-  logRequest(request, "stripe:webhook")
-
-  if (!webhookSecret) {
-    return NextResponse.json({ error: "Stripe webhook is not configured" }, { status: 500 })
-  }
-
-  const signature = request.headers.get("stripe-signature")
-  if (!signature) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 400 })
-  }
+export async function POST(req: Request) {
+  const body = await req.text()
+  const signature = (await headers()).get("Stripe-Signature") as string
+  console.log("[WEBHOOK] Received webhook")
 
   const stripe = getStripeClient()
-  const rawBody = await request.text()
-
   let event: Stripe.Event
+
+  const secret = process.env.STRIPE_WEBHOOK_SECRET!
+  console.log("***** [WEBHOOK] STARTING *****")
+  console.log("***** [WEBHOOK] Secret length:", secret?.length)
+  console.log("***** [WEBHOOK] Secret first 5 chars:", secret?.substring(0, 5))
+
   try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
-  } catch (err) {
-    logError("stripe:webhook:signature-verification-failed", err)
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      secret
+    )
+  } catch (error: any) {
+    console.error("[WEBHOOK] Signature verification failed:", error.message)
+    return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 })
   }
+  console.log("[WEBHOOK] Event type:", event.type)
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error("[WEBHOOK] Missing Supabase environment variables")
+    return new NextResponse("Internal Server Error: Missing Supabase Config", { status: 500 })
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
   try {
     switch (event.type) {
-      case "checkout.session.completed":
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
+      case "checkout.session.completed": {
+        console.log("[WEBHOOK] Processing checkout.session.completed")
+        const session = event.data.object as Stripe.Checkout.Session
+        const subscriptionId = session.subscription as string
+        const userId = session.metadata?.userId
+
+        console.log("[WEBHOOK] Session ID:", session.id)
+        console.log("[WEBHOOK] Subscription ID:", subscriptionId)
+        console.log("[WEBHOOK] User ID from metadata:", userId)
+
+        if (!userId || !subscriptionId) {
+          console.error("[WEBHOOK] Missing userId or subscriptionId")
+          break
+        }
+
+        // Retrieve subscription to get status and price
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+
+        // Determine plan name
+        const priceId = subscription.items.data[0].price.id
+        const premiumPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM
+        const creditsPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS
+
+        console.log("[WEBHOOK] Received Price ID:", priceId)
+        console.log("[WEBHOOK] Expected Premium ID:", premiumPriceId)
+        console.log("[WEBHOOK] Expected Credits ID:", creditsPriceId)
+
+        let planName = 'free'
+        if (priceId === premiumPriceId) {
+          planName = 'premium'
+        } else if (priceId === creditsPriceId) {
+          planName = 'credit_only'
+        }
+        console.log("[WEBHOOK] Determined Plan Name:", planName)
+
+        // Update profiles table
+        console.log("[WEBHOOK] Updating profile plan to:", planName, "for user:", userId)
+        const { error: profileError, count: profileCount } = await supabase
+          .from("profiles")
+          .update({ plan: planName })
+          .eq("id", userId)
+          .select() // Select to get the count/data back if needed, though count option is better
+
+        if (profileError) {
+          console.error("[WEBHOOK] Profile update failed:", profileError)
+        } else {
+          console.log("[WEBHOOK] Profile update success. Rows affected:", profileCount) // Note: count might be null without count option
+        }
+
+        // Insert into subscriptions table
+        console.log("[WEBHOOK] Upserting subscription:", subscriptionId, "for user:", userId)
+        const { error: upsertError } = await supabase.from("subscriptions").upsert({
+          id: subscriptionId,
+          user_id: userId,
+          status: subscription.status,
+          price_id: priceId,
+          cancel_at_period_end: subscription.cancel_at_period_end,
+        })
+        if (upsertError) {
+          console.error("[WEBHOOK] Subscription upsert failed:", upsertError)
+        } else {
+          console.log("[WEBHOOK] Subscription upsert success")
+        }
+
+        // Add credits if applicable (e.g. 400 credits for specific plans)
+        // You might want to check price_id to decide how many credits to add
+        // For now, let's assume all subscriptions give 400 credits on creation
+        // In a real app, map price_id to credit amount
+        const creditsToAdd = 400
+
+        await supabase.rpc("increment_credits", {
+          user_id_arg: userId,
+          amount_arg: creditsToAdd
+        })
+
+        // Log transaction
+        await supabase.from("credit_transactions").insert({
+          user_id: userId,
+          amount: creditsToAdd,
+          description: "Subscription started - Monthly credits",
+        })
+
         break
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted":
-        logInfo("stripe:webhook:subscription-event-ignored", { type: event.type })
+      }
+
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object as Stripe.Invoice
+        const subscriptionId = invoice.subscription as string
+
+        // If this is the first payment (billing_reason='subscription_create'), 
+        // it's already handled by checkout.session.completed usually, 
+        // BUT checkout.session.completed is better for initial setup.
+        // invoice.payment_succeeded is good for recurring renewals.
+
+        if (invoice.billing_reason === 'subscription_cycle') {
+          // Find user by subscriptionId
+          const { data: sub } = await supabase
+            .from("subscriptions")
+            .select("user_id")
+            .eq("id", subscriptionId)
+            .single()
+
+          if (sub) {
+            const creditsToAdd = 400
+            await supabase.rpc("increment_credits", {
+              user_id_arg: sub.user_id,
+              amount_arg: creditsToAdd
+            })
+
+            await supabase.from("credit_transactions").insert({
+              user_id: sub.user_id,
+              amount: creditsToAdd,
+              description: "Subscription renewal - Monthly credits",
+            })
+          }
+        }
         break
-      default:
-        logInfo("stripe:webhook:ignored-event", { type: event.type })
+      }
+
+      case "customer.subscription.updated": {
+        const subscription = event.data.object as Stripe.Subscription
+        const priceId = subscription.items.data[0].price.id
+        let planName = 'free'
+        if (subscription.status === 'active') {
+          if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM) {
+            planName = 'premium'
+          } else if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS) {
+            planName = 'credit_only'
+          }
+        }
+
+        await supabase.from("subscriptions").update({
+          status: subscription.status,
+          cancel_at_period_end: subscription.cancel_at_period_end,
+        }).eq("id", subscription.id)
+
+        // Find user_id from subscription to update profile
+        const { data: sub } = await supabase.from("subscriptions").select("user_id").eq("id", subscription.id).single()
+        if (sub) {
+          await supabase.from("profiles").update({ plan: planName }).eq("id", sub.user_id)
+        }
+        break
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription
+        await supabase.from("subscriptions").update({
+          status: subscription.status,
+        }).eq("id", subscription.id)
+
+        const { data: sub } = await supabase.from("subscriptions").select("user_id").eq("id", subscription.id).single()
+        if (sub) {
+          await supabase.from("profiles").update({ plan: 'free' }).eq("id", sub.user_id)
+        }
+        break
+      }
     }
-  } catch (err) {
-    logError("stripe:webhook:handler-error", err, { type: event.type })
-    return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 })
+  } catch (error) {
+    console.error("[STRIPE_WEBHOOK]", error)
+    return new NextResponse("Internal Error", { status: 500 })
   }
 
-  return NextResponse.json({ received: true })
+  return new NextResponse(null, { status: 200 })
 }

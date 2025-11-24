@@ -1,63 +1,110 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { Bell, X, FileText, CheckCircle, AlertCircle, Clock } from "lucide-react"
-import { useState } from "react"
+import { Bell, X, FileText, AlertCircle, Clock, Upload, Megaphone } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 
-interface Notification {
+const CATEGORY_CONFIG = {
+  report: {
+    label: "レポート作成完了",
+    description: "最新の生成済みレポート",
+    icon: FileText,
+    accent: "text-primary",
+  },
+  processing: {
+    label: "処理中",
+    description: "現在実行中の処理状況",
+    icon: Clock,
+    accent: "text-sky-600",
+  },
+  storage: {
+    label: "ストレージ容量警告",
+    description: "容量超過に関する注意",
+    icon: AlertCircle,
+    accent: "text-amber-500",
+  },
+  upload: {
+    label: "アップロード完了",
+    description: "ファイルアップロードに関する通知",
+    icon: Upload,
+    accent: "text-emerald-600",
+  },
+  announcement: {
+    label: "運営からのお知らせ",
+    description: "メンテナンスやリリース情報",
+    icon: Megaphone,
+    accent: "text-purple-600",
+  },
+} as const
+
+type NotificationCategory = keyof typeof CATEGORY_CONFIG
+
+interface NotificationItem {
   id: string
-  type: "success" | "warning" | "info"
   title: string
   message: string
   time: string
+  createdAt?: string | null
   link?: string
   read: boolean
+  category: NotificationCategory
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "success",
-    title: "レポート作成完了",
-    message: "「実験1のレポート」の生成が完了しました",
-    time: "2分前",
-    link: "/dashboard/reports",
-    read: false,
-  },
-  {
-    id: "2",
-    type: "info",
-    title: "処理中",
-    message: "「実験2のレポート」を処理中です(65%完了)",
-    time: "10分前",
-    link: "/dashboard/reports",
-    read: false,
-  },
-  {
-    id: "3",
-    type: "warning",
-    title: "ストレージ容量の警告",
-    message: "ストレージ使用量が80%に達しました",
-    time: "1時間前",
-    link: "/dashboard/settings",
-    read: true,
-  },
-  {
-    id: "4",
-    type: "success",
-    title: "アップロード完了",
-    message: "実験データのアップロードが完了しました",
-    time: "3時間前",
-    read: true,
-  },
-]
+type NotificationsResponse = {
+  notifications: NotificationItem[]
+}
 
 export function NotificationPanel() {
   const [isOpen, setIsOpen] = useState(false)
-  const [notifications, setNotifications] = useState(mockNotifications)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const unreadCount = notifications.filter((n) => !n.read).length
+
+  const categoryKeys = useMemo(
+    () => Object.keys(CATEGORY_CONFIG) as NotificationCategory[],
+    []
+  )
+
+  const notificationsByCategory = useMemo(() => {
+    const grouped = categoryKeys.reduce<Record<NotificationCategory, NotificationItem[]>>((acc, key) => {
+      acc[key] = []
+      return acc
+    }, {} as Record<NotificationCategory, NotificationItem[]>)
+
+    notifications.forEach((notification) => {
+      if (grouped[notification.category]) {
+        grouped[notification.category].push(notification)
+      }
+    })
+
+    return grouped
+  }, [notifications, categoryKeys])
+
+  const fetchNotifications = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await fetch("/api/notifications", { cache: "no-store" })
+      const data: NotificationsResponse | { error?: string } | null = await response.json().catch(() => null)
+      if (!response.ok) {
+        const message = data && "error" in data && data.error ? data.error : "通知の取得に失敗しました"
+        throw new Error(message)
+      }
+      setNotifications((data as NotificationsResponse)?.notifications ?? [])
+    } catch (err) {
+      console.error("[notification-panel] failed to load notifications", err)
+      setError("通知の取得に失敗しました")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchNotifications()
+  }, [fetchNotifications])
 
   const markAsRead = (id: string) => {
     setNotifications(notifications.map((n) => (n.id === id ? { ...n, read: true } : n)))
@@ -67,17 +114,9 @@ export function NotificationPanel() {
     setNotifications(notifications.map((n) => ({ ...n, read: true })))
   }
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "success":
-        return <CheckCircle className="h-5 w-5 text-primary" />
-      case "warning":
-        return <AlertCircle className="h-5 w-5 text-amber-500" />
-      case "info":
-        return <Clock className="h-5 w-5 text-secondary" />
-      default:
-        return <FileText className="h-5 w-5 text-muted-foreground" />
-    }
+  const getIcon = (category: NotificationCategory) => {
+    const Icon = CATEGORY_CONFIG[category].icon
+    return <Icon className={`h-5 w-5 ${CATEGORY_CONFIG[category].accent}`} />
   }
 
   return (
@@ -121,7 +160,7 @@ export function NotificationPanel() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="absolute right-0 mt-2 w-96 bg-white border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
+              className="absolute right-0 mt-2 w-96 bg-white border border-border rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[80vh]"
               style={{
                 boxShadow: "0 0 30px rgba(94, 234, 212, 0.15), 0 10px 40px rgba(0, 0, 0, 0.3)",
               }}
@@ -157,60 +196,121 @@ export function NotificationPanel() {
                 </div>
               )}
 
+              {/* Category Overview */}
+              <div className="px-4 py-3 border-b border-border bg-white">
+                <div className="grid grid-cols-1 gap-3">
+                  {categoryKeys.map((categoryKey) => {
+                    const config = CATEGORY_CONFIG[categoryKey]
+                    const items = notificationsByCategory[categoryKey]
+                    const latest = items[0]
+                    return (
+                      <div
+                        key={categoryKey}
+                        className="flex items-start gap-3 rounded-lg border border-border/70 px-3 py-2 bg-white/80"
+                      >
+                        <div className="mt-0.5">{getIcon(categoryKey)}</div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-foreground">{config.label}</p>
+                            <span className="text-xs text-muted-foreground">
+                              {items.length > 0 ? `${items.length}件` : "通知なし"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{config.description}</p>
+                          {latest && (
+                            <p className="text-xs text-foreground mt-1 line-clamp-1">
+                              ・{latest.title}（{latest.time}）
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
               {/* Notification List */}
-              <div className="max-h-96 overflow-y-auto bg-white">
-                {notifications.length === 0 ? (
+              <div className="flex-1 overflow-y-auto bg-white">
+                {isLoading ? (
+                  <div className="flex flex-col gap-2 p-4">
+                    {Array.from({ length: 3 }).map((_, idx) => (
+                      <div key={idx} className="animate-pulse space-y-2 rounded-lg border border-border/60 p-4">
+                        <div className="h-3 w-1/3 bg-muted rounded" />
+                        <div className="h-3 w-2/3 bg-muted rounded" />
+                        <div className="h-3 w-1/4 bg-muted rounded" />
+                      </div>
+                    ))}
+                  </div>
+                ) : error ? (
+                  <div className="p-6 text-center text-sm text-red-500">{error}</div>
+                ) : notifications.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">
                     <Bell className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>通知はありません</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-border">
-                    {notifications.map((notification) => (
-                      <motion.div
-                        key={notification.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className={`p-4 hover:bg-accent transition-colors cursor-pointer ${
-                          !notification.read ? "bg-primary/5" : ""
-                        }`}
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        {notification.link ? (
-                          <Link href={notification.link} onClick={() => setIsOpen(false)}>
-                            <div className="flex gap-3">
-                              <div className="flex-shrink-0 mt-1">{getIcon(notification.type)}</div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                  <h4 className="font-semibold text-sm text-foreground">{notification.title}</h4>
-                                  {!notification.read && (
-                                    <span className="flex-shrink-0 h-2 w-2 bg-primary rounded-full mt-1" />
-                                  )}
-                                </div>
-                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                  {notification.message}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-2">{notification.time}</p>
-                              </div>
-                            </div>
-                          </Link>
-                        ) : (
-                          <div className="flex gap-3">
-                            <div className="flex-shrink-0 mt-1">{getIcon(notification.type)}</div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className="font-semibold text-sm text-foreground">{notification.title}</h4>
-                                {!notification.read && (
-                                  <span className="flex-shrink-0 h-2 w-2 bg-primary rounded-full mt-1" />
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{notification.message}</p>
-                              <p className="text-xs text-muted-foreground mt-2">{notification.time}</p>
-                            </div>
+                    {categoryKeys.map((categoryKey) => {
+                      const config = CATEGORY_CONFIG[categoryKey]
+                      const items = notificationsByCategory[categoryKey]
+                      if (!items || items.length === 0) {
+                        return null
+                      }
+                      return (
+                        <div key={categoryKey}>
+                          <div className="px-4 py-2 bg-muted/30 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                            {config.label}
                           </div>
-                        )}
-                      </motion.div>
-                    ))}
+                          {items.map((notification) => (
+                            <motion.div
+                              key={notification.id}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className={`p-4 hover:bg-accent transition-colors cursor-pointer ${
+                                !notification.read ? "bg-primary/5" : ""
+                              }`}
+                              onClick={() => markAsRead(notification.id)}
+                            >
+                              {notification.link ? (
+                                <Link href={notification.link} onClick={() => setIsOpen(false)}>
+                                  <div className="flex gap-3">
+                                    <div className="flex-shrink-0 mt-1">{getIcon(notification.category)}</div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <h4 className="font-semibold text-sm text-foreground">{notification.title}</h4>
+                                        {!notification.read && (
+                                          <span className="flex-shrink-0 h-2 w-2 bg-primary rounded-full mt-1" />
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                        {notification.message}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-2">{notification.time}</p>
+                                    </div>
+                                  </div>
+                                </Link>
+                              ) : (
+                                <div className="flex gap-3">
+                                  <div className="flex-shrink-0 mt-1">{getIcon(notification.category)}</div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <h4 className="font-semibold text-sm text-foreground">{notification.title}</h4>
+                                      {!notification.read && (
+                                        <span className="flex-shrink-0 h-2 w-2 bg-primary rounded-full mt-1" />
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                      {notification.message}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-2">{notification.time}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </motion.div>
+                          ))}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

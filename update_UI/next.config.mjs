@@ -12,7 +12,7 @@ const nextConfig = {
       const base = target.replace(/\/$/, '')
       return [
         {
-          source: '/api/:path*',
+          source: '/api/:path((?!stripe).*)',
           destination: `${base}/api/:path*`,
         },
       ]

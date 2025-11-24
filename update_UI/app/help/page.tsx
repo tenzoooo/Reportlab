@@ -24,7 +24,7 @@ const faqs = [
     questions: [
       {
         q: "レポートの作成方法は?",
-        a: "ダッシュボードから「新規作成」ボタンをクリックし、実験書PDFをアップロードしてください。AIが自動的に内容を解析し、レポートを生成します。",
+        a: "PDFをアップロードするだけでレポートの基盤を作成します。",
       },
       {
         q: "対応しているファイル形式は?",
@@ -40,12 +40,12 @@ const faqs = [
     category: "プランと料金",
     questions: [
       {
-        q: "Freeプランの制限は?",
-        a: "Freeプランでは月5件までレポートを作成でき、ストレージは100MBまで利用できます。",
+        q: "各プランのクレジット数は?",
+        a: "Credit Onlyプラン、Premiumプランともに、毎月400クレジットが付与されます。",
       },
       {
-        q: "Premiumプランの特典は?",
-        a: "Premiumプランでは無制限のレポート作成、1GBのストレージ、優先サポートをご利用いただけます。月額980円です。",
+        q: "PremiumプランとCredit Onlyプランの違いは?",
+        a: "Premiumプランでは、Credit Onlyプランの内容に加え、「画像の挿入」や「Excel表の貼り付け」などの追加機能が利用可能になります。（Credit Onlyプランではこれらの機能は利用できません）",
       },
       {
         q: "プランの変更方法は?",
@@ -174,7 +174,7 @@ export default function HelpPage() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16"
+          className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16"
         >
           <motion.div variants={itemVariants}>
             <Link href="/help/email">
@@ -186,15 +186,7 @@ export default function HelpPage() {
             </Link>
           </motion.div>
 
-          <motion.div variants={itemVariants}>
-            <Link href="/help/chat">
-              <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-primary hover:shadow-lg transition-all duration-300 cursor-pointer group">
-                <MessageCircle className="h-10 w-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">チャットサポート</h3>
-                <p className="text-gray-600">リアルタイムでサポート</p>
-              </div>
-            </Link>
-          </motion.div>
+
 
           <motion.div variants={itemVariants}>
             <Link href="/help/faq">

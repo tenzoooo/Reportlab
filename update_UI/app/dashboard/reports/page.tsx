@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { FileText, Plus, Search, Download, Trash2, Eye, MoreVertical, Play } from "lucide-react"
+import { FileText, Plus, Search, Download, Trash2, Eye, MoreVertical, Play, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>("")
   const [mounted, setMounted] = useState(false)
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null)
   const [reports, setReports] = useState<{
     id: string
     title: string
@@ -133,6 +134,43 @@ export default function ReportsPage() {
       fetchReports()
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const handleRegenerate = async (id: string) => {
+    try {
+      setRegeneratingId(id)
+      const supabase = createClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) {
+        window.location.href = "/login"
+        return
+      }
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
+      const endpoint = `${baseUrl}/api/reports/regenerate/from-cache`
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ reportId: id }),
+      })
+      if (!res.ok) {
+        const msg = await res.text()
+        throw new Error(msg || `再生成に失敗しました (${res.status})`)
+      }
+      setReports((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "processing" as const } : r))
+      )
+      alert("レポートの再生成を開始しました。処理が完了するとステータスが更新されます。")
+      fetchReports()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+    } finally {
+      setRegeneratingId(null)
     }
   }
 
@@ -279,6 +317,20 @@ export default function ReportsPage() {
                                 <Play className="h-4 w-4" />
                                 下書きを再開
                               </Link>
+                            </DropdownMenuItem>
+                          )}
+                          {report.status !== "draft" && (
+                            <DropdownMenuItem
+                              className="flex items-center gap-2"
+                              disabled={regeneratingId === report.id}
+                              onClick={() => handleRegenerate(report.id)}
+                            >
+                              {regeneratingId === report.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RotateCcw className="h-4 w-4" />
+                              )}
+                              再生成
                             </DropdownMenuItem>
                           )}
                           {report.status === "completed" && report.file_url && (

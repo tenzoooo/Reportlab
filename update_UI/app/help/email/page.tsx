@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 export default function EmailSupportPage() {
   const [formData, setFormData] = useState({
@@ -19,11 +21,34 @@ export default function EmailSupportPage() {
     message: "",
   })
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // ここで実際のメール送信処理を行う
-    setIsSubmitted(true)
+    setIsSubmitting(true)
+
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      const { error } = await supabase.from("support_tickets").insert({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
+        user_id: user?.id || null,
+      })
+
+      if (error) throw error
+
+      setIsSubmitted(true)
+      toast.success("お問い合わせを送信しました")
+    } catch (error) {
+      console.error("Error submitting ticket:", error)
+      toast.error("送信に失敗しました。時間をおいて再度お試しください。")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -107,9 +132,9 @@ export default function EmailSupportPage() {
                   />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full">
+                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
                   <Send className="h-5 w-5 mr-2" />
-                  送信する
+                  {isSubmitting ? "送信中..." : "送信する"}
                 </Button>
               </form>
             </div>

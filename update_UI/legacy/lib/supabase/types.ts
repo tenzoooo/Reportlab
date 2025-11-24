@@ -80,6 +80,88 @@ export interface Database {
           }
         ]
       }
+      feedback: {
+        Row: {
+          created_at: string | null
+          email: string
+          feedback: string
+          id: string
+          name: string
+          rating: number | null
+          status: '新機能改善' | '不具合' | 'その他'
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          feedback: string
+          id?: string
+          name: string
+          rating?: number | null
+          status: '新機能改善' | '不具合' | 'その他'
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          feedback?: string
+          id?: string
+          name?: string
+          rating?: number | null
+          status?: '新機能改善' | '不具合' | 'その他'
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'feedback_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      notifications: {
+        Row: {
+          category: 'report' | 'processing' | 'storage' | 'upload' | 'announcement'
+          created_at: string | null
+          id: string
+          link: string | null
+          message: string
+          read: boolean | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category: 'report' | 'processing' | 'storage' | 'upload' | 'announcement'
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          message: string
+          read?: boolean | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: 'report' | 'processing' | 'storage' | 'upload' | 'announcement'
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'notifications_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       reports: {
         Row: {
           created_at: string | null

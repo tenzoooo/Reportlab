@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer"
-import { encoding_for_model as encodingForModel, get_encoding as getEncoding } from "@dqbd/tiktoken"
+import { encodingForModel, getEncoding } from "js-tiktoken"
 
 type SupportedModel = Parameters<typeof encodingForModel>[0]
 
@@ -41,12 +41,8 @@ export const countTokens = (text: string, model?: string): { model: string; toke
     encoding = getEncoding("cl100k_base")
   }
 
-  try {
-    const tokens = encoding.encode(text || "").length
-    return { model: targetModel, tokens }
-  } finally {
-    encoding.free()
-  }
+  const tokens = encoding.encode(text || "").length
+  return { model: targetModel, tokens }
 }
 
 /**

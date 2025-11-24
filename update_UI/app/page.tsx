@@ -454,7 +454,7 @@ export default function LandingPage() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
           >
             {[
               {
@@ -462,23 +462,35 @@ export default function LandingPage() {
                 price: "¥0",
                 features: ["月5件までのレポート作成", "100MBのストレージ", "基本的なAI分析機能"],
                 highlighted: false,
+                buttonText: "無料で始める",
+                href: "/register"
+              },
+              {
+                name: "Credit Only",
+                price: "¥500",
+                features: ["毎月400クレジット付与", "レポート作成 約40件分", "ストレージ 500MB", "基本機能はFreeと同じ"],
+                highlighted: false,
+                buttonText: "クレジット定期購入",
+                href: "/register?plan=credit"
               },
               {
                 name: "Premium",
                 price: "¥980",
-                features: ["無制限のレポート作成", "1GBのストレージ", "高度なAI分析機能", "優先サポート"],
+                features: ["毎月400クレジット付与", "高度なAI分析機能", "優先サポート", "1GBのストレージ", "カスタムテンプレート"],
                 highlighted: true,
+                buttonText: "Premiumを始める",
+                href: "/register?plan=premium"
               },
             ].map((plan, i) => (
               <motion.div
                 key={i}
                 variants={fadeInUp}
                 whileHover={{ scale: 1.05, y: -10 }}
-                className={`card ${plan.highlighted ? "border-2 border-secondary relative mt-8" : ""}`}
+                className={`card ${plan.highlighted ? "border-2 border-secondary relative mt-8 md:mt-0" : ""}`}
               >
                 {plan.highlighted && (
                   <motion.div
-                    className="absolute -top-5 left-1/2 -translate-x-1/2"
+                    className="absolute -top-5 left-1/2 -translate-x-1/2 w-full text-center"
                     animate={{
                       y: [0, -5, 0],
                       scale: [1, 1.1, 1],
@@ -490,19 +502,19 @@ export default function LandingPage() {
                     }}
                   >
                     <span
-                      className="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-6 py-2 rounded-full text-base font-bold shadow-lg"
+                      className="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-6 py-2 rounded-full text-base font-bold shadow-lg inline-block"
                       style={{ boxShadow: "0 0 20px rgba(236, 72, 153, 0.6), 0 0 40px rgba(251, 146, 60, 0.4)" }}
                     >
                       おすすめ
                     </span>
                   </motion.div>
                 )}
-                <div className="space-y-6">
+                <div className="space-y-6 h-full flex flex-col">
                   <div>
                     <h3 className="text-2xl font-bold text-foreground mb-2">{plan.name}</h3>
                     <div className="flex items-baseline gap-2">
                       <motion.span
-                        className={`text-5xl font-bold ${plan.highlighted ? "text-secondary" : "text-foreground"}`}
+                        className={`text-4xl font-bold ${plan.highlighted ? "text-secondary" : "text-foreground"}`}
                         initial={{ opacity: 0, scale: 0 }}
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true }}
@@ -513,7 +525,7 @@ export default function LandingPage() {
                       <span className="text-muted-foreground">/月</span>
                     </div>
                   </div>
-                  <ul className="space-y-3">
+                  <ul className="space-y-3 flex-grow">
                     {plan.features.map((feature, j) => (
                       <motion.li
                         key={j}
@@ -524,16 +536,16 @@ export default function LandingPage() {
                         className="flex items-start gap-3"
                       >
                         <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
-                        <span className="text-muted-foreground">{feature}</span>
+                        <span className="text-muted-foreground text-sm">{feature}</span>
                       </motion.li>
                     ))}
                   </ul>
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                     <Link
-                      href="/register"
+                      href={plan.href}
                       className={`${plan.highlighted ? "primary-button bg-secondary hover:bg-secondary/90" : "secondary-button"} w-full block text-center`}
                     >
-                      {plan.name === "Free" ? "無料で始める" : "Premiumを始める"}
+                      {plan.buttonText}
                     </Link>
                   </motion.div>
                 </div>

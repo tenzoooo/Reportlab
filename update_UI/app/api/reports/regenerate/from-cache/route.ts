@@ -210,6 +210,25 @@ const extractResultJson = (response: any): unknown => {
   return undefined
 }
 
+const ENABLE_DIFY_DEBUG_LOG = process.env.ENABLE_DIFY_DEBUG_LOG === "true"
+
+const toPreviewString = (value: unknown, limit = 4000) => {
+  try {
+    const raw = typeof value === "string" ? value : JSON.stringify(value)
+    if (raw.length > limit) {
+      return `${raw.slice(0, limit)}…(truncated)`
+    }
+    return raw
+  } catch {
+    return String(value)
+  }
+}
+
+const logDifyDebug = (label: string, payload: unknown) => {
+  if (!ENABLE_DIFY_DEBUG_LOG) return
+  logInfo(label, { preview: toPreviewString(payload) })
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const {
@@ -281,20 +300,101 @@ export async function POST(req: NextRequest) {
     const figureImages = await downloadFigureImages(admin, experimentFiles ?? [])
     const tableRows = await downloadTableRows(admin, experimentFiles ?? [])
 
-    const { data: latestAnalysis, error: analysisErr } = await supabase
-      .from("analysis_results")
-      .select("dify_response")
-      .eq("report_id", reportId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (analysisErr || !latestAnalysis?.dify_response) {
+    const firstDoc = docs[0]
+    const objectPath = sanitizeStoragePath(firstDoc.file_url || "")
+    if (!objectPath) {
+      logError("reports/regenerate-cache:missing-object-path", { fileUrl: firstDoc.file_url })
       await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
-      return NextResponse.json({ error: "No cached analysis result found" }, { status: 400 })
+      return NextResponse.json({ error: "Document path is missing" }, { status: 400 })
+    }
+    const makeDocumentUrl = async () => {
+      const defaultName = firstDoc.file_name || "document.pdf"
+      if (!objectPath) {
+        return { url: null as string | null, error: "Document path is missing" }
+      }
+      try {
+        const { data: signed, error: signErr } = await admin.storage
+          .from(BUCKET_NAME)
+          .createSignedUrl(objectPath, 60 * 60, { download: defaultName })
+
+        let documentUrl = signed?.signedUrl ?? null
+        const looksSigned = Boolean(documentUrl && (documentUrl.includes("/sign/") || documentUrl.includes("token=")))
+
+        if ((!looksSigned || !documentUrl) && !signErr) {
+          const { data: publicData } = admin.storage.from(BUCKET_NAME).getPublicUrl(objectPath)
+          if (publicData?.publicUrl) {
+            documentUrl = publicData.publicUrl
+          }
+        }
+
+        if (signErr || !documentUrl) {
+          return { url: null, error: signErr?.message || "Failed to create signed/public URL" }
+        }
+        return { url: documentUrl, error: null }
+      } catch (err) {
+        return { url: null, error: err instanceof Error ? err.message : String(err) }
+      }
     }
 
-    let difyOutput: unknown = extractResultJson(latestAnalysis.dify_response)
+    const { url: documentUrl, error: docUrlError } = await makeDocumentUrl()
+    if (!documentUrl) {
+      logError("reports/regenerate-cache:document-url-failed", { objectPath, error: docUrlError })
+      await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
+      return NextResponse.json({ error: docUrlError || "Failed to prepare document URL" }, { status: 400 })
+    }
+
+    const difyBase = process.env.DIFY_API_URL?.replace(/\/$/, "")
+    const difyKey = process.env.DIFY_API_KEY
+    if (!difyBase || !difyKey) {
+      logInfo("reports/regenerate-cache:missing-dify-config")
+      await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
+      return NextResponse.json({ error: "Missing Dify configuration" }, { status: 500 })
+    }
+
+    const payload = {
+      inputs: {
+        pdf_manual: {
+          type: "document",
+          transfer_method: "remote_url",
+          name: firstDoc.file_name || "document.pdf",
+          url: documentUrl,
+        },
+      },
+      user: user.id,
+    }
+
+    logInfo("reports/regenerate-cache:call-dify", { url: `${difyBase}/v1/workflows/run`, reportId })
+    const resp = await fetch(`${difyBase}/v1/workflows/run`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${difyKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const difyResponse = await resp.json().catch(() => ({}))
+    logDifyDebug("reports/regenerate-cache:dify-response", difyResponse)
+
+    if (!resp.ok) {
+      const message =
+        typeof difyResponse === "object" ? JSON.stringify(difyResponse) : String(difyResponse ?? "Unknown error")
+      throw new Error(message)
+    }
+
+    const { error: insertErr } = await supabase
+      .from("analysis_results")
+      .insert([{ report_id: reportId, dify_response: difyResponse }])
+      .select("id")
+      .single()
+
+    if (insertErr) {
+      logError("reports/regenerate-cache:insert-analysis-failed", insertErr)
+      await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
+      return NextResponse.json({ error: insertErr.message }, { status: 500 })
+    }
+
+    let difyOutput: unknown = extractResultJson(difyResponse)
     if (typeof difyOutput === "string") {
       try {
         difyOutput = JSON.parse(difyOutput)
@@ -310,10 +410,9 @@ export async function POST(req: NextRequest) {
       buildDocTemplateData(difyWithTables)
     } catch (normalizeError) {
       logError("reports/regenerate-cache:template-data-failed", normalizeError)
-      throw new Error("Failed to normalize cached result_json for DOCX template")
+      throw new Error("Failed to normalize Dify result_json for DOCX template")
     }
 
-    const firstDoc = docs[0]
     const buffer = await generateReport({
       title: firstDoc.file_name || "report",
       difyOutput: difyWithTables,
@@ -341,7 +440,7 @@ export async function POST(req: NextRequest) {
     await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
     return NextResponse.json(
       {
-        error: "Failed to regenerate from cached JSON",
+        error: "Failed to regenerate report",
         detail: error instanceof Error ? error.message : String(error),
       },
       { status: 500 },

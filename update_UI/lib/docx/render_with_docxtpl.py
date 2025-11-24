@@ -87,6 +87,8 @@ def inject_inline_images(doc: DocxTemplate, context: dict) -> dict:
   return context
 
 
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+
 def build_table_subdoc(doc: DocxTemplate, rows) -> Optional[Any]:
   """
   Build a subdocument containing a simple grid table from a 2D rows array.
@@ -115,7 +117,15 @@ def build_table_subdoc(doc: DocxTemplate, rows) -> Optional[Any]:
       if c_index < len(row):
         cell_value = row[c_index]
         value = str(cell_value) if cell_value is not None else ""
-      table.cell(r_index, c_index).text = value
+      cell = table.cell(r_index, c_index)
+      cell.text = value
+      # Center align
+      if cell.paragraphs:
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+      
+      # 数値が入らないセルは左上から右下への斜線セルとして表現する
+      if _should_draw_diagonal_cell(value, r_index, c_index):
+        _apply_diagonal_cell_border(cell)
   return sub
 
 
@@ -166,38 +176,53 @@ def build_jinja_env() -> Environment:
       return rt
     parts = str(value).split("\n")
     for idx, part in enumerate(parts):
-      rt.add(part)
+      rt.add(part, font='MS Mincho')
       if idx != len(parts) - 1:
         rt.add("\n")
     return rt
 
-  def consideration_units(units) -> str:
+  def consideration_units(units):
+    rt = RichText()
     if not isinstance(units, list):
-      return ""
-    lines = []
+      return rt
+    
+    first = True
     for unit in units:
       if not isinstance(unit, dict):
         continue
       idx = unit.get("index") or ""
       discussion = unit.get("discussion_active") or ""
       answer = unit.get("answer") or ""
+      
       body = f"（{idx}）{discussion}".strip()
       if answer:
         body = f"{body}\n{answer}"
+      
       if body:
-        lines.append(body)
-    return "\n".join(lines)
+        if not first:
+          rt.add("\n")
+        rt.add(body, font='MS Mincho')
+        first = False
+    return rt
 
   env.filters["nl2br"] = nl2br
   env.filters["consideration_units"] = consideration_units
-  def reference_lines(value) -> str:
+  
+  def reference_lines(value):
+    rt = RichText()
     if isinstance(value, dict):
       refs_formatted = value.get("reference_list_formatted")
       if isinstance(refs_formatted, list) and len(refs_formatted) > 0:
-        return "\n".join(str(item) for item in refs_formatted if item is not None)
+        for idx, item in enumerate(refs_formatted):
+            if item is not None:
+                if idx > 0:
+                    rt.add("\n")
+                rt.add(str(item), font='MS Mincho')
+        return rt
+        
       refs = value.get("references")
       if isinstance(refs, list) and len(refs) > 0:
-        lines = []
+        first = True
         for ref in refs:
           if not isinstance(ref, dict):
             continue
@@ -206,12 +231,40 @@ def build_jinja_env() -> Environment:
           year = ref.get("year") or ""
           line = f"[{_id}] {title} {year}".strip()
           if line:
-            lines.append(line)
-        if lines:
-          return "\n".join(lines)
-    return "（参考文献の記載なし）"
+            if not first:
+                rt.add("\n")
+            rt.add(line, font='MS Mincho')
+            first = False
+        if not first: # If we added at least one line
+          return rt
+          
+    rt.add("（参考文献の記載なし）", font='MS Mincho')
+    return rt
   env.filters["reference_lines"] = reference_lines
   return env
+
+
+def _should_draw_diagonal_cell(value: str, row_index: int, col_index: int) -> bool:
+  """
+  Decide whether to draw a diagonal (top-left to bottom-right) line in the cell.
+
+  Rule:
+  - Only body cells (skip header row and header column: index 0)
+  - Cell text is empty or a simple placeholder such as "-" or "ー"
+  """
+  # Skip header row / header column
+  if row_index == 0 or col_index == 0:
+    return False
+
+  text = (value or "").strip()
+  if not text:
+    return True
+
+  # Treat common "no data" placeholders as empty
+  if text in {"-", "ー", "―"}:
+    return True
+
+  return False
 
 
 def _apply_table_borders(table) -> None:
@@ -240,6 +293,65 @@ def _apply_table_borders(table) -> None:
     element.set(qn("w:color"), "000000")
 
 
+def _apply_diagonal_cell_border(cell) -> None:
+  """
+  Apply a diagonal border from top-left to bottom-right for a single cell.
+  """
+  tc = cell._tc
+  tc_pr = getattr(tc, "tcPr", None)
+  if tc_pr is None:
+    tc_pr = OxmlElement("w:tcPr")
+    tc.append(tc_pr)
+
+  borders = tc_pr.find(qn("w:tcBorders"))
+  if borders is None:
+    borders = OxmlElement("w:tcBorders")
+    tc_pr.append(borders)
+
+  diag = borders.find(qn("w:tl2br"))
+  if diag is None:
+    diag = OxmlElement("w:tl2br")
+    borders.append(diag)
+
+  diag.set(qn("w:val"), "single")
+  diag.set(qn("w:sz"), "8")  # 0.5pt
+  diag.set(qn("w:space"), "0")
+  diag.set(qn("w:color"), "000000")
+
+
+def render_report(payload: dict) -> bytes:
+  """
+  Render the report and return the DOCX bytes.
+  Accepts a payload dictionary with:
+  - template_path: str (optional, path to template file)
+  - template_base64: str (optional, base64 encoded template)
+  - context: dict (data to render)
+  """
+  template_path = payload.get("template_path", "")
+  template_base64 = payload.get("template_base64", "")
+  context = payload.get("context") or {}
+
+  if template_base64:
+    template_file = BytesIO(base64.b64decode(template_base64))
+  elif template_path:
+    resolved_path = Path(template_path).expanduser()
+    if not resolved_path.exists():
+      raise FileNotFoundError(f"Template not found: {resolved_path}")
+    template_file = resolved_path
+  else:
+    raise ValueError("Either template_path or template_base64 must be provided")
+
+  doc = DocxTemplate(template_file)
+  context_with_images = inject_inline_images(doc, context)
+  context_with_tables = inject_tables(doc, context_with_images)
+  env = build_jinja_env()
+  doc.render(context_with_tables, jinja_env=env)
+  
+  output_io = BytesIO()
+  doc.save(output_io)
+  return output_io.getvalue()
+
+
 def main() -> int:
   try:
     payload = json.load(sys.stdin)
@@ -247,23 +359,21 @@ def main() -> int:
     sys.stderr.write(f"Failed to load JSON payload: {exc}\n")
     return 1
 
-  template_path = Path(payload.get("template_path", "")).expanduser()
   output_path = Path(payload.get("output_path", "")).expanduser()
-  context = payload.get("context") or {}
-
-  if not template_path.exists():
-    sys.stderr.write(f"Template not found: {template_path}\n")
-    return 2
-
-  output_path.parent.mkdir(parents=True, exist_ok=True)
-
+  
   try:
-    doc = DocxTemplate(template_path)
-    context_with_images = inject_inline_images(doc, context)
-    context_with_tables = inject_tables(doc, context_with_images)
-    env = build_jinja_env()
-    doc.render(context_with_tables, jinja_env=env)
-    doc.save(output_path)
+    docx_bytes = render_report(payload)
+    
+    if output_path:
+      output_path.parent.mkdir(parents=True, exist_ok=True)
+      with open(output_path, "wb") as f:
+        f.write(docx_bytes)
+    else:
+      # If no output path, maybe stdout? But usually we want a file.
+      # For now, just error if no output path in CLI mode.
+      sys.stderr.write("output_path is required for CLI usage\n")
+      return 2
+
   except Exception as exc:  # pragma: no cover
     sys.stderr.write(f"Failed to render DOCX with docxtpl: {exc}\n")
     return 3

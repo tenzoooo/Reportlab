@@ -120,8 +120,9 @@ export default function ReportDetailPage() {
     setMounted(true)
   }, [])
 
-  const handleRegenerate = async () => {
+  const handleRegenerateAI = async () => {
     try {
+      if (!confirm("AIで再生成しますか？\n（クレジットを消費する可能性があります）")) return
       setIsRegenerating(true)
       setFileUrl(null)
       setProgress(0)
@@ -135,7 +136,8 @@ export default function ReportDetailPage() {
       }
 
       const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
-      const endpoint = `${baseUrl}/api/reports/regenerate/from-cache`
+      // Use the standard generation endpoint for full AI regeneration
+      const endpoint = `${baseUrl}/api/reports/generate`
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -150,7 +152,45 @@ export default function ReportDetailPage() {
       }
       setStatus("processing")
       setProgress(0)
-      alert("レポートの再生成を開始しました。処理が完了するとステータスが更新されます。")
+      alert("AIによる再生成を開始しました。")
+    } catch (regErr) {
+      alert(regErr instanceof Error ? regErr.message : String(regErr))
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
+  const handleRegenerateJSON = async () => {
+    try {
+      setIsRegenerating(true)
+      setFileUrl(null)
+      setProgress(0)
+      const supabase = createClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) {
+        window.location.href = "/login"
+        return
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
+      const endpoint = `${baseUrl}/api/reports/regenerate/from-json`
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ reportId }),
+      })
+      if (!res.ok) {
+        const msg = await res.text()
+        throw new Error(msg || `再生成に失敗しました (${res.status})`)
+      }
+      setStatus("processing")
+      setProgress(0)
+      alert("JSONからの再生成を開始しました。")
     } catch (regErr) {
       alert(regErr instanceof Error ? regErr.message : String(regErr))
     } finally {
@@ -263,18 +303,30 @@ export default function ReportDetailPage() {
         <Card className="max-w-md mx-auto">
           <CardContent className="p-4 space-y-3">
             <p className="text-sm text-muted-foreground">
-              同じアップロード済みファイル・JSONを使ってレポートを再生成します。テンプレート更新や生成失敗時のリトライに使えます。
+              Supabaseのアップロード済みファイルを再取得し、DifyでJSONを再生成してテンプレートに差し込みます。テンプレート更新や生成失敗時のリトライに使えます。
             </p>
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full gap-2"
-              onClick={handleRegenerate}
-              disabled={isRegenerating}
-            >
-              {isRegenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-              再生成する
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full gap-2"
+                onClick={handleRegenerateJSON}
+                disabled={isRegenerating}
+              >
+                {isRegenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                JSONから再生成
+              </Button>
+              <Button
+                variant="default"
+                size="lg"
+                className="w-full gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0"
+                onClick={handleRegenerateAI}
+                disabled={isRegenerating}
+              >
+                {isRegenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                AIで再生成
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

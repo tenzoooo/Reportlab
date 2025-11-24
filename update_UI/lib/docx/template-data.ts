@@ -111,30 +111,30 @@ const normalizeExperiments = (value: unknown) => {
 
         const tables = Array.isArray(item.tables)
           ? (item.tables
-              .map((entry) =>
-                isRecord(entry)
-                  ? {
-                      label: toStringSafe(entry.label),
-                      caption: toStringSafe(entry.caption),
-                      rows: Array.isArray(entry.rows)
-                        ? (entry.rows
-                            .map((r) => (Array.isArray(r) ? r.map((cell) => toStringSafe(cell)) : null))
-                            .filter(Boolean) as string[][])
-                        : undefined,
-                    }
-                  : null
-              )
-              .filter(Boolean) as DocTemplateTable[])
+            .map((entry) =>
+              isRecord(entry)
+                ? {
+                  label: toStringSafe(entry.label),
+                  caption: toStringSafe(entry.caption),
+                  rows: Array.isArray(entry.rows)
+                    ? (entry.rows
+                      .map((r) => (Array.isArray(r) ? r.map((cell) => toStringSafe(cell)) : null))
+                      .filter(Boolean) as string[][])
+                    : undefined,
+                }
+                : null
+            )
+            .filter(Boolean) as DocTemplateTable[])
           : []
 
         const figures = Array.isArray(item.figures)
           ? (item.figures
-              .map((entry) =>
-                isRecord(entry)
-                  ? { label: toStringSafe(entry.label), caption: toStringSafe(entry.caption) }
-                  : null
-              )
-              .filter(Boolean) as DocTemplateFigure[])
+            .map((entry) =>
+              isRecord(entry)
+                ? { label: toStringSafe(entry.label), caption: toStringSafe(entry.caption) }
+                : null
+            )
+            .filter(Boolean) as DocTemplateFigure[])
           : []
 
         return {
@@ -168,12 +168,17 @@ const normalizeConsideration = (value: unknown): DocTemplateConsideration => {
       const discussionActive = toStringSafe(unit.discussion_active)
       if (!index && !discussionActive) return null
       return {
-        index: removeLonelyNumberLines(index),
+        index: index, // Don't remove lonely numbers from index
         discussion_active: removeLonelyNumberLines(discussionActive),
         answer: toNullableString(unit.answer) ? removeLonelyNumberLines(toNullableString(unit.answer) as string) : undefined,
       }
     })
     .filter(Boolean) as DocTemplateConsiderationUnit[]
+
+  console.log("[TEMPLATE_DATA] Normalized consideration units count:", units.length)
+  if (units.length > 0) {
+    console.log("[TEMPLATE_DATA] First unit sample:", JSON.stringify(units[0]))
+  }
 
   const referenceListFormatted = Array.isArray(value.reference_list_formatted)
     ? value.reference_list_formatted.map(toStringSafe).filter(Boolean)
@@ -229,7 +234,16 @@ export const buildDocTemplateData = (difyOutput: unknown): DocTemplateData => {
   const raw = isRecord(difyOutput) ? difyOutput : {}
 
   const experimentValue = raw["experiment"]
-  const experimentsValue = Array.isArray(raw["experiments"]) ? (raw["experiments"] as unknown[]) : undefined
+  let experimentsValue = Array.isArray(raw["experiments"]) ? (raw["experiments"] as unknown[]) : undefined
+
+  // Fallback: check if experiments are nested inside consideration
+  if (!experimentsValue && !experimentValue && isRecord(raw["consideration"])) {
+    const nestedExperiments = (raw["consideration"] as Record<string, unknown>)["experiments"]
+    if (Array.isArray(nestedExperiments)) {
+      experimentsValue = nestedExperiments as unknown[]
+    }
+  }
+
   const experimentSource = isRecord(experimentValue)
     ? experimentValue
     : experimentsValue
@@ -237,6 +251,12 @@ export const buildDocTemplateData = (difyOutput: unknown): DocTemplateData => {
       : {}
 
   let considerationSource: unknown = raw["consideration"]
+
+  // Fallback: check if consideration fields are at the root
+  if (!considerationSource && Array.isArray(raw["units"])) {
+    considerationSource = raw
+  }
+
   if (!isRecord(considerationSource) && experimentsValue) {
     const candidate = experimentsValue.find(
       (item) => isRecord(item) && Array.isArray((item as Record<string, unknown>)["units"])

@@ -55,9 +55,9 @@ const applyFigureImages = (
       hasChanges = true
       return asset
         ? {
-            figure_image: asset,
-            ...figure,
-          }
+          figure_image: asset,
+          ...figure,
+        }
         : figure
     })
 
@@ -84,7 +84,12 @@ const applyFigureImages = (
 const toBase64Figures = (data: DocTemplateData): SerializableDocTemplateData => {
   const experiments = data.experiments.map<SerializableExperiment>((experiment) => {
     const figures = experiment.figures.map<SerializableFigure>((figure) => {
-      if (!figure.figure_image) return figure
+      if (!figure.figure_image) {
+        return {
+          ...figure,
+          figure_image: undefined,
+        }
+      }
       const buffer = figure.figure_image.buffer
       return {
         ...figure,
@@ -107,6 +112,46 @@ const toBase64Figures = (data: DocTemplateData): SerializableDocTemplateData => 
 }
 
 const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<Buffer> => {
+  // Check if running on Vercel
+  if (process.env.VERCEL) {
+    console.log("Running on Vercel, invoking Python Serverless Function...")
+
+    // Read template file and convert to base64
+    const templateBuffer = await readFile(TEMPLATE_PATH)
+    const templateBase64 = templateBuffer.toString("base64")
+
+    const payload = {
+      template_base64: templateBase64,
+      context,
+    }
+
+    // Determine API URL
+    // On Vercel, we can usually use a relative URL if calling from the frontend, 
+    // but here we are likely server-side. 
+    // VERCEL_URL is provided by Vercel (without protocol).
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"
+    const apiUrl = `${baseUrl}/api/generate_docx`
+
+    console.log(`Sending request to ${apiUrl}`)
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Python renderer API failed: ${response.status} ${response.statusText} - ${errorText}`)
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    return Buffer.from(arrayBuffer)
+  }
+
+  // Local execution via child_process
   const workdir = await mkdtemp(path.join(tmpdir(), "docxtpl-"))
   const payload = {
     template_path: TEMPLATE_PATH,
