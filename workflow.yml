@@ -1,0 +1,1365 @@
+app:
+  description: ''
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  mode: workflow
+  name: 実験結果作成
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/openai:0.2.6@e2665624a156f52160927bceac9e169bd7e5ae6b936ae82575e14c90af390e6e
+kind: app
+version: 0.3.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .GIF
+      - .WEBP
+      - .SVG
+      allowed_file_types:
+      - image
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        image_file_size_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInLoop: false
+        sourceType: document-extractor
+        targetType: llm
+      id: 1757759088515-source-1757898491399-target
+      selected: false
+      source: '1757759088515'
+      sourceHandle: source
+      target: '1757898491399'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: 1757898491399-source-1757988836734-target
+      selected: false
+      source: '1757898491399'
+      sourceHandle: source
+      target: '1757988836734'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: start
+        targetType: document-extractor
+      id: 1757757047185-source-1757759088515-target
+      selected: false
+      source: '1757757047185'
+      sourceHandle: source
+      target: '1757759088515'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: document-extractor
+        targetType: llm
+      id: 1757759088515-source-1757898488459-target
+      selected: false
+      source: '1757759088515'
+      sourceHandle: source
+      target: '1757898488459'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: llm
+      id: 1757988836734-source-1758678491529-target
+      source: '1757988836734'
+      sourceHandle: source
+      target: '1758678491529'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: llm
+      id: 1757988836734-source-17588915586900-target
+      source: '1757988836734'
+      sourceHandle: source
+      target: '17588915586900'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: 1762149140611-source-1762149222224-target
+      source: '1762149140611'
+      sourceHandle: source
+      target: '1762149222224'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: 1762149222224-source-1762149794973-target
+      source: '1762149222224'
+      sourceHandle: source
+      target: '1762149794973'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: 1762149794973-source-1762149904873-target
+      source: '1762149794973'
+      sourceHandle: source
+      target: '1762149904873'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: 1762149904873-source-1762150135474-target
+      source: '1762149904873'
+      sourceHandle: source
+      target: '1762150135474'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: llm
+      id: 1757988836734-source-1762149140611-target
+      source: '1757988836734'
+      sourceHandle: source
+      target: '1762149140611'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: 1757898488459-source-1757988836734-target
+      source: '1757898488459'
+      sourceHandle: source
+      target: '1757988836734'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: 17588915586900-source-1762152538729-target
+      source: '17588915586900'
+      sourceHandle: source
+      target: '1762152538729'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: 1758678491529-source-1762152538729-target
+      source: '1758678491529'
+      sourceHandle: source
+      target: '1762152538729'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: 1762150135474-source-1762152538729-target
+      source: '1762150135474'
+      sourceHandle: source
+      target: '1762152538729'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: code
+        targetType: end
+      id: 1762152538729-source-1758083370545-target
+      source: '1762152538729'
+      sourceHandle: source
+      target: '1758083370545'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        desc: ''
+        selected: false
+        title: 開始
+        type: start
+        variables:
+        - allowed_file_extensions:
+          - .pdf
+          allowed_file_types:
+          - document
+          allowed_file_upload_methods:
+          - local_file
+          - remote_url
+          label: pdf_manual
+          max_length: 48
+          options: []
+          required: true
+          type: file
+          variable: pdf_manual
+      height: 90
+      id: '1757757047185'
+      position:
+        x: 33.335062659546935
+        y: 265.5
+      positionAbsolute:
+        x: 33.335062659546935
+        y: 265.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        is_array_file: false
+        selected: false
+        title: 実験書テキスト抽出
+        type: document-extractor
+        variable_selector:
+        - '1757757047185'
+        - pdf_manual
+      height: 92
+      id: '1757759088515'
+      position:
+        x: 334
+        y: 265.5
+      positionAbsolute:
+        x: 334
+        y: 265.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: gpt-5-nano
+          provider: langgenius/openai/openai
+        prompt_template:
+        - id: fd676dbb-aebd-4358-8582-2bf3e2f9403f
+          role: system
+          text: "あなたは長文テキストから「実験方法」セクションのみを“原文どおり”抽出する厳密抽出器である。要約・言い換え・追記・削除・順序入替は禁止。\n\
+            \n対象(A): 実験方法（配下小節や箇条書きを含めて本文としてそのまま）\n\n許可する最小整形（内容不変に限る）:\n- ページヘッダ/フッタ・ページ番号・脚注番号の除去\n\
+            - ハイフンで分断された改行語の結合（例 “フィル-\\nタ”→“フィルタ”）\n- 行頭/行末の余分な空白除去\n※語句・記号・順序の変更、LaTeX化、記号置換は禁止。\n\
+            \n\n- 小節（例: 4.1, 4.2 …）や箇条書きは本文に含める（別配列は作らない）。\n\n欠損時:\n- 見つからない場合、空文字列で返す。\n\
+            \n出力は**JSONのみ**。解説やコードフェンス外の文字を付けない。すべての文字列は入力textのサブストリングであること。出現順は原文どおり。\n\
+            出力フォーマット:\n{\n  \"method\": {\n    \"section_number\": string,\n    \"\
+            heading\": string,\n    \"text\": string\n  }\n}"
+        - id: 7f5b6581-370e-4ee9-82fd-0d5fd8f4ff17
+          role: user
+          text: "次の入力を与える。仕様に厳密に従い、**JSONのみ**返すこと（解説・コードフェンス禁止）。\n\n【入力】\ntext:\n\
+            {{#1757759088515.text#}}\n\n【タスク】\n- textから「実験方法」セクションだけを原文どおり抽出し、見出し番号・見出し名・本文を返す（配下小節・箇条書きも本文に含める）。\n\
+            \n【ルール】\n- 要約・言い換え・追記・削除・順序入替は禁止。\n- 許可整形はヘッダ/フッタ/ページ番号の除去、改行分断語の結合、行頭末空白除去のみ。\n\
+            - 見つからない場合は空文字列で埋める。\n\n【出力（JSON）】\n{\n  \"method\": {\n    \"section_number\"\
+            : \"\",\n    \"heading\": \"\",\n    \"text\": \"\"\n  }\n}"
+        retry_config:
+          max_retries: 3
+          retry_enabled: false
+          retry_interval: 1000
+        selected: true
+        structured_output:
+          schema:
+            $id: https://example.com/schemas/method_extract.v1.schema.json
+            $schema: https://json-schema.org/draft/2020-12/schema
+            additionalProperties: false
+            properties:
+              method:
+                additionalProperties: false
+                properties:
+                  heading:
+                    default: ''
+                    type: string
+                  section_number:
+                    default: ''
+                    type: string
+                  text:
+                    default: ''
+                    type: string
+                required:
+                - text
+                type: object
+            required:
+            - method
+            title: MethodExtractV1
+            type: object
+        structured_output_enabled: true
+        title: 実験方法抜粋
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '1757898488459'
+      position:
+        x: 638
+        y: 395.5
+      positionAbsolute:
+        x: 638
+        y: 395.5
+      selected: true
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: gpt-5-nano
+          provider: langgenius/openai/openai
+        prompt_template:
+        - id: 7628cba9-f124-4d84-8927-fdacaa902797
+          role: system
+          text: "あなたは長文テキストから「考察、報告事項及び検討事項」系セクションのみを“原文どおり”抽出する厳密抽出器である。要約・言い換え・追記・削除・順序入替は禁止。\n\
+            \n対象(B): 考察（箇条書きを含めて本文としてそのまま）\n\n許可する最小整形:\n- ページヘッダ/フッタ・ページ番号・脚注番号の除去\n\
+            - ハイフンで分断された改行語の結合\n- 行頭/行末の余分な空白除去\n※語句・記号・順序の変更、LaTeX化、記号置換は禁止。\n\n\
+            セクション検出:\n- 開始見出しパターン例:\n  ^\\s*\\d+\\.\\s*考察\n  ^\\s*考察$\n  ^\\s*検討$\n\
+            \  ^\\s*報告事項$\n  ^\\s*Discussion$\n  ^\\s*考察課題$\n\n他考察と思われるセッション\n考察のセッションは主に実験方法の次のセッションに属することが多い。\n\
+            - 開始見出し行から、次の同レベル大見出しの直前（または文書末）までを(B)とする。\n- 箇条書きは本文に含める（別配列は作らない）。\n\
+            \n欠損時:\n- 見つからない場合、空文字列で返す。\n\n出力は**JSONのみ**。解説やコードフェンス外の文字を付けない。すべての文字列は入力textのサブストリングであること。出現順は原文どおり。\n\
+            出力フォーマット:\n{\n  \"discussion\": {\n    \"section_number\": string,\n \
+            \   \"heading\": string,\n    \"text\": string\n  }\n}"
+        - id: eb4b29f4-de4d-437b-8bba-c2e24ac142b3
+          role: user
+          text: "次の入力を与える。仕様に厳密に従い、**JSONのみ**返すこと（解説・コードフェンス禁止）。\n\n【入力】\ntext:\n\
+            {{#1757759088515.text#}}\n\n【タスク】\n- textから「考察/検討/報告事項/Discussion」に該当するセクションだけを原文どおり抽出し、見出し番号・見出し名・本文を返す（箇条書きも本文に含める）。\n\
+            \n【ルール】\n- 要約・言い換え・追記・削除・順序入替は禁止。\n- 許可整形はヘッダ/フッタ/ページ番号の除去、改行分断語の結合、行頭末空白除去のみ。\n\
+            - 見つからない場合は空文字列で埋める。\n\n【出力（JSON）】\n{\n  \"discussion\": {\n    \"section_number\"\
+            : \"\",\n    \"heading\": \"\",\n    \"text\": \"\"\n  }\n}"
+        selected: false
+        structured_output:
+          schema:
+            $id: https://example.com/schemas/discussion_extract.v1.schema.json
+            $schema: https://json-schema.org/draft/2020-12/schema
+            additionalProperties: false
+            properties:
+              discussion:
+                additionalProperties: false
+                properties:
+                  heading:
+                    default: ''
+                    type: string
+                  section_number:
+                    default: ''
+                    type: string
+                  text:
+                    default: ''
+                    type: string
+                required:
+                - text
+                type: object
+            required:
+            - discussion
+            title: DiscussionExtractV1
+            type: object
+        structured_output_enabled: true
+        title: 考察抜粋
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '1757898491399'
+      position:
+        x: 658.1276765853676
+        y: 77.64168520323578
+      positionAbsolute:
+        x: 658.1276765853676
+        y: 77.64168520323578
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        output_type: object
+        selected: false
+        title: 変数集約器 2
+        type: variable-aggregator
+        variables:
+        - - '1757898491399'
+          - structured_output
+        - - '1757898488459'
+          - structured_output
+      height: 131
+      id: '1757988836734'
+      position:
+        x: 942
+        y: 265.5
+      positionAbsolute:
+        x: 942
+        y: 265.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        outputs:
+        - value_selector:
+          - '1762152538729'
+          - merged_json
+          value_type: object
+          variable: result_json
+        selected: false
+        title: 終了
+        type: end
+      height: 90
+      id: '1758083370545'
+      position:
+        x: 3001.1772077400146
+        y: 377.79574735369476
+      positionAbsolute:
+        x: 3001.1772077400146
+        y: 377.79574735369476
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: gpt-5-nano
+          provider: langgenius/openai/openai
+        prompt_template:
+        - id: d6b8c794-9628-4986-b10b-8346d6fca9a2
+          role: system
+          text: 'あなたは理系大学生であり、与えられた実験書の内容だけを根拠に、レポートの「まとめ（振り返り）」を約300字で作成する。情報源は必ず
+            lab_text のみとし、外部知識や不確かな推測の断定は禁止。文体はだ・である調、本文のみ1段落（改行なし）。数値や結論は lab_text
+            に存在するときのみ用いる。存在しない場合は記述しない。過去形で出力。構成: ①目的と理論の要点 ②装置・手順の肝と注意点（安全事項があれば言及）出力は260〜340字、見出し・箇条書き・引用・絵文字は禁止、句点で終える。本文以外の出力は一切しないこと。難しい言葉は使わずに、日本語が苦手な理系大学生ということを加味して出力に反映させること。
+
+            lab_text:
+
+            <<<
+
+            {{#1757759088515.text#}}
+
+            >>>'
+        selected: false
+        structured_output:
+          schema:
+            $id: https://example.com/schemas/summary-300chars.schema.json
+            $schema: https://json-schema.org/draft/2020-12/schema
+            additionalProperties: false
+            description: lab_textのみを情報源とした、だ・である調の約300字1段落。末尾は句点。
+            properties:
+              summary:
+                description: 本文のみ（見出しなし・箇条書きなし・改行なし）。だ・である調、260〜340字、句点で終える。
+                maxLength: 340
+                minLength: 260
+                pattern: ^[^\r\n]*。$
+                type: string
+            required:
+            - summary
+            title: 実験まとめ（振り返り）オブジェクト
+            type: object
+        structured_output_enabled: true
+        title: まとめ作成
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '1758678491529'
+      position:
+        x: 2462
+        y: 395.5
+      positionAbsolute:
+        x: 2462
+        y: 395.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: gpt-5-nano
+          provider: langgenius/openai/openai
+        prompt_template:
+        - id: 57ff1f93-9157-4ba7-90fa-084c431252b6
+          role: system
+          text: "【システムプロンプト（改訂版）：考察ユニット生成器】\n\nあなたは「考察ユニット生成器」。与えられた\n(1) 考察テキスト（日本語、（１）（２）…などの列挙を含む段落）\n\
+            (2) 式テキスト（\"formulas_in_parentheses\": [{equation_number, label_raw, formula_text_raw},\
+            \ ...] のJSON）\nを用いて、各番号ごとの“考察ユニット”を抽出・整形し、JSONで返す。\n\n【やること】\n1) 番号分割：\n\
+            \   - 考察テキストを、全角/半角の多様なパターンで厳密に分割する。例： （１）, （ 1 ）, (1), 1), 1．, １．, 1.,\
+            \ 1- など。\n   - 順序は原文通りに保持。空要素は無視。\n\n2) 文体変換：\n   - 各項目の命令形を**能動態・常体**に変換（例：「導出せよ」→「導出する」、「比較し考察せよ」→「比較し，考察する」）。\n\
+            \   - 敬体は禁止。必要に応じて1〜3文に要約・整形するが、意味を変えない。\n\n3) 式参照の抽出：\n   - 「式（n）」参照を抽出（ゆれ許容：式(\
+            \ 7 ), 式７, 7式, 39b 等）。英小文字接尾は数値を優先。\n   - 推奨正規表現例：(?i)(式?\\s*[\\(（]?\\\
+            s*(\\d+)\\s*[\\)）]?\\s*[a-z]?)|(\\b(\\d+)[a-z]?\\s*式)\n\n4) 式JSONとの突合：\n\
+            \   - \"formulas_in_parentheses\" の {equation_number, label_raw, formula_text_raw}\
+            \ と数値一致で照合。\n   - 見つかった式は `formulas_used`、未検出番号は `missing_formula_numbers`（昇順・重複なし）。\n\
+            \n5) 参考文献の付与（最低3件）：\n   - トップレベル `references` に集約、各要素に 1 始まりの `id`。\n\
+            \   - **全体で少なくとも3件（min=3）**を出力する。実在の日本語資料（教科書、学会誌、JIS/官公庁、大学公式）を優先。\n\
+            \   - 3件に満たない場合、分野に即した**プレースホルダ文献**で補完（`notes: \"placeholder\"` を必須）。\n\
+            \   - 各ユニットの `reference_ids` に参照IDを列挙し、`discussion_active` の末尾に [n] を付す（複数可）。\n\
+            \   - 不要なユニットは `reference_ids` を空配列、文末番号も付さない。\n\n6) 文献フォーマット出力：\n   -\
+            \ トップレベル `reference_list_formatted` に文字列配列で出力。\n   - 形式：`[1]{文献名}日付`（例：`[1]電子回路\
+            \ 基礎と応用（第3版） 2018-04-10`）\n   - 日付は `\"YYYY\"` または `\"YYYY-MM-DD\"`。URL等は\
+            \ `references` 側に保持。\n\n7) 出力：\n   - トップレベル object として `units`, `total_count`,\
+            \ `references`, `reference_list_formatted` を返す。\n   - 各ユニット：\n     - `index`（1始まり整数）\n\
+            \     - `discussion_active`（整形後テキスト。必要時末尾に [n]）\n     - `formula_numbers`（整数配列；昇順・重複なし）\n\
+            \     - `formulas_used`（式オブジェクト配列）\n     - `missing_formula_numbers`（整数配列）\n\
+            \     - `reference_ids`（整数配列；昇順・重複なし）\n   - nullは禁止。空は空配列/空文字を用いる。\n \
+            \  - 入力欠損時も可能な範囲で処理し、未参照は空配列で可視化。\n   - **最終出力は JSON のみ**とし、説明文は一切含めない。\n\
+            \n\n【安全策】\n- unitsが0件でも `{ \"units\": [], \"total_count\": 0, \"references\"\
+            : [], \"reference_list_formatted\": [] }` を必ず返す（ただし通常は `references` を\
+            \ min=3 とする）。"
+        - id: e18e1492-62fb-4013-b1e3-8869ded020b6
+          role: user
+          text: '# 入力
+
+            考察テキスト:
+
+            {{#1757898491399.structured_output.discussion.text#}}
+
+
+
+            # 出力条件
+
+            Systemに従い、JSONのみを返す（考察ユニット配列と総数を含む）。'
+        selected: false
+        structured_output:
+          schema:
+            $id: https://example.com/schemas/discussion-unit-extractor.output.schema.json
+            $schema: https://json-schema.org/draft/2020-12/schema
+            additionalProperties: false
+            examples:
+            - units:
+              - discussion_active: AとBの特性を比較し，差異の要因を考察する。
+                index: 1
+              - discussion_active: 条件Cが出力応答に与える影響を説明する。
+                index: 2
+            properties:
+              units:
+                description: 分割・整形後の考察ユニット配列。検出できない場合は空配列。
+                items:
+                  additionalProperties: false
+                  properties:
+                    discussion_active:
+                      description: 命令形を能動態・常体へ変換し、必要に応じて1〜3文に整形した本文。
+                      minLength: 0
+                      type: string
+                    index:
+                      description: 1始まりの連番。原文見出し（①, i), a) 等）は採番根拠とするが、ここでは連番に正規化する。
+                      minimum: 1
+                      type: integer
+                  required:
+                  - index
+                  - discussion_active
+                  type: object
+                type: array
+            required:
+            - units
+            title: 考察ユニット抽出器 出力スキーマ
+            type: object
+        structured_output_enabled: true
+        title: 考察ユニット作成 (1)
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '17588915586900'
+      position:
+        x: 2462
+        y: 265.5
+      positionAbsolute:
+        x: 2462
+        y: 265.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: gpt-5-nano
+          provider: langgenius/openai/openai
+        prompt_template:
+        - id: 0dd22b4b-cdce-4adc-a8b2-995f415fb364
+          role: system
+          text: "以下の実験方法テキストから、実験の階層構造を抽出してJSON形式で出力してください。\n\n実験方法テキスト:\n{{experiment_methods_text}}\n\
+            \n抽出ルール:\n1. 大項目（4.1, 4.2, 4.3...）→ idx（1, 2, 3...）に変換\n2. 小項目（4.1.1,\
+            \ 4.1.2...）→ subidx（1, 2, 3...）に変換\n3. 小項目がない大項目の場合 → subidx = null\n\
+            4. 各項目のタイトルを name として抽出\n出力形式:\n[\n  {\n    \"section\": \"4.1\",\n  \
+            \  \"idx\": 1,\n    \"subidx\": null,\n    \"name\": \"RLC回路\"\n  },\n\
+            \  {\n    \"section\": \"4.1.1\",\n    \"idx\": 1,\n    \"subidx\": 1,\n\
+            \    \"name\": \"IC - VCE特性の測定\"\n  }\n]\n\n必ずJSON配列形式で出力してください。他のテキストは含めないでください。"
+        - id: de62c23b-3bc0-4ba1-bdd7-d3616a49b810
+          role: user
+          text: '実験方法テキスト:
+
+
+            {{#1757898488459.text#}}'
+        selected: false
+        structured_output:
+          schema:
+            description: 実験項目の出力スキーマ
+            properties:
+              chapter:
+                type: number
+              experiments:
+                description: 実験項目のリスト
+                items:
+                  properties:
+                    idx:
+                      description: 実験の大項目番号
+                      example: 1
+                      type: integer
+                    name:
+                      description: 実験項目の名称
+                      example: IC - VCE特性の測定
+                      type: string
+                    section:
+                      description: 実験書のセクション番号
+                      example: 4.1.1
+                      type: string
+                    subidx:
+                      description: 実験の小項目番号（ない場合はnull）
+                      example: 1
+                      type:
+                      - integer
+                      - 'null'
+                  required:
+                  - section
+                  - idx
+                  - subidx
+                  - name
+                  type: object
+                title: experiments
+                type: array
+            required:
+            - experiments
+            - chapter
+            title: experiments_output
+            type: object
+        structured_output_enabled: true
+        title: 実験構造の抽出
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '1762149140611'
+      position:
+        x: 1246
+        y: 507.5
+      positionAbsolute:
+        x: 1246
+        y: 507.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: gpt-5-nano
+          provider: langgenius/openai/openai
+        prompt_template:
+        - id: 83c6acfa-a655-4245-8faf-94069da025b0
+          role: system
+          text: "以下の実験方法テキストから、各実験の詳細情報を抽出してJSON形式で出力してください。\n\n実験方法テキスト:\n{{experiment_methods_text}}\n\
+            \n実験構造:\n{{experiment_structure}}\n\n各実験について以下を抽出してください:\n1. 測定条件: 変化させるパラメータとその値（例:\
+            \ \"IB = 20, 40, 60 μA\"）\n2. 実験種類: \"測定\", \"計算\", \"分析\" のいずれか\n   -\
+            \ 測定: 実際に測定装置を使って測定する実験\n   - 計算: Mathematica等で計算する実験\n   - 分析: 測定結果を整理・分析する実験\n\
+            3. 使用ツール: Mathematica等の計算ツールを使用する場合は記載\n4. 参照データ: 他の実験や表を参照する場合は記載\n\n\
+            出力形式:\n[\n  {\n    \"section\": \"4.1.1\",\n    \"idx\": 1,\n    \"subidx\"\
+            : 1,\n    \"name\": \"IC - VCE特性の測定\",\n    \"measurement_conditions\"\
+            : \"IB = 20, 40, 60 μA\",\n    \"experiment_type\": \"測定\",\n    \"tool\"\
+            : null,\n    \"reference\": null\n  }\n]\n\n必ずJSON配列形式で出力してください。他のテキストは含めないでください。"
+        - id: 1af4fbcb-5d0f-46e4-bffc-3a73b451de1d
+          role: user
+          text: '実験方法テキスト:
+
+            ''''''
+
+            {{#1757898488459.text#}}
+
+            ''''''
+
+
+            実験構造:
+
+            ''''''
+
+            {{#1762149140611.text#}}
+
+            '''''''
+        selected: false
+        structured_output:
+          schema:
+            description: 実験項目の出力スキーマ
+            properties:
+              experiments:
+                description: 実験項目のリスト
+                items:
+                  properties:
+                    experiment_type:
+                      description: 実験の種類
+                      enum:
+                      - 測定
+                      - 計算
+                      - 分析
+                      type: string
+                    idx:
+                      description: 実験の大項目番号
+                      example: 1
+                      type: integer
+                    measurement_conditions:
+                      description: 測定条件（パラメータと値）
+                      example: IB = 20, 40, 60 μA
+                      type: string
+                    name:
+                      description: 実験項目の名称
+                      example: IC - VCE特性の測定
+                      type: string
+                    reference:
+                      description: 参照する他の実験や表（ある場合）
+                      example: 表5.1
+                      type:
+                      - string
+                      - 'null'
+                    section:
+                      description: 実験書のセクション番号
+                      example: 4.1.1
+                      type: string
+                    subidx:
+                      description: 実験の小項目番号（ない場合はnull）
+                      example: 1
+                      type:
+                      - integer
+                      - 'null'
+                    tool:
+                      description: 使用する計算ツール（ある場合）
+                      example: Mathematica
+                      type:
+                      - string
+                      - 'null'
+                  required:
+                  - section
+                  - idx
+                  - subidx
+                  - name
+                  - measurement_conditions
+                  - experiment_type
+                  type: object
+                title: experiments
+                type: array
+            required:
+            - experiments
+            title: experiments_output
+            type: object
+        structured_output_enabled: true
+        title: 詳細情報抽出
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '1762149222224'
+      position:
+        x: 1550
+        y: 507.5
+      positionAbsolute:
+        x: 1550
+        y: 507.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "import json\n\ndef main(experiment_details) -> dict:\n    \"\"\"\n\
+          \    各実験に図表番号を割り当てる\n    \n    Args:\n        experiment_details: structured_output形式のオブジェクト\n\
+          \            - String型の場合: JSON文字列をパース\n            - Dict型の場合: そのまま使用\n\
+          \    \n    Returns:\n        dict: experiment_with_figures をキーとする辞書\n  \
+          \  \"\"\"\n    try:\n        # 入力型の判定と変換\n        if isinstance(experiment_details,\
+          \ str):\n            # String型の場合: JSON文字列をパース\n            data = json.loads(experiment_details)\n\
+          \        elif isinstance(experiment_details, dict):\n            # Dict型の場合:\
+          \ そのまま使用\n            data = experiment_details\n        else:\n       \
+          \     # その他の型の場合: エラー\n            return {\n                \"experiment_with_figures\"\
+          : {\n                    \"error\": f\"Invalid input type: {type(experiment_details)}\"\
+          \n                }\n            }\n        \n        # experiments配列を取得\n\
+          \        if \"experiments\" in data:\n            experiments = data[\"\
+          experiments\"]\n        else:\n            # structured_output全体が渡された場合\n\
+          \            if \"structured_output\" in data:\n                experiments\
+          \ = data[\"structured_output\"][\"experiments\"]\n            else:\n  \
+          \              return {\n                    \"experiment_with_figures\"\
+          : {\n                        \"error\": \"experiments key not found in input\"\
+          \n                    }\n                }\n        \n        chapter =\
+          \ 5  # 実験結果の章番号\n        \n        table_counter = 1\n        fig_counter\
+          \ = 1\n        \n        result = []\n        \n        for exp in experiments:\n\
+          \            exp_data = {\n                \"section\": exp.get(\"section\"\
+          , \"\"),\n                \"idx\": exp.get(\"idx\", 0),\n              \
+          \  \"subidx\": exp.get(\"subidx\"),\n                \"name\": exp.get(\"\
+          name\", \"\"),\n                \"measurement_conditions\": exp.get(\"measurement_conditions\"\
+          , \"\"),\n                \"experiment_type\": exp.get(\"experiment_type\"\
+          , \"\"),\n                \"tool\": exp.get(\"tool\"),\n               \
+          \ \"reference\": exp.get(\"reference\"),\n                \"tables\": [],\n\
+          \                \"figures\": []\n            }\n            \n        \
+          \    # 実験種類に応じて図表を割り当て\n            if exp.get(\"experiment_type\") == \"\
+          測定\":\n                # データ表 + グラフ\n                exp_data[\"tables\"\
+          ].append({\n                    \"number\": table_counter,\n           \
+          \         \"label\": f\"表{chapter}.{table_counter}\",\n                \
+          \    \"type\": \"data\"\n                })\n                table_counter\
+          \ += 1\n                \n                exp_data[\"figures\"].append({\n\
+          \                    \"number\": fig_counter,\n                    \"label\"\
+          : f\"図{chapter}.{fig_counter}\",\n                    \"type\": \"graph\"\
+          \n                })\n                fig_counter += 1\n               \
+          \ \n            elif exp.get(\"experiment_type\") == \"計算\":\n         \
+          \       # グラフのみ\n                exp_data[\"figures\"].append({\n      \
+          \              \"number\": fig_counter,\n                    \"label\":\
+          \ f\"図{chapter}.{fig_counter}\",\n                    \"type\": \"graph\"\
+          \n                })\n                fig_counter += 1\n               \
+          \ \n            elif exp.get(\"experiment_type\") == \"分析\":\n         \
+          \       # 計算結果表 + グラフ\n                exp_data[\"tables\"].append({\n \
+          \                   \"number\": table_counter,\n                    \"label\"\
+          : f\"表{chapter}.{table_counter}\",\n                    \"type\": \"result\"\
+          \n                })\n                table_counter += 1\n             \
+          \   \n                exp_data[\"figures\"].append({\n                 \
+          \   \"number\": fig_counter,\n                    \"label\": f\"図{chapter}.{fig_counter}\"\
+          ,\n                    \"type\": \"graph\"\n                })\n       \
+          \         fig_counter += 1\n            \n            result.append(exp_data)\n\
+          \        \n        # 出力はObject型として返す（experiments配列を含むオブジェクト）\n        return\
+          \ {\n            \"experiment_with_figures\": {\n                \"experiments\"\
+          : result\n            }\n        }\n        \n    except Exception as e:\n\
+          \        return {\n            \"experiment_with_figures\": {\n        \
+          \        \"error\": f\"処理エラー: {str(e)}\"\n            }\n        }"
+        code_language: python3
+        desc: ''
+        outputs:
+          experiment_with_figures:
+            children: null
+            type: object
+        selected: false
+        title: 図表割り当て
+        type: code
+        variables:
+        - value_selector:
+          - '1762149222224'
+          - structured_output
+          value_type: object
+          variable: experiment_details
+      height: 54
+      id: '1762149794973'
+      position:
+        x: 1854
+        y: 507.5
+      positionAbsolute:
+        x: 1854
+        y: 507.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: gpt-5-nano
+          provider: langgenius/openai/openai
+        prompt_template:
+        - id: 2f8c0155-1254-4410-99aa-8b1a23d880db
+          role: system
+          text: '以下の実験データに対して、description_briefを生成してJSON形式で出力してください。
+
+
+            実験データ:
+
+            {{experiment_with_figures}}
+
+
+            description_brief生成ルール:
+
+
+            【測定実験の場合】
+
+            テンプレート: "〜において、〜を測定した結果を表X.Xおよび図X.Xに示す。"
+
+            例: "エミッタ接地回路において、IB = 20, 40, 60 μAの各ベース電流に対するIC - VCE特性を測定した結果を表5.1および図5.1に示す。"
+
+
+            【計算実験の場合】
+
+            テンプレート: "〜を用いて〜を計算した結果を図X.Xに示す。"
+
+            例: "実験で使用した素子の値(表5.2)を用いて1次低域フィルタのステップ応答波形をMathematicaで計算した結果を図5.11に示す。"
+
+
+            【分析実験の場合】
+
+            テンプレート: "〜の結果を整理して〜を作成し、〜を求めた結果を表X.Xに示す。"
+
+            例: "実験1.1の結果を整理してIC - IBグラフを作成し、最小二乗法により近似直線を引いた結果を図5.3に示す。この近似直線の傾きからエミッタ接地電流増幅率βを求めた結果を表5.3に示す。"
+
+
+            注意点:
+
+            1. 測定条件（measurement_conditions）を必ず含める
+
+            2. 図表番号（tables, figures）を正確に記載
+
+            3. 使用した回路図への参照は含めない
+
+            4. 簡潔に1〜2文で記述
+
+
+            各実験データにdescription_briefフィールドを追加して、JSON配列形式で出力してください。
+
+            他のテキストは含めないでください。'
+        - id: 92d6f457-5653-4d95-9a46-1b868b78b594
+          role: user
+          text: '実験データ:
+
+            ''''''
+
+            {{#1762149794973.experiment_with_figures#}}
+
+
+            '''''''
+        selected: false
+        structured_output:
+          schema:
+            properties:
+              experiments:
+                description: 説明文が追加された実験データのリスト
+                items:
+                  properties:
+                    description_brief:
+                      description: 実験の簡潔な説明文（1〜2文）。測定条件と図表番号を含む。
+                      example: エミッタ接地回路において、IB = 20, 40, 60 μAの各ベース電流に対するIC - VCE特性を測定した結果を表5.1および図5.1に示す。
+                      type: string
+                    experiment_type:
+                      description: 実験の種類
+                      enum:
+                      - 測定
+                      - 計算
+                      - 分析
+                      type: string
+                    figures:
+                      description: この実験に関連する図のリスト
+                      items:
+                        properties:
+                          label:
+                            description: 図のラベル
+                            example: 図5.1
+                            type: string
+                          number:
+                            description: 図の通し番号
+                            example: 1
+                            type: integer
+                          type:
+                            description: 図の種類
+                            enum:
+                            - graph
+                            type: string
+                        required:
+                        - number
+                        - label
+                        - type
+                        type: object
+                      type: array
+                    idx:
+                      description: 実験の大項目番号
+                      example: 1
+                      type: integer
+                    measurement_conditions:
+                      description: 測定条件（パラメータと値）
+                      example: IB = 20, 40, 60 μA
+                      type: string
+                    name:
+                      description: 実験項目の名称
+                      example: IC - VCE特性の測定
+                      type: string
+                    reference:
+                      description: 参照する他の実験や表（ある場合）
+                      example: 実験1.1
+                      type:
+                      - string
+                      - 'null'
+                    section:
+                      description: 実験書のセクション番号
+                      example: 4.1.1
+                      type: string
+                    subidx:
+                      description: 実験の小項目番号（ない場合はnull）
+                      example: 1
+                      type:
+                      - integer
+                      - 'null'
+                    tables:
+                      description: この実験に関連する表のリスト
+                      items:
+                        properties:
+                          label:
+                            description: 表のラベル
+                            example: 表5.1
+                            type: string
+                          number:
+                            description: 表の通し番号
+                            example: 1
+                            type: integer
+                          type:
+                            description: '表の種類（data: 測定データ, result: 計算結果）'
+                            enum:
+                            - data
+                            - result
+                            type: string
+                        required:
+                        - number
+                        - label
+                        - type
+                        type: object
+                      type: array
+                    tool:
+                      description: 使用する計算ツール（ある場合）
+                      example: Mathematica
+                      type:
+                      - string
+                      - 'null'
+                  required:
+                  - section
+                  - idx
+                  - subidx
+                  - name
+                  - measurement_conditions
+                  - experiment_type
+                  - tool
+                  - reference
+                  - tables
+                  - figures
+                  - description_brief
+                  type: object
+                type: array
+            required:
+            - experiments
+            type: object
+        structured_output_enabled: true
+        title: 説明文生成
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '1762149904873'
+      position:
+        x: 2158
+        y: 507.5
+      positionAbsolute:
+        x: 2158
+        y: 507.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "import json\n\ndef main(experiment_with_descriptions) -> dict:\n  \
+          \  \"\"\"\n    最終的なJSON形式に組み立て、検証する\n    \n    Args:\n        experiment_with_descriptions:\
+          \ structured_output形式のオブジェクト\n    \n    Returns:\n        dict: final_json\
+          \ (Object), validation_status (String), validation_message (String)\n  \
+          \  \"\"\"\n    try:\n        # 入力型の判定と変換\n        if isinstance(experiment_with_descriptions,\
+          \ str):\n            # String型の場合: JSON文字列をパース\n            data = json.loads(experiment_with_descriptions)\n\
+          \        elif isinstance(experiment_with_descriptions, dict):\n        \
+          \    # Dict型の場合: そのまま使用\n            data = experiment_with_descriptions\n\
+          \        else:\n            # その他の型の場合: エラー\n            return {\n    \
+          \            \"final_json\": {\"error\": f\"Invalid input type: {type(experiment_with_descriptions)}\"\
+          },\n                \"validation_status\": \"error\",\n                \"\
+          validation_message\": f\"Invalid input type: {type(experiment_with_descriptions)}\"\
+          \n            }\n        \n        # experiments配列を取得\n        if \"experiments\"\
+          \ in data:\n            experiments = data[\"experiments\"]\n        else:\n\
+          \            # structured_output全体が渡された場合\n            if \"structured_output\"\
+          \ in data:\n                experiments = data[\"structured_output\"][\"\
+          experiments\"]\n            else:\n                return {\n          \
+          \          \"final_json\": {\"error\": \"experiments key not found\"},\n\
+          \                    \"validation_status\": \"error\",\n               \
+          \     \"validation_message\": \"experiments key not found in input\"\n \
+          \               }\n        \n        chapter = 5\n        \n        final_experiments\
+          \ = []\n        \n        for exp in experiments:\n            # 表のキャプションを生成\n\
+          \            tables = []\n            for table in exp.get(\"tables\", []):\n\
+          \                table_type = table.get(\"type\", \"\")\n              \
+          \  exp_name = exp.get(\"name\", \"\")\n                \n              \
+          \  if table_type == \"data\":\n                    caption = f\"{exp_name}測定データ\"\
+          \n                elif table_type == \"result\":\n                    #\
+          \ \"〜の測定\" や \"特性\" を削除\n                    caption = exp_name.replace(\"\
+          の測定\", \"\").replace(\"特性\", \"\").strip()\n                    if not caption:\n\
+          \                        caption = exp_name\n                else:\n   \
+          \                 caption = exp_name\n                \n               \
+          \ tables.append({\n                    \"label\": table.get(\"label\", \"\
+          \"),\n                    \"caption\": caption\n                })\n   \
+          \         \n            # 図のキャプションを生成\n            figures = []\n      \
+          \      for figure in exp.get(\"figures\", []):\n                exp_type\
+          \ = exp.get(\"experiment_type\", \"\")\n                exp_tool = exp.get(\"\
+          tool\")\n                exp_name = exp.get(\"name\", \"\")\n          \
+          \      \n                if exp_type == \"計算\" and exp_tool:\n         \
+          \           caption = f\"計算上の{exp_name}\"\n                else:\n     \
+          \               caption = exp_name\n                \n                figures.append({\n\
+          \                    \"label\": figure.get(\"label\", \"\"),\n         \
+          \           \"caption\": caption\n                })\n            \n   \
+          \         # 最終実験データを構築\n            exp_data = {\n                \"idx\"\
+          : exp.get(\"idx\", 0),\n                \"subidx\": exp.get(\"subidx\"),\n\
+          \                \"name\": exp.get(\"name\", \"\"),\n                \"\
+          description_brief\": exp.get(\"description_brief\", \"\"),\n           \
+          \     \"tables\": tables,\n                \"figures\": figures\n      \
+          \      }\n            \n            final_experiments.append(exp_data)\n\
+          \        \n        # 最終JSON構造（Object型として返す）\n        final_json_obj = {\n\
+          \            \"chapter\": chapter,\n            \"experiments\": final_experiments\n\
+          \        }\n        \n        # 検証\n        validation_result = validate_json(final_json_obj)\n\
+          \        \n        if validation_result[\"valid\"]:\n            return\
+          \ {\n                \"final_json\": final_json_obj,  # Object型として返す\n \
+          \               \"validation_status\": \"success\",\n                \"\
+          validation_message\": \"JSONの検証に成功しました\"\n            }\n        else:\n\
+          \            return {\n                \"final_json\": final_json_obj, \
+          \ # エラーでもObject型として返す\n                \"validation_status\": \"error\"\
+          ,\n                \"validation_message\": f\"検証エラー: {validation_result['message']}\"\
+          \n            }\n            \n    except Exception as e:\n        return\
+          \ {\n            \"final_json\": {\"error\": str(e)},  # エラー情報をObject型で返す\n\
+          \            \"validation_status\": \"error\",\n            \"validation_message\"\
+          : f\"処理エラー: {str(e)}\"\n        }\n\ndef validate_json(data):\n    \"\"\"\
+          \n    JSON構造を検証\n    \n    Args:\n        data: 検証対象のJSON構造\n    \n    Returns:\n\
+          \        dict: valid (bool) と message (str) を含む辞書\n    \"\"\"\n    try:\n\
+          \        # 必須フィールドの確認\n        if \"chapter\" not in data:\n           \
+          \ return {\"valid\": False, \"message\": \"chapterフィールドが必要です\"}\n      \
+          \  if \"experiments\" not in data:\n            return {\"valid\": False,\
+          \ \"message\": \"experimentsフィールドが必要です\"}\n        \n        for i, exp\
+          \ in enumerate(data[\"experiments\"]):\n            # 必須フィールド\n        \
+          \    required_fields = [\"idx\", \"subidx\", \"name\", \"description_brief\"\
+          , \"tables\", \"figures\"]\n            for field in required_fields:\n\
+          \                if field not in exp:\n                    return {\"valid\"\
+          : False, \"message\": f\"実験{i+1}: {field}フィールドが必要です\"}\n            \n \
+          \           # グラフがある場合はデータ表も必要（計算実験を除く）\n            exp_name = exp.get(\"\
+          name\", \"\")\n            if len(exp[\"figures\"]) > 0 and \"計算\" not in\
+          \ exp_name:\n                if len(exp[\"tables\"]) == 0:\n           \
+          \         return {\"valid\": False, \"message\": f\"実験「{exp_name}」: グラフがある場合はデータ表も必要です\"\
+          }\n        \n        return {\"valid\": True, \"message\": \"検証成功\"}\n \
+          \       \n    except Exception as e:\n        return {\"valid\": False,\
+          \ \"message\": f\"検証中にエラー: {str(e)}\"}"
+        code_language: python3
+        desc: ''
+        outputs:
+          final_json:
+            children: null
+            type: object
+          validation_message:
+            children: null
+            type: string
+          validation_status:
+            children: null
+            type: string
+        selected: false
+        title: JSON組み立て・検証
+        type: code
+        variables:
+        - value_selector:
+          - '1762149904873'
+          - structured_output
+          value_type: object
+          variable: experiment_with_descriptions
+      height: 54
+      id: '1762150135474'
+      position:
+        x: 2462
+        y: 525.5
+      positionAbsolute:
+        x: 2462
+        y: 525.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "import json\nfrom typing import Any, Dict, List\n\ndef ensure_dict(x:\
+          \ Any) -> Dict:\n    \"\"\"文字列なら JSON として decode、dict 以外は空 dict に落とす\"\"\
+          \"\n    if isinstance(x, dict):\n        return x\n    if isinstance(x,\
+          \ str):\n        try:\n            return json.loads(x)\n        except\
+          \ Exception:\n            return {}\n    return {}\n\ndef unwrap_common_wrappers(d:\
+          \ Dict) -> Dict:\n    \"\"\"\n    Dify でありがちな result / output / data ラップを1段だけ剥がす。\n\
+          \    内側に summary / units / experiments のどれかがあれば優先的にそこを見る。\n    \"\"\"\n\
+          \    if not isinstance(d, dict):\n        return {}\n\n    keys_of_interest\
+          \ = {\"summary\", \"units\", \"experiments\", \"chapter\", \"total_count\"\
+          }\n\n    # すでに必要なキーを直接持っていればそのまま返す\n    if keys_of_interest & d.keys():\n\
+          \        return d\n\n    # よくあるラッパー result / output / data をチェック\n    for\
+          \ wrapper in (\"result\", \"output\", \"data\"):\n        inner = d.get(wrapper)\n\
+          \        if isinstance(inner, dict) and (keys_of_interest & inner.keys()):\n\
+          \            return inner\n\n    # それっぽくなければそのまま\n    return d\n\ndef main(inputs=None,\
+          \ **kwargs) -> dict:\n    \"\"\"\n    3つの JSON を結合し、chapter / experiments\
+          \ / summary / units / references を\n    1つの JSON に整理して返す。\n    どの input\
+          \ に何が入っていても、自動的に検出する。\n    \"\"\"\n    data = inputs if isinstance(inputs,\
+          \ dict) else kwargs\n\n    # 入力を dict に正規化して unwrap\n    js_list: List[Dict]\
+          \ = []\n    for key in (\"input_json1\", \"input_json2\", \"input_json3\"\
+          ):\n        raw = data.get(key)\n        d = unwrap_common_wrappers(ensure_dict(raw))\n\
+          \        js_list.append(d)\n\n    merged = {\n        \"chapter\": None,\n\
+          \        \"experiments\": [],\n        \"summary\": None,\n        \"units\"\
+          : [],\n        \"total_count\": None,\n        \"references\": [],\n   \
+          \     \"reference_list_formatted\": [],\n    }\n\n    for js in js_list:\n\
+          \        if not isinstance(js, dict):\n            continue\n\n        #\
+          \ chapter：まだ入っていなくて、js が持っていれば採用\n        if merged[\"chapter\"] is None\
+          \ and \"chapter\" in js:\n            merged[\"chapter\"] = js.get(\"chapter\"\
+          )\n\n        # experiments：list なら全部結合\n        exps = js.get(\"experiments\"\
+          )\n        if isinstance(exps, list):\n            merged[\"experiments\"\
+          ].extend(exps)\n\n        # summary：まだ入っていなくて、js が持っていれば採用\n        if merged[\"\
+          summary\"] is None and \"summary\" in js:\n            merged[\"summary\"\
+          ] = js.get(\"summary\")\n\n        # units / total_count：まだ入っていなくて、js が持っていれば採用\n\
+          \        if not merged[\"units\"] and isinstance(js.get(\"units\"), list):\n\
+          \            merged[\"units\"] = js.get(\"units\", [])\n            if \"\
+          total_count\" in js:\n                merged[\"total_count\"] = js.get(\"\
+          total_count\")\n\n        # references\n        if not merged[\"references\"\
+          ] and \"references\" in js:\n            merged[\"references\"] = js.get(\"\
+          references\") or []\n\n        # reference_list_formatted\n        if (not\
+          \ merged[\"reference_list_formatted\"] \n                and \"reference_list_formatted\"\
+          \ in js):\n            merged[\"reference_list_formatted\"] = js.get(\"\
+          reference_list_formatted\") or []\n\n    return {\"merged_json\": merged}\n"
+        code_language: python3
+        desc: ''
+        outputs:
+          merged_json:
+            children: null
+            type: object
+        selected: false
+        title: 結合
+        type: code
+        variables:
+        - value_selector:
+          - '1762150135474'
+          - final_json
+          value_type: object
+          variable: input_json1
+        - value_selector:
+          - '17588915586900'
+          - structured_output
+          value_type: object
+          variable: input_json2
+        - value_selector:
+          - '1758678491529'
+          - structured_output
+          value_type: object
+          variable: input_json3
+      height: 54
+      id: '1762152538729'
+      position:
+        x: 2739.034950689864
+        y: 382.14268680379894
+      positionAbsolute:
+        x: 2739.034950689864
+        y: 382.14268680379894
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    viewport:
+      x: 109.57519506035663
+      y: 306.0989375531971
+      zoom: 0.26680428825410596

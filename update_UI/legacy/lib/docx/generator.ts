@@ -8,6 +8,13 @@ import { buildDocTemplateData } from "./template-data"
 
 export { buildDocTemplateData } from "./template-data"
 
+const DOCX_DEBUG = process.env.DOCX_DEBUG === "1"
+const logDocxDebug = (...args: unknown[]) => {
+  if (DOCX_DEBUG) {
+    console.log("[legacy/docx/generator]", ...args)
+  }
+}
+
 const TEMPLATE_PATH = path.join(process.cwd(), "templates", "chapter_fixed.docx")
 
 export type GenerateReportInput = {
@@ -94,6 +101,11 @@ const isDocxtemplaterError = (value: unknown): value is DocxtemplaterError => {
 }
 
 export async function generateReport({ difyOutput, figureImages }: GenerateReportInput): Promise<Buffer> {
+  logDocxDebug("generateReport called", {
+    path: __filename,
+    difyType: typeof difyOutput,
+    hasFigures: Array.isArray(figureImages),
+  })
   const templateBuffer = await readFile(TEMPLATE_PATH)
 
   try {

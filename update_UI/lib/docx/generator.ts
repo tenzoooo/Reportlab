@@ -13,8 +13,43 @@ import { buildDocTemplateData } from "./template-data"
 
 export { buildDocTemplateData } from "./template-data"
 
+const DOCX_DEBUG = process.env.DOCX_DEBUG === "1"
+const logDocxDebug = (...args: unknown[]) => {
+  if (DOCX_DEBUG) {
+    console.log("[docx/generator]", ...args)
+  }
+}
+
 const TEMPLATE_PATH = path.join(process.cwd(), "templates", "chapter_fixed.docx")
 const PY_RENDERER_PATH = path.join(process.cwd(), "lib", "docx", "render_with_docxtpl.py")
+
+logDocxDebug("module loaded", {
+  path: __filename,
+  templatePath: TEMPLATE_PATH,
+  rendererPath: PY_RENDERER_PATH,
+})
+
+const decodeAndStripTags = (value: string): string => {
+  const decoded = value.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+  return decoded.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+const sanitizeDeep = (input: unknown): unknown => {
+  if (typeof input === "string") {
+    return decodeAndStripTags(input)
+  }
+  if (Array.isArray(input)) {
+    return input.map((item) => sanitizeDeep(item))
+  }
+  if (input && typeof input === "object") {
+    const result: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+      result[k] = sanitizeDeep(v)
+    }
+    return result
+  }
+  return input
+}
 
 type SerializableFigureImage = Omit<DocTemplateFigureImage, "buffer"> & { buffer: string }
 type SerializableFigure = Omit<DocTemplateFigure, "figure_image"> & { figure_image?: SerializableFigureImage }
@@ -112,6 +147,14 @@ const toBase64Figures = (data: DocTemplateData): SerializableDocTemplateData => 
 }
 
 const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<Buffer> => {
+  // [DEBUG] Save the context to a file in the project root for inspection
+  try {
+    await writeFile(path.join(process.cwd(), "debug_template_data.json"), JSON.stringify(context, null, 2), "utf-8")
+    console.log("[DEBUG] Saved template data to debug_template_data.json")
+  } catch (err) {
+    console.error("[DEBUG] Failed to save debug template data:", err)
+  }
+
   // Check if running on Vercel
   if (process.env.VERCEL) {
     console.log("Running on Vercel, invoking Python Serverless Function...")
@@ -161,6 +204,11 @@ const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<
 
   await writeFile(path.join(workdir, "payload.json"), JSON.stringify(payload), "utf-8")
 
+  // [DEBUG] Log the payload sent to Python
+  console.log("--- [DEBUG] PYTHON PAYLOAD START ---")
+  console.log(JSON.stringify(payload, null, 2))
+  console.log("--- [DEBUG] PYTHON PAYLOAD END ---")
+
   await new Promise<void>((resolve, reject) => {
     const child = spawn("python3", [PY_RENDERER_PATH], {
       cwd: process.cwd(),
@@ -205,10 +253,20 @@ const buildBlocks = (data: DocTemplateData): DocTemplateData => {
 }
 
 export async function generateReport({ difyOutput, figureImages }: GenerateReportInput): Promise<Buffer> {
+  logDocxDebug("generateReport called", {
+    path: __filename,
+    difyType: typeof difyOutput,
+    hasFigures: Array.isArray(figureImages),
+  })
   console.log("Loading DOCX template from:", TEMPLATE_PATH)
 
   try {
-    const data = buildDocTemplateData(difyOutput)
+    const sanitized = sanitizeDeep(difyOutput)
+    logDocxDebug("sanitizeDeep applied", {
+      sanitizedType: typeof sanitized,
+      hasExperiments: Boolean((sanitized as any)?.experiments),
+    })
+    const data = buildDocTemplateData(sanitized)
     const dataWithBlocks = buildBlocks(data)
     const dataWithImages = applyFigureImages(dataWithBlocks, figureImages)
     const serialized = toBase64Figures(dataWithImages)

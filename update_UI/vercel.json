@@ -1,0 +1,18 @@
+{
+    "builds": [
+        {
+            "src": "api/**/*.py",
+            "use": "@vercel/python"
+        },
+        {
+            "src": "package.json",
+            "use": "@vercel/next"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/generate_docx",
+            "dest": "/api/generate_docx.py"
+        }
+    ]
+}

@@ -1,2 +1,4 @@
 docxtpl>=0.16
 Pillow>=10.0.0
+jinja2>=3.0.0
+markupsafe>=2.0.0

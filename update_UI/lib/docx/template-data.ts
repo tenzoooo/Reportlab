@@ -59,10 +59,32 @@ export type DocTemplateData = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
+const stripDocxTags = (value: string): string => {
+  // Decode HTML entities recursively to handle double encoding (e.g. &amp;lt; -> &lt; -> <)
+  let decoded = value
+  let previous = ""
+  // Limit iterations to prevent infinite loops
+  for (let i = 0; i < 3; i++) {
+    previous = decoded
+    decoded = decoded.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+    if (previous === decoded) break
+  }
+
+  // Remove DOCX/OpenXML-like tags (e.g., <w:r>...</w:t>) and generic XML/HTML tags
+  // Using a regex that matches the Python implementation: <[/]?[a-zA-Z0-9:]+[^>]*>
+  const withoutTags = decoded.replace(/<[/]?[a-zA-Z0-9:]+[^>]*>/g, "")
+
+  // Collapse redundant whitespace introduced after tag stripping
+  return withoutTags.replace(/\s+/g, " ").trim()
+}
+
 const toStringSafe = (value: unknown): string => {
-  if (typeof value === "string") return value
-  if (typeof value === "number" || typeof value === "boolean") return String(value)
-  return ""
+  let result = ""
+  if (typeof value === "string") result = value
+  else if (typeof value === "number" || typeof value === "boolean") result = String(value)
+
+  if (!result) return ""
+  return stripDocxTags(result)
 }
 
 const removeLonelyNumberLines = (value: string): string => {

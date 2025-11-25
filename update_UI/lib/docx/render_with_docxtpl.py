@@ -11,9 +11,45 @@ from jinja2 import Environment
 from docx.shared import Mm
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.table import _Cell, Table  # type: ignore
+from docx.text.paragraph import Paragraph
+
+import re
+import traceback
 
 TARGET_WIDTH_MM = 106.29
 TARGET_HEIGHT_MM = 60.57
+
+
+def _strip_artifacts_from_paragraph(paragraph: Paragraph) -> None:
+  """Remove literal OpenXML tag strings that may appear in run text."""
+  for run in paragraph.runs:
+    if not run.text:
+      continue
+    # Use regex to remove any XML-like tags (e.g. <w:r>, </w:t>, <w:t ...>)
+    # This handles variations in attributes and spacing.
+    original_text = run.text
+    text = re.sub(r'<[/]?[a-zA-Z0-9:]+[^>]*>', '', run.text)
+    if text != run.text:
+      print(f"[DEBUG] Stripped artifacts from run: {original_text} -> {text}", file=sys.stderr)
+      run.text = text
+
+
+def _strip_artifacts_from_table(table: Table) -> None:
+  for row in table.rows:
+    for cell in row.cells:
+      for para in cell.paragraphs:
+        _strip_artifacts_from_paragraph(para)
+      for nested in cell.tables:
+        _strip_artifacts_from_table(nested)
+
+
+def strip_openxml_artifacts(docx_document) -> None:
+  """Remove literal OpenXML tag strings from the rendered document."""
+  for para in docx_document.paragraphs:
+    _strip_artifacts_from_paragraph(para)
+  for table in docx_document.tables:
+    _strip_artifacts_from_table(table)
 
 
 def px_to_mm(px: float, dpi: float = 96.0) -> float:
@@ -167,6 +203,68 @@ def inject_tables(doc: DocxTemplate, context: dict) -> dict:
   return context
 
 
+def _clean_text(value) -> str:
+  """Strip leading/trailing whitespace to avoid xml:space=\"preserve\"."""
+  return "" if value is None else str(value).strip()
+
+def create_consideration_units_rt(units) -> RichText:
+  rt = RichText()
+  if not isinstance(units, list):
+    return rt
+  
+  first = True
+  for unit in units:
+    if not isinstance(unit, dict):
+      continue
+    idx = _clean_text(unit.get("index"))
+    discussion = _clean_text(unit.get("discussion_active"))
+    answer = _clean_text(unit.get("answer"))
+    
+    body = f"（{idx}）{discussion}".strip()
+    if answer:
+      body = f"{body}\n{answer}"
+    
+    if body:
+      if not first:
+        rt.add("\n")
+      rt.add(body)
+      first = False
+  return rt
+
+def create_reference_lines_rt(value) -> RichText:
+  rt = RichText()
+  if isinstance(value, dict):
+    refs_formatted = value.get("reference_list_formatted")
+    if isinstance(refs_formatted, list) and len(refs_formatted) > 0:
+      for idx, item in enumerate(refs_formatted):
+          text = _clean_text(item)
+          if text:
+              if idx > 0:
+                  rt.add("\n")
+              rt.add(text)
+      return rt
+      
+    refs = value.get("references")
+    if isinstance(refs, list) and len(refs) > 0:
+      first = True
+      for ref in refs:
+        if not isinstance(ref, dict):
+          continue
+        _id = _clean_text(ref.get("id"))
+        title = _clean_text(ref.get("title"))
+        year = _clean_text(ref.get("year"))
+        line = f"[{_id}] {title} {year}".strip()
+        if line:
+          if not first:
+              rt.add("\n")
+          rt.add(line)
+          first = False
+      if not first: # If we added at least one line
+        return rt
+        
+  rt.add("（参考文献の記載なし）")
+  return rt
+
 def build_jinja_env() -> Environment:
   env = Environment(autoescape=False)
 
@@ -176,83 +274,22 @@ def build_jinja_env() -> Environment:
       return rt
     parts = str(value).split("\n")
     for idx, part in enumerate(parts):
-      rt.add(part, font='MS Mincho')
+      rt.add(_clean_text(part))
       if idx != len(parts) - 1:
         rt.add("\n")
     return rt
 
-  def consideration_units(units):
-    rt = RichText()
-    if not isinstance(units, list):
-      return rt
-    
-    first = True
-    for unit in units:
-      if not isinstance(unit, dict):
-        continue
-      idx = unit.get("index") or ""
-      discussion = unit.get("discussion_active") or ""
-      answer = unit.get("answer") or ""
-      
-      body = f"（{idx}）{discussion}".strip()
-      if answer:
-        body = f"{body}\n{answer}"
-      
-      if body:
-        if not first:
-          rt.add("\n")
-        rt.add(body, font='MS Mincho')
-        first = False
-    return rt
-
+  # Register filters for backward compatibility or other uses
   env.filters["nl2br"] = nl2br
-  env.filters["consideration_units"] = consideration_units
-  
-  def reference_lines(value):
-    rt = RichText()
-    if isinstance(value, dict):
-      refs_formatted = value.get("reference_list_formatted")
-      if isinstance(refs_formatted, list) and len(refs_formatted) > 0:
-        for idx, item in enumerate(refs_formatted):
-            if item is not None:
-                if idx > 0:
-                    rt.add("\n")
-                rt.add(str(item), font='MS Mincho')
-        return rt
-        
-      refs = value.get("references")
-      if isinstance(refs, list) and len(refs) > 0:
-        first = True
-        for ref in refs:
-          if not isinstance(ref, dict):
-            continue
-          _id = ref.get("id") or ""
-          title = ref.get("title") or ""
-          year = ref.get("year") or ""
-          line = f"[{_id}] {title} {year}".strip()
-          if line:
-            if not first:
-                rt.add("\n")
-            rt.add(line, font='MS Mincho')
-            first = False
-        if not first: # If we added at least one line
-          return rt
-          
-    rt.add("（参考文献の記載なし）", font='MS Mincho')
-    return rt
-  env.filters["reference_lines"] = reference_lines
+  env.filters["consideration_units"] = create_consideration_units_rt
+  env.filters["reference_lines"] = create_reference_lines_rt
   return env
 
 
 def _should_draw_diagonal_cell(value: str, row_index: int, col_index: int) -> bool:
   """
   Decide whether to draw a diagonal (top-left to bottom-right) line in the cell.
-
-  Rule:
-  - Only body cells (skip header row and header column: index 0)
-  - Cell text is empty or a simple placeholder such as "-" or "ー"
   """
-  # Skip header row / header column
   if row_index == 0 or col_index == 0:
     return False
 
@@ -260,7 +297,6 @@ def _should_draw_diagonal_cell(value: str, row_index: int, col_index: int) -> bo
   if not text:
     return True
 
-  # Treat common "no data" placeholders as empty
   if text in {"-", "ー", "―"}:
     return True
 
@@ -319,13 +355,50 @@ def _apply_diagonal_cell_border(cell) -> None:
   diag.set(qn("w:color"), "000000")
 
 
+def patch_template(doc: DocxTemplate, context: dict) -> None:
+  """
+  Patch the template in-memory to replace complex filter chains with simple variables.
+  This avoids issues where docxtpl/Jinja2 escapes RichText objects returned by filters.
+  """
+  docx_obj = doc.get_docx()
+  if not docx_obj:
+    print("[WARN] Could not get docx object for patching", file=sys.stderr)
+    return
+
+  # Replacements map: old_tag -> new_tag
+  replacements = {
+    "{{ consideration.units | consideration_units | nl2br }}": "{{ consideration_units_rt }}",
+    "{{ consideration.units | consideration_units }}": "{{ consideration_units_rt }}",
+    "{{ consideration | reference_lines | nl2br }}": "{{ references_rt }}",
+    "{{ consideration | reference_lines }}": "{{ references_rt }}",
+  }
+
+  def patch_paragraphs(paragraphs):
+    for p in paragraphs:
+      if "{{" in p.text:
+        original = p.text
+        modified = original
+        for old, new in replacements.items():
+          if old in modified:
+            modified = modified.replace(old, new)
+        
+        if modified != original:
+          print(f"[DEBUG] Patched template tag: '{original}' -> '{modified}'", file=sys.stderr)
+          p.text = modified
+
+  # Patch body paragraphs
+  patch_paragraphs(docx_obj.paragraphs)
+
+  # Patch table cells
+  for t in docx_obj.tables:
+    for row in t.rows:
+      for cell in row.cells:
+        patch_paragraphs(cell.paragraphs)
+
+
 def render_report(payload: dict) -> bytes:
   """
   Render the report and return the DOCX bytes.
-  Accepts a payload dictionary with:
-  - template_path: str (optional, path to template file)
-  - template_base64: str (optional, base64 encoded template)
-  - context: dict (data to render)
   """
   template_path = payload.get("template_path", "")
   template_base64 = payload.get("template_base64", "")
@@ -342,10 +415,19 @@ def render_report(payload: dict) -> bytes:
     raise ValueError("Either template_path or template_base64 must be provided")
 
   doc = DocxTemplate(template_file)
+  
+  # Pre-calculate RichText objects
+  context["consideration_units_rt"] = create_consideration_units_rt(context.get("consideration", {}).get("units"))
+  context["references_rt"] = create_reference_lines_rt(context.get("consideration", {}))
+  
+  # Patch the template to use these new variables
+  patch_template(doc, context)
+
   context_with_images = inject_inline_images(doc, context)
   context_with_tables = inject_tables(doc, context_with_images)
   env = build_jinja_env()
   doc.render(context_with_tables, jinja_env=env)
+  strip_openxml_artifacts(doc.docx)
   
   output_io = BytesIO()
   doc.save(output_io)
@@ -369,13 +451,12 @@ def main() -> int:
       with open(output_path, "wb") as f:
         f.write(docx_bytes)
     else:
-      # If no output path, maybe stdout? But usually we want a file.
-      # For now, just error if no output path in CLI mode.
       sys.stderr.write("output_path is required for CLI usage\n")
       return 2
 
   except Exception as exc:  # pragma: no cover
     sys.stderr.write(f"Failed to render DOCX with docxtpl: {exc}\n")
+    sys.stderr.write(traceback.format_exc())
     return 3
 
   return 0

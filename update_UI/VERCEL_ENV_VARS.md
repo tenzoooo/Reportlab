@@ -38,12 +38,13 @@ Stripeのリダイレクトや内部API呼び出しに使用されます。
 - **値**: 決済成功時のリダイレクト先URL（例: `https://your-project.vercel.app/dashboard/settings?tab=subscription&success=true`）
     - *注*: コード内では `NEXT_PUBLIC_BASE_URL` を基に自動生成しているため、必須ではありませんが、明示的に指定したい場合は設定してください。
 
-### 5. Dify設定
-AI機能に必要です。
-- **キー**: `DIFY_API_URL`
-- **値**: DifyのAPIエンドポイント（例: `https://api.dify.ai/v1`）
-- **キー**: `DIFY_API_KEY`
-- **値**: DifyのAPIキー
+### 5. AI設定
+AI機能（OpenAI）に必要です。
+- **キー**: `OPENAI_API_KEY`
+- **値**: OpenAIのAPIキー（`sk-...`）
+
+> [!NOTE]
+> 以前のDify設定（`DIFY_API_URL`, `DIFY_API_KEY`）は不要になりました。
 
 ## システム変数（自動設定）
 Vercelが自動的に設定するため、手動で追加する**必要はありません**：

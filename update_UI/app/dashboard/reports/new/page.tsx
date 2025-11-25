@@ -33,13 +33,14 @@ type ProcessingStep = {
 }
 
 const PROCESSING_STEPS: ProcessingStep[] = [
-  { label: "PDFファイルをアップロード中...", duration: 1000 },
-  { label: "実験データを解析中...", duration: 2000 },
-  { label: "統計処理を実行中...", duration: 2000 },
-  { label: "グラフを生成中...", duration: 1500 },
-  { label: "レポート本文を作成中...", duration: 2000 },
-  { label: "参考文献を検索中...", duration: 1500 },
-  { label: "最終チェック中...", duration: 1000 },
+  { label: "実験方法を抽出中...", duration: 1200 },
+  { label: "構造を把握中...", duration: 1200 },
+  { label: "詳細情報を追加中...", duration: 1200 },
+  { label: "図表のキャプションを決定中...", duration: 1200 },
+  { label: "実験の説明文を生成中...", duration: 1200 },
+  { label: "まとめを作成中...", duration: 1200 },
+  { label: "考察を作成中...", duration: 1200 },
+  { label: "DOCXを生成中...", duration: 1200 },
 ]
 
 const PROCESSING_STORAGE_KEY = "reportlab:processing-state"
