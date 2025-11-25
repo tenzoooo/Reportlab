@@ -34,6 +34,16 @@ Stripeのリダイレクトや内部API呼び出しに使用されます。
 - **値**: StripeのPublishable Key（本番モード用）
 - **キー**: `NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM`
 - **値**: Stripe本番環境でのPremiumプランのPrice ID
+- **キー**: `STRIPE_SUCCESS_URL`（任意）
+- **値**: 決済成功時のリダイレクト先URL（例: `https://your-project.vercel.app/dashboard/settings?tab=subscription&success=true`）
+    - *注*: コード内では `NEXT_PUBLIC_BASE_URL` を基に自動生成しているため、必須ではありませんが、明示的に指定したい場合は設定してください。
+
+### 5. Dify設定
+AI機能に必要です。
+- **キー**: `DIFY_API_URL`
+- **値**: DifyのAPIエンドポイント（例: `https://api.dify.ai/v1`）
+- **キー**: `DIFY_API_KEY`
+- **値**: DifyのAPIキー
 
 ## システム変数（自動設定）
 Vercelが自動的に設定するため、手動で追加する**必要はありません**：
