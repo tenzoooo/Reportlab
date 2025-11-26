@@ -164,6 +164,8 @@ def build_table_subdoc(doc: DocxTemplate, rows) -> Optional[Any]:
       # 数値が入らないセルは左上から右下への斜線セルとして表現する
       if _should_draw_diagonal_cell(value, r_index, c_index):
         _apply_diagonal_cell_border(cell)
+    
+    _prevent_row_breaking(table.rows[r_index])
   return sub
 
 
@@ -355,6 +357,22 @@ def _apply_diagonal_cell_border(cell) -> None:
   diag.set(qn("w:sz"), "8")  # 0.5pt
   diag.set(qn("w:space"), "0")
   diag.set(qn("w:color"), "000000")
+
+
+def _prevent_row_breaking(row) -> None:
+  """
+  Prevent a table row from breaking across pages.
+  """
+  tr = row._tr
+  tr_pr = getattr(tr, "trPr", None)
+  if tr_pr is None:
+    tr_pr = OxmlElement("w:trPr")
+    tr.append(tr_pr)
+  
+  cant_split = tr_pr.find(qn("w:cantSplit"))
+  if cant_split is None:
+    cant_split = OxmlElement("w:cantSplit")
+    tr_pr.append(cant_split)
 
 
 def patch_template(doc: DocxTemplate, context: dict) -> None:
