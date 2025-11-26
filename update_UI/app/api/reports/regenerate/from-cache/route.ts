@@ -3,11 +3,12 @@ import { z } from "zod"
 import { randomUUID } from "node:crypto"
 import { Buffer } from "node:buffer"
 import { createClient } from "@/lib/supabase/server"
-import { createClient as createAdminClient } from "@supabase/supabase-js"
+import { createClient as createAdminClient, SupabaseClient } from "@supabase/supabase-js"
 import { generateReport } from "@/lib/docx/generator"
 import type { DocTemplateFigureImage } from "@/lib/docx/template-data"
 import { buildDocTemplateData } from "@/lib/docx/template-data"
 import { logError, logInfo } from "@/lib/server/logger"
+import { analyzeDocument } from "@/lib/analysis/service"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -57,7 +58,7 @@ const fitFigureImageSize = (width?: number | null, height?: number | null) => {
 }
 
 const downloadFigureImages = async (
-  admin: ReturnType<typeof createAdminClient>,
+  admin: SupabaseClient,
   files: ExperimentFileRecord[]
 ): Promise<DocTemplateFigureImage[]> => {
   const images = files
@@ -113,7 +114,7 @@ const downloadFigureImages = async (
 }
 
 const downloadTableRows = async (
-  admin: ReturnType<typeof createAdminClient>,
+  admin: SupabaseClient,
   files: ExperimentFileRecord[]
 ): Promise<RowsTable[]> => {
   const tables = files
@@ -184,49 +185,6 @@ const applyTablesToDify = (source: unknown, tables: RowsTable[]): unknown => {
   } catch {
     return source
   }
-}
-
-const extractResultJson = (response: any): unknown => {
-  if (!response || typeof response !== "object") return undefined
-  if (response.output && typeof response.output === "object") {
-    const maybe = (response.output as any).result_json
-    if (maybe !== undefined) return maybe
-  }
-  if (response.outputs && typeof response.outputs === "object") {
-    const maybe = (response.outputs as any).result_json
-    if (maybe !== undefined) return maybe
-  }
-  if (response.data && typeof response.data === "object") {
-    const data = response.data as any
-    if (data.output && typeof data.output === "object") {
-      const maybe = (data.output as any).result_json
-      if (maybe !== undefined) return maybe
-    }
-    if (data.outputs && typeof data.outputs === "object") {
-      const maybe = (data.outputs as any).result_json
-      if (maybe !== undefined) return maybe
-    }
-  }
-  return undefined
-}
-
-const ENABLE_DIFY_DEBUG_LOG = process.env.ENABLE_DIFY_DEBUG_LOG === "true"
-
-const toPreviewString = (value: unknown, limit = 4000) => {
-  try {
-    const raw = typeof value === "string" ? value : JSON.stringify(value)
-    if (raw.length > limit) {
-      return `${raw.slice(0, limit)}…(truncated)`
-    }
-    return raw
-  } catch {
-    return String(value)
-  }
-}
-
-const logDifyDebug = (label: string, payload: unknown) => {
-  if (!ENABLE_DIFY_DEBUG_LOG) return
-  logInfo(label, { preview: toPreviewString(payload) })
 }
 
 export async function POST(req: NextRequest) {
@@ -307,102 +265,41 @@ export async function POST(req: NextRequest) {
       await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
       return NextResponse.json({ error: "Document path is missing" }, { status: 400 })
     }
-    const makeDocumentUrl = async () => {
-      const defaultName = firstDoc.file_name || "document.pdf"
-      if (!objectPath) {
-        return { url: null as string | null, error: "Document path is missing" }
+
+    // Download PDF as Buffer for local analysis
+    let pdfBuffer: Buffer
+    try {
+      const { data, error } = await admin.storage.from(BUCKET_NAME).download(objectPath)
+      if (error || !data) {
+        logError("reports/regenerate-cache:pdf-download-failed", error, { objectPath })
+        await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
+        return NextResponse.json({ error: error?.message || "Failed to download PDF" }, { status: 500 })
       }
-      try {
-        const { data: signed, error: signErr } = await admin.storage
-          .from(BUCKET_NAME)
-          .createSignedUrl(objectPath, 60 * 60, { download: defaultName })
-
-        let documentUrl = signed?.signedUrl ?? null
-        const looksSigned = Boolean(documentUrl && (documentUrl.includes("/sign/") || documentUrl.includes("token=")))
-
-        if ((!looksSigned || !documentUrl) && !signErr) {
-          const { data: publicData } = admin.storage.from(BUCKET_NAME).getPublicUrl(objectPath)
-          if (publicData?.publicUrl) {
-            documentUrl = publicData.publicUrl
-          }
-        }
-
-        if (signErr || !documentUrl) {
-          return { url: null, error: signErr?.message || "Failed to create signed/public URL" }
-        }
-        return { url: documentUrl, error: null }
-      } catch (err) {
-        return { url: null, error: err instanceof Error ? err.message : String(err) }
-      }
-    }
-
-    const { url: documentUrl, error: docUrlError } = await makeDocumentUrl()
-    if (!documentUrl) {
-      logError("reports/regenerate-cache:document-url-failed", { objectPath, error: docUrlError })
+      const arrayBuffer = await data.arrayBuffer()
+      pdfBuffer = Buffer.from(arrayBuffer)
+    } catch (downloadError) {
+      logError("reports/regenerate-cache:pdf-download-exception", downloadError)
       await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
-      return NextResponse.json({ error: docUrlError || "Failed to prepare document URL" }, { status: 400 })
+      return NextResponse.json({ error: "Failed to download PDF" }, { status: 500 })
     }
 
-    const difyBase = process.env.DIFY_API_URL?.replace(/\/$/, "")
-    const difyKey = process.env.DIFY_API_KEY
-    if (!difyBase || !difyKey) {
-      logInfo("reports/regenerate-cache:missing-dify-config")
-      await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
-      return NextResponse.json({ error: "Missing Dify configuration" }, { status: 500 })
-    }
+    // Analyze document locally
+    logInfo("reports/regenerate-cache:start-analysis", { file: firstDoc.file_name })
+    const analysisResult = await analyzeDocument(pdfBuffer)
 
-    const payload = {
-      inputs: {
-        pdf_manual: {
-          type: "document",
-          transfer_method: "remote_url",
-          name: firstDoc.file_name || "document.pdf",
-          url: documentUrl,
-        },
-      },
-      user: user.id,
-    }
-
-    logInfo("reports/regenerate-cache:call-dify", { url: `${difyBase}/v1/workflows/run`, reportId })
-    const resp = await fetch(`${difyBase}/v1/workflows/run`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${difyKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    })
-
-    const difyResponse = await resp.json().catch(() => ({}))
-    logDifyDebug("reports/regenerate-cache:dify-response", difyResponse)
-
-    if (!resp.ok) {
-      const message =
-        typeof difyResponse === "object" ? JSON.stringify(difyResponse) : String(difyResponse ?? "Unknown error")
-      throw new Error(message)
-    }
-
+    // Save analysis result
     const { error: insertErr } = await supabase
       .from("analysis_results")
-      .insert([{ report_id: reportId, dify_response: difyResponse }])
+      .insert([{ report_id: reportId, dify_response: analysisResult }])
       .select("id")
       .single()
 
     if (insertErr) {
       logError("reports/regenerate-cache:insert-analysis-failed", insertErr)
-      await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
-      return NextResponse.json({ error: insertErr.message }, { status: 500 })
+      // Continue even if save fails
     }
 
-    let difyOutput: unknown = extractResultJson(difyResponse)
-    if (typeof difyOutput === "string") {
-      try {
-        difyOutput = JSON.parse(difyOutput)
-      } catch {
-        // keep string
-      }
-    }
-
+    const difyOutput = analysisResult
     const difyWithTables = applyTablesToDify(difyOutput, tableRows)
 
     // Validate template structure (optional preview)
@@ -410,7 +307,7 @@ export async function POST(req: NextRequest) {
       buildDocTemplateData(difyWithTables)
     } catch (normalizeError) {
       logError("reports/regenerate-cache:template-data-failed", normalizeError)
-      throw new Error("Failed to normalize Dify result_json for DOCX template")
+      throw new Error("Failed to normalize analysis result for DOCX template")
     }
 
     const buffer = await generateReport({
