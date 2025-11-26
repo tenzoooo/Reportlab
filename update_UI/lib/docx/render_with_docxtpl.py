@@ -160,6 +160,7 @@ def build_table_subdoc(doc: DocxTemplate, rows) -> Optional[Any]:
       cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
       for paragraph in cell.paragraphs:
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        paragraph.paragraph_format.keep_with_next = True
       
       # 数値が入らないセルは左上から右下への斜線セルとして表現する
       if _should_draw_diagonal_cell(value, r_index, c_index):
