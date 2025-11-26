@@ -8,17 +8,124 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { createClient } from "@/lib/supabase/client"
+import { useEffect } from "react"
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [userData, setUserData] = useState({
-    name: "山田 太郎",
-    email: "yamada.taro@example.com",
-    university: "東京工業大学",
-    department: "工学部 電気電子工学科",
-    studentId: "2021001",
-    joinDate: "2024年4月",
+    name: "",
+    email: "",
+    university: "",
+    department: "",
+    studentId: "",
+    joinDate: "",
   })
+
+  const [stats, setStats] = useState([
+    { label: "総レポート数", value: 0, icon: BookOpen, color: "text-blue-600" },
+    { label: "今月作成", value: 0, icon: Award, color: "text-green-600" },
+    { label: "利用日数", value: 0, icon: Calendar, color: "text-purple-600" },
+  ])
+
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (!session) return
+
+        // Fetch Profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        // Fetch Stats
+        const now = new Date()
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+        const [
+          { count: totalReports },
+          { count: monthlyReports },
+          { data: recentReports }
+        ] = await Promise.all([
+          supabase.from('reports').select('*', { count: 'exact', head: true }).eq('user_id', session.user.id),
+          supabase.from('reports').select('*', { count: 'exact', head: true }).eq('user_id', session.user.id).gte('created_at', startOfMonth),
+          supabase.from('reports').select('title, created_at, status').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(3)
+        ])
+
+        // Calculate usage days
+        const joinDate = new Date(session.user.created_at)
+        const diffTime = Math.abs(now.getTime() - joinDate.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+        setUserData({
+          name: profile?.full_name || session.user.user_metadata?.full_name || "未設定",
+          email: session.user.email || "",
+          university: profile?.university || "",
+          department: profile?.department || "",
+          studentId: profile?.grade || "", // Note: mapping grade to studentId based on UI label, or should we add student_id to schema? Using grade for now as placeholder or add a field.
+          // Actually schema has 'grade', let's use that for now or just leave blank if not in schema. 
+          // Schema has: username, full_name, avatar_url, website, email, university, department, grade, plan, credits.
+          // UI has: name, email, university, department, studentId. 
+          // Let's map 'grade' to 'studentId' for now or just generic text field.
+          joinDate: joinDate.toLocaleDateString('ja-JP'),
+        })
+
+        setStats([
+          { label: "総レポート数", value: totalReports || 0, icon: BookOpen, color: "text-blue-600" },
+          { label: "今月作成", value: monthlyReports || 0, icon: Award, color: "text-green-600" },
+          { label: "利用日数", value: diffDays, icon: Calendar, color: "text-purple-600" },
+        ])
+
+        setRecentActivity(
+          (recentReports || []).map((r: any) => ({
+            title: r.title || "無題のレポート",
+            date: new Date(r.created_at).toLocaleDateString('ja-JP'),
+            type: "作成" // Currently only report creation is tracked
+          }))
+        )
+
+      } catch (error) {
+        console.error('Error fetching profile data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  const handleSave = async () => {
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: session.user.id,
+          full_name: userData.name,
+          university: userData.university,
+          department: userData.department,
+          grade: userData.studentId, // Mapping studentId input to grade column for now
+          updated_at: new Date().toISOString(),
+        })
+
+      if (error) throw error
+      setIsEditing(false)
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      // You might want to add a toast notification here
+    }
+  }
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -37,17 +144,9 @@ export default function ProfilePage() {
     visible: { opacity: 1, y: 0 },
   }
 
-  const stats = [
-    { label: "総レポート数", value: 15, icon: BookOpen, color: "text-blue-600" },
-    { label: "今月作成", value: 3, icon: Award, color: "text-green-600" },
-    { label: "利用日数", value: 45, icon: Calendar, color: "text-purple-600" },
-  ]
-
-  const recentActivity = [
-    { title: "実験1のレポート", date: "2024/10/28", type: "作成" },
-    { title: "実験2のレポート", date: "2024/10/27", type: "作成" },
-    { title: "実験3のレポート", date: "2024/10/26", type: "作成" },
-  ]
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">読み込み中...</div>
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -142,8 +241,8 @@ export default function ProfilePage() {
                     <CardTitle>プロフィール情報</CardTitle>
                     <CardDescription>基本情報の確認と編集</CardDescription>
                   </div>
-                  <Button variant={isEditing ? "secondary" : "default"} onClick={() => setIsEditing(!isEditing)}>
-                    {isEditing ? "キャンセル" : "編集"}
+                  <Button variant={isEditing ? "secondary" : "default"} onClick={() => isEditing ? handleSave() : setIsEditing(true)}>
+                    {isEditing ? "保存" : "編集"}
                   </Button>
                 </CardHeader>
                 <CardContent>
@@ -173,9 +272,8 @@ export default function ProfilePage() {
                           id="email"
                           type="email"
                           value={userData.email}
-                          disabled={!isEditing}
-                          onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-                          className={!isEditing ? "bg-muted" : ""}
+                          disabled={true} // Email should not be editable here usually
+                          className="bg-muted"
                         />
                       </div>
 
@@ -235,9 +333,9 @@ export default function ProfilePage() {
                         <Button variant="outline" onClick={() => setIsEditing(false)}>
                           キャンセル
                         </Button>
-                        <Button onClick={() => setIsEditing(false)}>保存</Button>
                       </div>
                     )}
+
                   </div>
                 </CardContent>
               </Card>
@@ -252,26 +350,32 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentActivity.map((activity, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <BookOpen className="h-5 w-5 text-primary" />
+                    {recentActivity.length > 0 ? (
+                      recentActivity.map((activity, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <BookOpen className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">{activity.title}</p>
+                              <p className="text-sm text-muted-foreground">{activity.type}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-foreground">{activity.title}</p>
-                            <p className="text-sm text-muted-foreground">{activity.type}</p>
-                          </div>
-                        </div>
-                        <span className="text-sm text-muted-foreground">{activity.date}</span>
-                      </motion.div>
-                    ))}
+                          <span className="text-sm text-muted-foreground">{activity.date}</span>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="text-center text-muted-foreground py-4">
+                        アクティビティはまだありません
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

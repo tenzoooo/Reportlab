@@ -243,6 +243,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Report not found" }, { status: 404 })
   }
 
+  // Check and deduct credits
+  const REQUIRED_CREDITS = 100
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("credits")
+    .eq("id", user.id)
+    .single()
+
+  if (profileError || !profile) {
+    logError("reports/generate:profile-error", profileError)
+    return NextResponse.json({ error: "Failed to fetch user profile" }, { status: 500 })
+  }
+
+  if ((profile.credits ?? 0) < REQUIRED_CREDITS) {
+    logInfo("reports/generate:insufficient-credits", { userId: user.id, credits: profile.credits })
+    return NextResponse.json(
+      { error: `Insufficient credits. You need ${REQUIRED_CREDITS} credits to generate a report.` },
+      { status: 402 }
+    )
+  }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ credits: (profile.credits ?? 0) - REQUIRED_CREDITS })
+    .eq("id", user.id)
+
+  if (updateError) {
+    logError("reports/generate:credit-deduction-failed", updateError)
+    return NextResponse.json({ error: "Failed to deduct credits" }, { status: 500 })
+  }
+
   await supabase.from("reports").update({ status: "processing" }).eq("id", reportId)
 
   // Fetch experiment files
@@ -318,8 +349,6 @@ export async function POST(req: NextRequest) {
 
     const difyOutput = analysisResult
 
-
-
     const difyWithTables = applyTablesToDify(difyOutput, tableRows)
     let templatePreview: unknown
     try {
@@ -330,11 +359,32 @@ export async function POST(req: NextRequest) {
       throw new Error("Failed to normalize Dify result_json for DOCX template")
     }
 
+    // Fetch user profile for naming
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("grade, full_name")
+      .eq("id", user.id)
+      .single()
+
+    const experimentName = (firstDoc.file_name || "report").replace(/\.[^/.]+$/, "")
+    let reportTitle = experimentName
+
+    if (profile) {
+      const studentId = profile.grade || ""
+      const name = profile.full_name || ""
+      if (studentId && name) {
+        reportTitle = `${studentId}_${name}_${experimentName}`
+      }
+    }
+
     // Generate DOCX from the template using Dify JSON
-    const buffer = await generateReport({ title: firstDoc.file_name || "report", difyOutput: difyWithTables, figureImages })
+    const buffer = await generateReport({ title: reportTitle, difyOutput: difyWithTables, figureImages })
 
     // Upload generated file to storage
-    const storagePath = `${user.id}/${reportId}/generated-${randomUUID()}.docx`
+    // Use UUID for storage filename to avoid "Invalid key" errors with non-ASCII characters
+    const storageFilename = `generated-${randomUUID()}.docx`
+    const storagePath = `${user.id}/${reportId}/${storageFilename}`
+
     const { error: uploadError } = await admin.storage
       .from(BUCKET_NAME)
       .upload(storagePath, buffer, {
@@ -346,16 +396,38 @@ export async function POST(req: NextRequest) {
       throw new Error(uploadError.message)
     }
 
-    await supabase.from("reports").update({ status: "completed", file_url: storagePath }).eq("id", reportId)
+    await supabase.from("reports").update({ status: "completed", file_url: storagePath, title: reportTitle }).eq("id", reportId)
 
-    logInfo("reports/generate:success", { reportId, fileUrl: storagePath })
+    logInfo("reports/generate:success", { reportId, fileUrl: storagePath, title: reportTitle })
     return NextResponse.json({ success: true, analysisId: inserted?.id, fileUrl: storagePath })
   } catch (error) {
     logError("reports/generate:exception", error)
+
+    // Refund credits on failure
+    const REQUIRED_CREDITS = 100
+    const { data: currentProfile } = await supabase
+      .from("profiles")
+      .select("credits")
+      .eq("id", user.id)
+      .single()
+
+    if (currentProfile) {
+      const { error: refundError } = await supabase
+        .from("profiles")
+        .update({ credits: (currentProfile.credits ?? 0) + REQUIRED_CREDITS })
+        .eq("id", user.id)
+
+      if (refundError) {
+        logError("reports/generate:refund-failed", refundError)
+      } else {
+        logInfo("reports/generate:refunded", { userId: user.id, amount: REQUIRED_CREDITS })
+      }
+    }
+
     await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
     return NextResponse.json(
       {
-        error: "Failed to run Dify workflow",
+        error: "Failed to generate report",
         detail: error instanceof Error ? error.message : String(error),
       },
       { status: 500 },

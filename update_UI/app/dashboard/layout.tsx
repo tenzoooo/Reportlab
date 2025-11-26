@@ -36,6 +36,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const router = useRouter()
   const [userEmail, setUserEmail] = useState<string>("")
+  const [credits, setCredits] = useState<number | null>(null)
+  const [storageUsage, setStorageUsage] = useState<number>(0)
   // Avoid hydration mismatch for Radix Dropdown by rendering it after mount
   const [mounted, setMounted] = useState(false)
 
@@ -49,6 +51,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         } = await supabase.auth.getUser()
 
         if (user?.email) setUserEmail(user.email)
+
+        // Fetch user profile for credits
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("credits")
+            .eq("id", user.id)
+            .single()
+
+          if (profile) {
+            setCredits(profile.credits)
+          }
+
+          // Fetch storage usage
+          const { data: usage } = await supabase.rpc("get_storage_usage", { user_id: user.id })
+          if (typeof usage === "number") {
+            setStorageUsage(usage)
+          }
+        }
 
         // Ensure each logged-in user has a Stripe customer row and metadata
         if (user) {
@@ -139,8 +160,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-600">ストレージ使用量</span>
               </div>
-              <Progress value={45} className="h-2" />
-              <p className="text-xs text-gray-500">45 MB / 100 MB</p>
+              <Progress value={Math.min((storageUsage / (100 * 1024 * 1024)) * 100, 100)} className="h-2" />
+              <p className="text-xs text-gray-500">{(storageUsage / (1024 * 1024)).toFixed(1)} MB / 100 MB</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-600">クレジット残数</span>
+              </div>
+              <p className="text-xs text-gray-500">{credits !== null ? `${credits} クレジット` : "読み込み中..."}</p>
             </div>
             <Link href="/dashboard/settings?tab=subscription" className="block">
               <Button variant="outline" size="sm" className="w-full gradient-button bg-transparent">

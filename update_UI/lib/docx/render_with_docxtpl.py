@@ -12,6 +12,7 @@ from docx.shared import Mm
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.table import _Cell, Table  # type: ignore
+from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.text.paragraph import Paragraph
 
 import re
@@ -156,8 +157,9 @@ def build_table_subdoc(doc: DocxTemplate, rows) -> Optional[Any]:
       cell = table.cell(r_index, c_index)
       cell.text = value
       # Center align
-      if cell.paragraphs:
-        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+      cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+      for paragraph in cell.paragraphs:
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
       
       # 数値が入らないセルは左上から右下への斜線セルとして表現する
       if _should_draw_diagonal_cell(value, r_index, c_index):

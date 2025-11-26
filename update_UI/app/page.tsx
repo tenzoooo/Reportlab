@@ -729,17 +729,17 @@ export default function LandingPage() {
               <h3 className="font-semibold mb-4">サポート</h3>
               <ul className="space-y-2 text-background/70 text-sm">
                 <li>
-                  <a href="#" className="hover:text-background transition-colors">
+                  <a href="/help" className="hover:text-background transition-colors">
                     ヘルプセンター
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-background transition-colors">
+                  <a href="/help/email" className="hover:text-background transition-colors">
                     お問い合わせ
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-background transition-colors">
+                  <a href="/help/faq" className="hover:text-background transition-colors">
                     FAQ
                   </a>
                 </li>
@@ -749,18 +749,18 @@ export default function LandingPage() {
               <h3 className="font-semibold mb-4">法的事項</h3>
               <ul className="space-y-2 text-background/70 text-sm">
                 <li>
-                  <a href="#" className="hover:text-background transition-colors">
+                  <a href="/legal/terms" className="hover:text-background transition-colors">
                     利用規約
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-background transition-colors">
+                  <a href="/legal/privacy" className="hover:text-background transition-colors">
                     プライバシーポリシー
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-background transition-colors">
-                    特定商取引法
+                  <a href="/legal/commercial-disclosure" className="hover:text-background transition-colors">
+                    特定商取引法に基づく表記
                   </a>
                 </li>
               </ul>
