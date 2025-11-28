@@ -26,6 +26,9 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Progress } from "@/components/ui/progress"
 import { createClient } from "@/lib/supabase/client"
+import { Switch } from "@/components/ui/switch"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+
 
 type ProcessingStep = {
   label: string
@@ -201,6 +204,8 @@ export default function NewReportPage() {
   const [processingReportId, setProcessingReportId] = useState<string | null>(null)
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
+  const [workflowType, setWorkflowType] = useState<"conventional" | "optimized" | "past_report">("conventional")
+  const [pastReportFile, setPastReportFile] = useState<File | null>(null)
 
   const searchParams = useSearchParams()
   const resumeReportId = searchParams.get("reportId")
@@ -649,19 +654,98 @@ export default function NewReportPage() {
         }
       }
 
+      // 3.6) 過去レポート（参照用）をアップロード
+      if (workflowType === "past_report" && pastReportFile) {
+        const ext = getFileExtension(pastReportFile.name) || "docx"
+        const storagePath = generateSafeStoragePath(
+          session.user.id,
+          reportId,
+          pastReportFile.name,
+          ext,
+          "experiment-data"
+        )
+        debugUpload("handleSubmit:past-report-upload:start", { storagePath })
+
+        const { error: uploadError } = await supabase.storage
+          .from("experiment-files")
+          .upload(storagePath, pastReportFile, {
+            contentType: pastReportFile.type || "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            upsert: true,
+          })
+
+        if (uploadError) {
+          debugUpload("handleSubmit:past-report-upload:error", uploadError)
+          throw new Error(uploadError.message)
+        }
+
+        // DBにも登録 (file_type="word"として扱うか、新しいタイプにするか。ここではwordとして登録し、ファイル名で判別させるか、メタデータを持たせる)
+        // 今回は file_type="word" で登録し、API側で "reference_report" として認識させるためのフラグが必要だが、
+        // experiment_data テーブルにはフラグがない。
+        // 暫定的に file_name にプレフィックスをつけるか、あるいはAPI側で file_name を見て判断する。
+        // ここでは file_name をそのまま登録し、API側で "past_report" ワークフローなら DOCX を探すロジックにする。
+        // ただし、実験書も DOCX の可能性があるので、区別が必要。
+        // file_type を "reference_docx" のようにしたいが、DB制約があるかもしれない。
+        // 既存の file_type: word, excel, image, code, pdf (pdf is treated as word usually or just file)
+        // 安全策として file_type="word" で登録する。API側で "reference_report" パラメータとしてパスを渡すわけではないので、
+        // DBから取得する際に区別する必要がある。
+        // 解決策: file_name に特別なマーカーを入れるわけにもいかないので、
+        // API側で「一番新しいDOCX」を過去レポートとみなす、あるいは
+        // experiment_data に `is_reference` カラムがないなら、
+        // クライアント側でアップロード時に `metadata` をストレージに付与する手もあるが、DB検索には使えない。
+
+        // 妥協案: APIには `reportId` しか渡していない。
+        // したがって、DB上のレコードで区別する必要がある。
+        // experiment_data テーブルの定義を確認できないが、file_type の制約が緩ければ "reference" としたい。
+        // もし制約が厳しいなら "word" にして、ファイル名で区別するしかないが、ユーザーファイル名は自由。
+
+        // 今回は、API側で「workflowType=past_report の場合、アップロードされたファイルの中で .docx のものを参照レポートとして扱う」とする。
+        // 実験書が PDF なら区別できる。実験書も DOCX だと区別不能になるリスクがある。
+        // リスク回避のため、ファイル名を一時的に変更して登録する？ -> ユーザーが見た時に変になる。
+
+        // ベストプラクティス: experiment_data に `category` カラムがあればよいが。
+        // ここでは `file_type: "word"` で登録し、API側で「実験書(PDF/Word)」と「過去レポート(DOCX)」をどう区別するか...
+        // 実験書は `experimentPdf` 変数にある。過去レポートは `pastReportFile`。
+        // 実験書がPDFなら拡張子で区別可能。
+        // もし実験書もDOCXなら... 
+        // 暫定対応: 過去レポートの file_type を "code" (その他扱い) にしてしまう手もあるが、wordとして扱いたい。
+        // 今回は「実験書はPDF推奨」とし、DOCX同士の競合は稀とする。
+        // あるいは、API側で `past_report_file_id` を受け取るように変更する？
+        // しかしAPIは `reportId` のみ。
+
+        // 修正: APIに `pastReportFilename` を渡すことで、サーバー側で特定できるようにする。
+
+        const { error: insertError } = await supabase.from("experiment_data").insert([
+          {
+            report_id: reportId,
+            file_name: pastReportFile.name,
+            file_type: "word",
+            file_url: storagePath,
+            uploaded_at: new Date().toISOString(),
+          },
+        ])
+
+        if (insertError) {
+          throw new Error(insertError.message)
+        }
+      }
+
       // 4) Dify を使うバックエンドの生成APIを呼び出し（Authorization: Bearer <token>）
       setCurrentStep(3)
       const token = session.access_token
       const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
       const endpoint = `${baseUrl}/api/reports/generate`
-      debugUpload("handleSubmit:generate-api:start", { endpoint })
+      debugUpload("handleSubmit:generate-api:start", { endpoint, workflowType })
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ reportId }),
+        body: JSON.stringify({
+          reportId,
+          workflowType,
+          referenceReportName: pastReportFile?.name
+        }),
       })
       if (!res.ok) {
         const msg = await res.text()
@@ -669,6 +753,17 @@ export default function NewReportPage() {
         throw new Error(msg || `Failed to start generation: ${res.status}`)
       }
       debugUpload("handleSubmit:generate-api:success", { reportId })
+
+      // If we uploaded a past report, we should probably pass its name to the API so it knows which one it is.
+      // But the current API signature in the fetch above only sends reportId and workflowType.
+      // We should update the body above to include `referenceReportName: pastReportFile?.name`.
+      // Let's do that in a separate replacement or assume the API will find it.
+      // For now, let's assume the API will look for a DOCX file that is NOT the experiment file.
+      // Or better, update the fetch body in the previous chunk.
+      // Wait, I can't edit the previous chunk here.
+      // I will assume the API is smart enough or I will update the fetch body in the next step if needed.
+      // Actually, I can just update the fetch body in the FIRST chunk of this tool call.
+      // I will update the first chunk to include referenceReportName.
 
       const startedAt = Date.now()
       setProcessingReportId(reportId)
@@ -808,6 +903,8 @@ export default function NewReportPage() {
               </motion.div>
             ) : (
               <div className="space-y-6">
+                {/* Workflow Selection moved to bottom */}
+
                 <div className="space-y-2">
                   <Label htmlFor="pdf-upload" className="text-base font-semibold text-card-foreground">実験書PDF</Label>
                   <input
@@ -1132,23 +1229,112 @@ export default function NewReportPage() {
                 )}
 
                 {experimentPdf && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3, delay: 0.1 }}
-                    className="p-4 bg-primary/10 border border-primary/30 rounded-lg"
-                  >
-                    <div className="flex items-start space-x-3">
-                      <CheckCircle2 className="w-5 h-5 text-primary mt-0.5" />
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-card-foreground">AIが自動でレポートを生成します</p>
-                        <p className="text-xs text-muted-foreground">
-                          実験書PDFの内容を解析し、目的・方法・結果・考察を含む完全なレポートを生成します。
-                          通常2-5分程度で完了します。
-                        </p>
+                  <div className="space-y-4 pt-4 border-t border-border">
+                    <Label className="text-base font-semibold">生成ワークフローを選択</Label>
+                    <RadioGroup
+                      value={workflowType}
+                      onValueChange={(val) => setWorkflowType(val as "conventional" | "optimized" | "past_report")}
+                      className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                    >
+                      {/* Conventional */}
+                      <div className="h-full">
+                        <Label
+                          htmlFor="wf-conventional"
+                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-full"
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <RadioGroupItem
+                              value="conventional"
+                              id="wf-conventional"
+                              className="peer"
+                            />
+                            <span className="text-lg font-bold">通常モード</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground text-left">
+                            標準的なレポート生成フロー。安定して動作します。
+                          </span>
+                        </Label>
                       </div>
-                    </div>
-                  </motion.div>
+
+                      {/* Optimized */}
+                      <div className="h-full">
+                        <Label
+                          htmlFor="wf-optimized"
+                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-full"
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <RadioGroupItem
+                              value="optimized"
+                              id="wf-optimized"
+                              className="peer"
+                            />
+                            <span className="text-lg font-bold">最適化モード (Beta)</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground text-left">
+                            より詳細な分析と高品質な文章生成を行います。
+                          </span>
+                        </Label>
+                      </div>
+
+                      {/* Past Report */}
+                      <div className="h-full">
+                        <Label
+                          htmlFor="wf-past-report"
+                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-full"
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <RadioGroupItem
+                              value="past_report"
+                              id="wf-past-report"
+                              className="peer"
+                            />
+                            <span className="text-lg font-bold">過去レポ再現</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground text-left">
+                            過去のレポートをアップロードし、その構成と文体を再現します。
+                          </span>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+
+                    {workflowType === "past_report" && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="pt-4 space-y-2"
+                      >
+                        <Label htmlFor="past-report-upload" className="text-sm font-semibold">
+                          参照する過去レポート (DOCX)
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="past-report-upload"
+                            type="file"
+                            accept=".docx"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) {
+                                setPastReportFile(e.target.files[0])
+                              }
+                            }}
+                            className="cursor-pointer"
+                          />
+                          {pastReportFile && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setPastReportFile(null)}
+                              className="text-destructive"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          ※このレポートの「章立て」と「図表の配置」をテンプレートとして使用します。
+                        </p>
+                      </motion.div>
+                    )}
+                  </div>
                 )}
 
                 {experimentPdf && (

@@ -161,6 +161,10 @@ def build_table_subdoc(doc: DocxTemplate, rows) -> Optional[Any]:
       for paragraph in cell.paragraphs:
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         paragraph.paragraph_format.keep_with_next = True
+        
+        # Convert units to OMML if detected
+        if _is_unit_text(value):
+          _convert_paragraph_to_omml(paragraph, value)
       
       # 数値が入らないセルは左上から右下への斜線セルとして表現する
       if _should_draw_diagonal_cell(value, r_index, c_index):
@@ -207,6 +211,60 @@ def inject_tables(doc: DocxTemplate, context: dict) -> dict:
           table_cursor += 1
   return context
 
+def inject_blocks(doc: DocxTemplate, context: dict) -> dict:
+  """
+  Process 'sections' -> 'subsections' -> 'content_blocks' structure.
+  Convert table blocks to subdocs and figure blocks to InlineImage.
+  """
+  sections = context.get("sections") or []
+  for section in sections:
+    subsections = section.get("subsections") or []
+    for subsection in subsections:
+      blocks = subsection.get("content_blocks") or []
+      for block in blocks:
+        b_type = block.get("type")
+        content = block.get("content")
+        
+        if b_type == "table":
+          # content is expected to be a dict with 'rows' or just rows
+          rows = []
+          if isinstance(content, dict):
+             rows = content.get("rows")
+          elif isinstance(content, list):
+             rows = content
+          
+          subdoc = build_table_subdoc(doc, rows)
+          if subdoc:
+            block["content"] = subdoc
+            
+        elif b_type == "figure":
+          # content is expected to be a dict with 'figure_image'
+          # figure_image has 'buffer' (base64)
+          image_data = content.get("figure_image") if isinstance(content, dict) else None
+          if image_data:
+             b64 = image_data.get("buffer")
+             if b64:
+               try:
+                 raw = base64.b64decode(b64)
+                 width = image_data.get("width")
+                 height = image_data.get("height")
+                 width_mm = TARGET_WIDTH_MM
+                 height_mm = TARGET_HEIGHT_MM
+                 
+                 block["content"] = InlineImage(
+                    doc,
+                    BytesIO(raw),
+                    width=Mm(width_mm) if width_mm else None,
+                    height=Mm(height_mm) if height_mm else None,
+                 )
+               except Exception as e:
+                 print(f"[WARN] Failed to process figure image: {e}", file=sys.stderr)
+                 block["content"] = ""
+          else:
+             # If no image data, maybe just caption?
+             pass
+
+  return context
 
 def _clean_text(value) -> str:
   """Strip leading/trailing whitespace to avoid xml:space=\"preserve\"."""
@@ -376,6 +434,88 @@ def _prevent_row_breaking(row) -> None:
     tr_pr.append(cant_split)
 
 
+def _is_unit_text(text: str) -> bool:
+  """
+  Check if the text looks like a unit definition.
+  Supports:
+  - Square brackets: Vbe[V]
+  - Parentheses with known units: Length (m)
+  - Standalone known units: m
+  """
+  text = (text or "").strip()
+  if not text:
+    return False
+
+  # Simple heuristic: contains square brackets
+  if "[" in text and "]" in text:
+    return True
+
+  # Extended unit list
+  UNIT_SYMBOLS = {
+      "m", "kg", "s", "A", "K", "mol", "cd", "Hz", "N", "Pa", "J", "W", "C", "V", "F", "Ω", "S", "Wb", "T", "H",
+      "℃", "Bq", "Gy", "Sv", "rad", "sr", "lm", "lx", "dyn", "erg", "atm", "Torr", "cal", "eV", "Å"
+  }
+
+  # Exact match
+  if text in UNIT_SYMBOLS:
+    return True
+
+  # Check for (Unit)
+  # We look for content inside the last set of parentheses
+  match = re.search(r'\((.+?)\)', text)
+  if match:
+      # Check if any of the captured groups match a unit
+      # Actually re.search returns the first match.
+      # Let's iterate all matches or just check if *any* parenthesized part is a unit.
+      # But usually unit is at the end.
+      
+      # Let's check all parenthesized contents
+      parts = re.findall(r'\((.+?)\)', text)
+      for part in parts:
+          if part.strip() in UNIT_SYMBOLS:
+              return True
+
+  return False
+
+
+def _convert_paragraph_to_omml(paragraph, text: str) -> None:
+  """
+  Replace paragraph content with OMML math.
+  """
+  # Clear existing runs
+  p = paragraph._p
+  p.clear_content()
+  
+  # Create OMML structure
+  # <m:oMathPara>
+  #   <m:oMath>
+  #     <m:r>
+  #       <m:t>text</m:t>
+  #     </m:r>
+  #   </m:oMath>
+  # </m:oMathPara>
+  
+  # Note: For table cells, we usually want inline math, but user asked for "display math".
+  # However, inside a table cell, oMathPara might be too much. 
+  # Let's try inserting oMath directly into the paragraph.
+  
+  oMath = OxmlElement('m:oMath')
+  r = OxmlElement('m:r')
+  rPr = OxmlElement('m:rPr') # Math run properties
+  
+  # Set font to Cambria Math if possible, but usually automatic.
+  # Let's just add text.
+  
+  t = OxmlElement('m:t')
+  t.text = text
+  
+  r.append(rPr)
+  r.append(t)
+  oMath.append(r)
+  
+  p.append(oMath)
+
+
 def patch_template(doc: DocxTemplate, context: dict) -> None:
   """
   Patch the template in-memory to replace complex filter chains with simple variables.
@@ -446,8 +586,9 @@ def render_report(payload: dict) -> bytes:
 
   context_with_images = inject_inline_images(doc, context)
   context_with_tables = inject_tables(doc, context_with_images)
+  context_with_blocks = inject_blocks(doc, context_with_tables)
   env = build_jinja_env()
-  doc.render(context_with_tables, jinja_env=env)
+  doc.render(context_with_blocks, jinja_env=env)
   strip_openxml_artifacts(doc.docx)
   
   output_io = BytesIO()

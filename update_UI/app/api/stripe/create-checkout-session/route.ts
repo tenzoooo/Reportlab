@@ -7,14 +7,19 @@ import { z } from "zod"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const CREDIT_PRICE_ID = process.env.STRIPE_PRICE_ID_CREDITS ?? process.env.STRIPE_PRICE_ID_PREMIUM
+const CREDIT_PRICE_ID =
+  process.env.STRIPE_PRICE_ID_CREDIT_PACK ??
+  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDIT_PACK
 const CREDITS_PER_UNIT = Number(process.env.CREDITS_PER_UNIT ?? "100")
 
 export async function POST(request: NextRequest) {
   logRequest(request, "stripe:create-checkout-session")
 
   if (!CREDIT_PRICE_ID || Number.isNaN(CREDITS_PER_UNIT) || CREDITS_PER_UNIT <= 0) {
-    return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Stripe credit pack is not configured. Set STRIPE_PRICE_ID_CREDIT_PACK to a one-time Price ID." },
+      { status: 500 }
+    )
   }
 
   const body = await request.json().catch(() => ({}))
@@ -43,13 +48,8 @@ export async function POST(request: NextRequest) {
 
   const stripe = getStripeClient()
   const origin = request.headers.get("origin") ?? new URL(request.url).origin
-  const successUrl = process.env.STRIPE_SUCCESS_URL ?? `${origin}/dashboard/settings?tab=subscription&state=success`
-  const cancelUrl = process.env.STRIPE_CANCEL_URL ?? `${origin}/dashboard/settings?tab=subscription&state=cancelled`
-
-  const stripeCustomerId =
-    typeof user.user_metadata?.stripe_customer_id === "string" && user.user_metadata.stripe_customer_id.trim()
-      ? user.user_metadata.stripe_customer_id
-      : undefined
+  const successUrl = process.env.STRIPE_SUCCESS_URL ?? `${origin}/dashboard/settings?tab=subscription&success=credits`
+  const cancelUrl = process.env.STRIPE_CANCEL_URL ?? `${origin}/dashboard/settings?tab=subscription&canceled=credits`
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -62,10 +62,12 @@ export async function POST(request: NextRequest) {
       ],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      customer: stripeCustomerId,
-      customer_email: stripeCustomerId ? undefined : user.email ?? undefined,
+      // 単発クレジット購入では customer_email のみを使い、
+      // Supabase 側の user.id と metadata の紐付けで管理します。
+      customer_email: user.email ?? undefined,
       metadata: {
         supabaseUserId: user.id,
+        userId: user.id,
         creditsPurchased: String(creditsPurchased),
       },
     })
@@ -73,6 +75,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: session.url })
   } catch (err) {
     logError("stripe:create-checkout-session", err)
-    return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 })
+    const message = err instanceof Error ? err.message : "Failed to create checkout session"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

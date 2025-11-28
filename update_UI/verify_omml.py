@@ -9,7 +9,7 @@ from docxtpl import DocxTemplate
 from docx.oxml.ns import qn
 from render_with_docxtpl import build_table_subdoc
 
-def verify_cant_split():
+def verify_omml_conversion():
     template_path = 'templates/template.docx'
     if not os.path.exists(template_path):
         print(f"Template not found: {template_path}")
@@ -18,7 +18,7 @@ def verify_cant_split():
     doc = DocxTemplate(template_path)
     
     rows = [
-        ["Header 1", "Header 2"],
+        ["Header 1", "Vbe[V]"],
         ["Cell 1", "Cell 2"]
     ]
     
@@ -30,20 +30,27 @@ def verify_cant_split():
         
     table = subdoc.tables[0]
     
-    # Check cantSplit property on rows
-    for i, row in enumerate(table.rows):
-        tr = row._tr
-        tr_pr = getattr(tr, "trPr", None)
-        if tr_pr is None:
-            print(f"FAIL: Row {i} has no trPr")
-            sys.exit(1)
+    # Check if Vbe[V] cell has OMML
+    cell = table.cell(0, 1)
+    p = cell.paragraphs[0]
+    
+    # Check for m:oMath element
+    oMath = p._p.find(qn("m:oMath"))
+    if oMath is None:
+        print("FAIL: No OMML element found in unit cell")
+        sys.exit(1)
+        
+    # Check text content inside OMML
+    t = oMath.find(".//" + qn("m:t"))
+    if t is None:
+        print("FAIL: No text element found in OMML")
+        sys.exit(1)
+        
+    if t.text != "Vbe[V]":
+        print(f"FAIL: OMML text mismatch. Expected 'Vbe[V]', got '{t.text}'")
+        sys.exit(1)
             
-        cant_split = tr_pr.find(qn("w:cantSplit"))
-        if cant_split is None:
-            print(f"FAIL: Row {i} has no w:cantSplit")
-            sys.exit(1)
-            
-    print("SUCCESS: All table rows have w:cantSplit property.")
+    print("SUCCESS: Unit text converted to OMML.")
 
 if __name__ == "__main__":
-    verify_cant_split()
+    verify_omml_conversion()

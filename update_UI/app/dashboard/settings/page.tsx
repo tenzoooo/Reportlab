@@ -24,6 +24,9 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
+const CREDITS_PER_PACK = Number(process.env.NEXT_PUBLIC_CREDITS_PER_UNIT ?? 100)
+const MAX_CREDIT_PACKS = 20
+
 export default function SettingsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -36,16 +39,35 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState({ name: "", email: "", university: "", department: "", credits: 0, plan: "free" })
   const [subscription, setSubscription] = useState<any>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [creditQuantity, setCreditQuantity] = useState(1)
 
   useEffect(() => {
     setActiveTab(tabParam)
 
     // Check for success/canceled params from Stripe redirect
-    if (searchParams.get("success")) {
+    const successParam = searchParams.get("success")
+    const canceledParam = searchParams.get("canceled")
+
+    if (successParam === "credits") {
+      toast.success("クレジットの購入が完了しました")
+      router.replace("/dashboard/settings?tab=subscription")
+    } else if (successParam) {
       toast.success("サブスクリプションが更新されました")
       router.replace("/dashboard/settings?tab=subscription")
     }
-    if (searchParams.get("canceled")) {
+    if (canceledParam === "credits") {
+      toast.info("クレジットの購入をキャンセルしました")
+      router.replace("/dashboard/settings?tab=subscription")
+    } else if (canceledParam) {
+      toast.info("決済がキャンセルされました")
+      router.replace("/dashboard/settings?tab=subscription")
+    }
+    const legacyState = searchParams.get("state")
+    if (!successParam && legacyState === "success") {
+      toast.success("サブスクリプションが更新されました")
+      router.replace("/dashboard/settings?tab=subscription")
+    }
+    if (!canceledParam && legacyState === "cancelled") {
       toast.info("決済がキャンセルされました")
       router.replace("/dashboard/settings?tab=subscription")
     }
@@ -137,6 +159,36 @@ export default function SettingsPage() {
     } catch (error) {
       console.error(error)
       toast.error(error instanceof Error ? error.message : "決済の開始に失敗しました")
+      setIsProcessing(false)
+    }
+  }
+
+  const updateCreditQuantity = (value: number) => {
+    const safeValue = Number.isFinite(value) ? value : 1
+    const clamped = Math.min(Math.max(Math.round(safeValue), 1), MAX_CREDIT_PACKS)
+    setCreditQuantity(clamped)
+  }
+
+  const handleCreditCheckout = async () => {
+    setIsProcessing(true)
+    try {
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: creditQuantity }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        throw new Error(data.error)
+      }
+      if (data.url) {
+        window.location.href = data.url
+        return
+      }
+      throw new Error("No URL returned")
+    } catch (error) {
+      console.error(error)
+      toast.error(error instanceof Error ? error.message : "クレジットの購入に失敗しました")
       setIsProcessing(false)
     }
   }
@@ -350,6 +402,69 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>クレジットを追加購入</CardTitle>
+                  <CardDescription>100クレジット単位で必要な分だけチャージできます</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground">購入セット数</h4>
+                      <p className="text-xs text-muted-foreground">
+                        1セット = {CREDITS_PER_PACK}クレジット（最大{MAX_CREDIT_PACKS}セット）
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => updateCreditQuantity(creditQuantity - 1)}
+                        disabled={creditQuantity <= 1 || isProcessing}
+                      >
+                        -
+                      </Button>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={MAX_CREDIT_PACKS}
+                        step={1}
+                        value={creditQuantity}
+                        onChange={(e) => updateCreditQuantity(Number(e.target.value))}
+                        className="w-20 text-center"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => updateCreditQuantity(creditQuantity + 1)}
+                        disabled={creditQuantity >= MAX_CREDIT_PACKS || isProcessing}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">購入予定クレジット</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {creditQuantity * CREDITS_PER_PACK} クレジット
+                      </p>
+                    </div>
+                    <Button
+                      className="w-full sm:w-auto"
+                      onClick={handleCreditCheckout}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? "処理中..." : "Stripeで購入"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    決済完了後すぐにクレジットが付与されます。Stripeの決済ページへ遷移します。
+                  </p>
                 </CardContent>
               </Card>
 

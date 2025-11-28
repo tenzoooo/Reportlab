@@ -9,6 +9,12 @@ import { buildDocTemplateData, generateReport } from "@/lib/docx/generator"
 import type { DocTemplateFigureImage } from "@/lib/docx/template-data"
 import { logRequest, logInfo, logError } from "@/lib/server/logger"
 import { analyzeDocument } from "@/lib/analysis/service"
+import { execFile } from "node:child_process"
+import { writeFile, unlink } from "node:fs/promises"
+import path from "node:path"
+import { promisify } from "node:util"
+
+const execFileAsync = promisify(execFile)
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -23,6 +29,10 @@ type RowsTable = { rows: string[][] }
 
 const requestSchema = z.object({
   reportId: z.string().uuid(),
+  workflowType: z.enum(["conventional", "optimized", "past_report"]).optional(),
+  referenceReportName: z.string().optional(),
+  // Legacy support
+  useOptimizedWorkflow: z.boolean().optional(),
 })
 
 type ExperimentFileRecord = {
@@ -224,7 +234,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
 
-  const { reportId } = parsed.data
+  const { reportId, useOptimizedWorkflow, workflowType: rawWorkflowType, referenceReportName } = parsed.data
+
+  // Normalize workflowType (support legacy useOptimizedWorkflow)
+  const workflowType = rawWorkflowType || (useOptimizedWorkflow ? "optimized" : "conventional")
 
   // Verify report ownership
   const { data: report, error: reportError } = await supabase
@@ -310,11 +323,12 @@ export async function POST(req: NextRequest) {
   const figureImages = await downloadFigureImages(admin as any, experimentFiles ?? [])
   const tableRows = await downloadTableRows(admin as any, experimentFiles ?? [])
 
-  // Download the PDF document
+  // Download the primary document (PDF or Word)
   const firstDoc = docs[0]
   const objectPath = sanitizeStoragePath(firstDoc.file_url)
+  const ext = (firstDoc.file_name || "").toLowerCase().endsWith(".docx") ? ".docx" : ".pdf"
 
-  let pdfBuffer: Buffer
+  let docBuffer: Buffer
   try {
     const { data, error } = await admin.storage.from(BUCKET_NAME).download(objectPath)
     if (error || !data) {
@@ -323,7 +337,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error?.message || "Failed to download PDF" }, { status: 500 })
     }
     const arrayBuffer = await data.arrayBuffer()
-    pdfBuffer = Buffer.from(arrayBuffer)
+    docBuffer = Buffer.from(arrayBuffer)
   } catch (downloadError) {
     logError("reports/generate:pdf-download-exception", downloadError)
     await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
@@ -331,9 +345,113 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Analyze the document locally
-    logInfo("reports/generate:start-analysis", { file: firstDoc.file_name })
-    const analysisResult = await analyzeDocument(pdfBuffer)
+    let analysisResult: any
+    let structureHint: any = null
+
+    // STEP 1: If past_report workflow, extract structure hint first
+    if (workflowType === "past_report" && referenceReportName) {
+      logInfo("reports/generate:extracting-hint", { referenceReportName })
+
+      // Find the reference DOCX file
+      const referenceFile = (experimentFiles ?? []).find(
+        (f) => f.file_name === referenceReportName && f.file_type === "word"
+      )
+
+      if (!referenceFile) {
+        logError("reports/generate:reference-not-found", { referenceReportName })
+        await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
+        return NextResponse.json(
+          { error: `Reference report "${referenceReportName}" not found` },
+          { status: 400 }
+        )
+      }
+
+      // Download the reference DOCX
+      const refObjectPath = sanitizeStoragePath(referenceFile.file_url)
+      let refBuffer: Buffer
+      try {
+        const { data, error } = await admin.storage.from(BUCKET_NAME).download(refObjectPath)
+        if (error || !data) {
+          throw new Error(error?.message || "Failed to download reference report")
+        }
+        const arrayBuffer = await data.arrayBuffer()
+        refBuffer = Buffer.from(arrayBuffer)
+      } catch (downloadError) {
+        logError("reports/generate:reference-download-failed", downloadError)
+        await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
+        return NextResponse.json({ error: "Failed to download reference report" }, { status: 500 })
+      }
+
+      // Save to temp file and run hint extraction
+      const tempRefPath = path.join("/tmp", `reference-${randomUUID()}.docx`)
+      await writeFile(tempRefPath, refBuffer)
+
+      try {
+        const scriptPath = path.join(process.cwd(), "lib/python/past_report_workflow.py")
+        const { stdout, stderr } = await execFileAsync("python3", [scriptPath, tempRefPath], {
+          env: { ...process.env },
+          maxBuffer: 1024 * 1024 * 5, // 5MB buffer
+        })
+
+        if (stderr) {
+          logInfo("reports/generate:hint-extraction-stderr", { stderr })
+        }
+
+        try {
+          structureHint = JSON.parse(stdout)
+          if (structureHint.error) {
+            throw new Error(structureHint.error)
+          }
+          logInfo("reports/generate:hint-extracted", { sections: structureHint.sections?.length })
+        } catch (parseError) {
+          logError("reports/generate:hint-parse-error", parseError, { stdout })
+          throw new Error("Failed to parse hint extraction output")
+        }
+      } finally {
+        await unlink(tempRefPath).catch(() => { })
+      }
+    }
+
+    // STEP 2: Analyze the experiment PDF (using optimized or conventional workflow)
+    if (workflowType === "optimized" || workflowType === "past_report") {
+      logInfo("reports/generate:start-optimized-analysis", { file: firstDoc.file_name, workflowType })
+
+      // Save buffer to a temp file (PDF or DOCX)
+      const tempDocPath = path.join("/tmp", `upload-${randomUUID()}${ext}`)
+      await writeFile(tempDocPath, docBuffer)
+
+      try {
+        // Execute Python script
+        const scriptPath = path.join(process.cwd(), "lib/python/optimized_workflow.py")
+        const { stdout, stderr } = await execFileAsync("python3", [scriptPath, tempDocPath], {
+          env: { ...process.env },
+          maxBuffer: 1024 * 1024 * 10 // 10MB buffer
+        })
+
+        if (stderr) {
+          logInfo("reports/generate:python-stderr", { stderr })
+        }
+
+        try {
+          analysisResult = JSON.parse(stdout)
+          if (analysisResult.error) {
+            throw new Error(analysisResult.error)
+          }
+        } catch (parseError) {
+          logError("reports/generate:python-output-parse-error", parseError, { stdout })
+          throw new Error("Failed to parse Python script output")
+        }
+
+      } finally {
+        // Clean up temp file
+        await unlink(tempDocPath).catch(() => { })
+      }
+
+    } else {
+      // Analyze the document locally (Legacy/Default)
+      logInfo("reports/generate:start-analysis", { file: firstDoc.file_name })
+      analysisResult = await analyzeDocument(pdfBuffer)
+    }
 
     // Save analysis result
     const { data: inserted, error: insertErr } = await supabase

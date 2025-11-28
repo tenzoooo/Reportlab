@@ -1,0 +1,53 @@
+{
+    "chapter_title": "反転増幅回路の直流利得特性",
+    "sections": [
+        {
+            "section_number": "1.1",
+            "title": "反転増幅回路の直流利得特性",
+            "subsections": [
+                {
+                    "subsection_number": "(1-1)",
+                    "title": "入力電圧と出力電圧の関係",
+                    "content_blocks": [
+                        {
+                            "type": "text",
+                            "content": "無負荷状態における入力電圧と出力電圧の関係を測定した。",
+                            "instruction": "実験の条件（無負荷状態など）と、何を測定したかを簡潔に述べる。",
+                            "style_type": "procedure"
+                        },
+                        {
+                            "type": "text",
+                            "content": "結果を表1.1.1、図1.1.1に示す。",
+                            "instruction": "結果を示す表と図の番号を参照し、「結果を表X、図Yに示す。」という形式で記述。",
+                            "style_type": "procedure"
+                        },
+                        {
+                            "type": "table",
+                            "content": "Table Placeholder",
+                            "instruction": "Insert the table containing input and output voltage measurements.",
+                            "style_type": "other"
+                        },
+                        {
+                            "type": "figure",
+                            "content": "Figure Placeholder",
+                            "instruction": "Insert the graph showing the relationship between input and output voltage.",
+                            "style_type": "other"
+                        },
+                        {
+                            "type": "text",
+                            "content": "表1.1.1より、入力電圧が増加すると出力電圧も比例して増加することが分かる。",
+                            "instruction": "表のデータに基づき、入力と出力の関係（比例など）を「〜より〜が分かる」という文体で記述。",
+                            "style_type": "observation"
+                        },
+                        {
+                            "type": "text",
+                            "content": "図1.1.1より、グラフは原点を通る直線となっており、入力電圧と出力電圧は比例関係にある。",
+                            "instruction": "図（グラフ）の形状（原点を通る直線など）に言及し、比例関係であることを確認する。",
+                            "style_type": "observation"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

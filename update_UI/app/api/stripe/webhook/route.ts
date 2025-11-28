@@ -44,15 +44,57 @@ export async function POST(req: Request) {
       case "checkout.session.completed": {
         console.log("[WEBHOOK] Processing checkout.session.completed")
         const session = event.data.object as Stripe.Checkout.Session
+        const userId = session.metadata?.supabaseUserId || session.metadata?.userId
         const subscriptionId = session.subscription as string
-        const userId = session.metadata?.userId
 
         console.log("[WEBHOOK] Session ID:", session.id)
+        console.log("[WEBHOOK] Mode:", session.mode)
         console.log("[WEBHOOK] Subscription ID:", subscriptionId)
         console.log("[WEBHOOK] User ID from metadata:", userId)
 
-        if (!userId || !subscriptionId) {
-          console.error("[WEBHOOK] Missing userId or subscriptionId")
+        if (!userId) {
+          console.error("[WEBHOOK] Missing userId in metadata")
+          break
+        }
+
+        // One-time credit purchase (mode=payment)
+        if (session.mode === "payment") {
+          const creditsPurchased = Number(session.metadata?.creditsPurchased ?? NaN)
+          if (!Number.isFinite(creditsPurchased) || creditsPurchased <= 0) {
+            console.error("[WEBHOOK] Invalid creditsPurchased metadata:", session.metadata?.creditsPurchased)
+            break
+          }
+
+          const description = `Stripe checkout (${session.id})`
+          const { data: existing } = await supabase
+            .from("credit_transactions")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("description", description)
+            .maybeSingle()
+
+          if (existing) {
+            console.log("[WEBHOOK] Credit transaction already recorded, skipping duplicate:", existing.id)
+            break
+          }
+
+          console.log("[WEBHOOK] Adding credits:", creditsPurchased, "to user:", userId)
+          await supabase.rpc("increment_credits", {
+            user_id_arg: userId,
+            amount_arg: creditsPurchased,
+          })
+
+          await supabase.from("credit_transactions").insert({
+            user_id: userId,
+            amount: creditsPurchased,
+            description,
+          })
+
+          break
+        }
+
+        if (!subscriptionId) {
+          console.error("[WEBHOOK] Missing subscriptionId for subscription checkout")
           break
         }
 

@@ -34,8 +34,18 @@ Stripeのリダイレクトや内部API呼び出しに使用されます。
 - **値**: StripeのPublishable Key（本番モード用）
 - **キー**: `NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM`
 - **値**: Stripe本番環境でのPremiumプランのPrice ID
+- **キー**: `NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS`
+- **値**: クレジット定期購入（サブスク）のPrice ID
+- **キー**: `STRIPE_PRICE_ID_CREDITS`（任意）
+- **値**: サーバー側でも同じIDを参照したい場合にセット（クレジット定期購入）。未設定でも動作します。
+- **キー**: `STRIPE_PRICE_ID_CREDIT_PACK`
+- **値**: 100クレジット単位で購入する際のPrice ID（Checkout用・サーバーのみ）。**必ず one_time のPrice ID を指定**してください。
+- **キー**: `NEXT_PUBLIC_STRIPE_PRICE_ID_CREDIT_PACK`（任意）
+- **値**: UIで参照したい場合のみ設定。非公開でも動作しますが、環境変数を共有したい場合に使います。
+- **キー**: `CREDITS_PER_UNIT` / `NEXT_PUBLIC_CREDITS_PER_UNIT`
+- **値**: 1パックあたりの付与クレジット数（デフォルト100）。バックエンドとフロントで同じ値をセットしてください。
 - **キー**: `STRIPE_SUCCESS_URL`（任意）
-- **値**: 決済成功時のリダイレクト先URL（例: `https://your-project.vercel.app/dashboard/settings?tab=subscription&success=true`）
+- **値**: 決済成功時のリダイレクト先URL（例: `https://your-project.vercel.app/dashboard/settings?tab=subscription&success=credits`）。クレジット購入のトーストを出したい場合は `success=credits` を付与してください。
     - *注*: コード内では `NEXT_PUBLIC_BASE_URL` を基に自動生成しているため、必須ではありませんが、明示的に指定したい場合は設定してください。
 
 ### 5. AI設定
