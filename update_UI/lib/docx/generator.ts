@@ -33,7 +33,8 @@ logDocxDebug("module loaded", {
 const PROTECTION_BYPASS_TOKEN =
   process.env.VERCEL_PROTECTION_BYPASS_TOKEN ||
   process.env.VERCEL_DEPLOYMENT_PROTECTION_BYPASS_TOKEN ||
-  process.env.VERCEL_BYPASS_TOKEN
+  process.env.VERCEL_BYPASS_TOKEN ||
+  process.env.VERCEL_AUTOMATION_BYPASS_SECRET
 
 const getBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "")
