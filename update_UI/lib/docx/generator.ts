@@ -22,6 +22,7 @@ const logDocxDebug = (...args: unknown[]) => {
 
 const TEMPLATE_PATH = path.join(process.cwd(), "templates", "chapter_fixed.docx")
 const PY_RENDERER_PATH = path.join(process.cwd(), "lib", "docx", "render_with_docxtpl.py")
+const PYTHON_BIN = process.env.PYTHON_BIN || "python3"
 
 logDocxDebug("module loaded", {
   path: __filename,
@@ -210,7 +211,7 @@ const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<
   console.log("--- [DEBUG] PYTHON PAYLOAD END ---")
 
   await new Promise<void>((resolve, reject) => {
-    const child = spawn("python3", [PY_RENDERER_PATH], {
+    const child = spawn(PYTHON_BIN, [PY_RENDERER_PATH], {
       cwd: process.cwd(),
       stdio: ["pipe", "inherit", "inherit"],
     })

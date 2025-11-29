@@ -198,6 +198,9 @@ const applyTablesToDify = (source: unknown, tables: RowsTable[]): unknown => {
 
 const ENABLE_DIFY_DEBUG_LOG = process.env.ENABLE_DIFY_DEBUG_LOG === "true"
 
+// Allow overriding the Python executable (for environments where `python3` is not available)
+const PYTHON_BIN = process.env.PYTHON_BIN || "python3"
+
 const toPreviewString = (value: unknown, limit = 4000) => {
   try {
     const raw = typeof value === "string" ? value : JSON.stringify(value)
@@ -388,7 +391,7 @@ export async function POST(req: NextRequest) {
 
       try {
         const scriptPath = path.join(process.cwd(), "lib/python/past_report_workflow.py")
-        const { stdout, stderr } = await execFileAsync("python3", [scriptPath, tempRefPath], {
+        const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [scriptPath, tempRefPath], {
           env: { ...process.env },
           maxBuffer: 1024 * 1024 * 5, // 5MB buffer
         })
@@ -423,9 +426,9 @@ export async function POST(req: NextRequest) {
       try {
         // Execute Python script
         const scriptPath = path.join(process.cwd(), "lib/python/optimized_workflow.py")
-        const { stdout, stderr } = await execFileAsync("python3", [scriptPath, tempDocPath], {
+        const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [scriptPath, tempDocPath], {
           env: { ...process.env },
-          maxBuffer: 1024 * 1024 * 10 // 10MB buffer
+          maxBuffer: 1024 * 1024 * 10, // 10MB buffer
         })
 
         if (stderr) {
@@ -441,16 +444,24 @@ export async function POST(req: NextRequest) {
           logError("reports/generate:python-output-parse-error", parseError, { stdout })
           throw new Error("Failed to parse Python script output")
         }
-
+      } catch (pythonError: any) {
+        // If Python is not available, fall back to legacy analysis
+        if (pythonError && pythonError.code === "ENOENT") {
+          logError("reports/generate:python-not-found", pythonError, { pythonBin: PYTHON_BIN })
+          logInfo("reports/generate:fallback-legacy-analysis", { file: firstDoc.file_name })
+          analysisResult = await analyzeDocument(docBuffer)
+        } else {
+          throw pythonError
+        }
       } finally {
         // Clean up temp file
-        await unlink(tempDocPath).catch(() => { })
+        await unlink(tempDocPath).catch(() => {})
       }
 
     } else {
       // Analyze the document locally (Legacy/Default)
       logInfo("reports/generate:start-analysis", { file: firstDoc.file_name })
-      analysisResult = await analyzeDocument(pdfBuffer)
+      analysisResult = await analyzeDocument(docBuffer)
     }
 
     // Save analysis result
