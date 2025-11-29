@@ -202,6 +202,11 @@ const ENABLE_DIFY_DEBUG_LOG = process.env.ENABLE_DIFY_DEBUG_LOG === "true"
 const PYTHON_BIN = process.env.PYTHON_BIN || "python3"
 const USE_REMOTE_PYTHON = process.env.VERCEL === "1" || process.env.USE_REMOTE_PYTHON === "true"
 
+const PROTECTION_BYPASS_TOKEN =
+  process.env.VERCEL_PROTECTION_BYPASS_TOKEN ||
+  process.env.VERCEL_DEPLOYMENT_PROTECTION_BYPASS_TOKEN ||
+  process.env.VERCEL_BYPASS_TOKEN
+
 const getBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "")
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`.replace(/\/+$/, "")
@@ -211,9 +216,13 @@ const getBaseUrl = () => {
 const callPythonApi = async <T>(pathname: string, payload: any): Promise<T> => {
   const baseUrl = getBaseUrl()
   const url = `${baseUrl}${pathname.startsWith("/") ? pathname : `/${pathname}`}`
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (PROTECTION_BYPASS_TOKEN) {
+    headers["x-vercel-protection-bypass"] = PROTECTION_BYPASS_TOKEN
+  }
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
