@@ -200,6 +200,28 @@ const ENABLE_DIFY_DEBUG_LOG = process.env.ENABLE_DIFY_DEBUG_LOG === "true"
 
 // Allow overriding the Python executable (for environments where `python3` is not available)
 const PYTHON_BIN = process.env.PYTHON_BIN || "python3"
+const USE_REMOTE_PYTHON = process.env.VERCEL === "1" || process.env.USE_REMOTE_PYTHON === "true"
+
+const getBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "")
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`.replace(/\/+$/, "")
+  return "http://localhost:3000"
+}
+
+const callPythonApi = async <T>(pathname: string, payload: any): Promise<T> => {
+  const baseUrl = getBaseUrl()
+  const url = `${baseUrl}${pathname.startsWith("/") ? pathname : `/${pathname}`}`
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const errorText = await res.text()
+    throw new Error(`Python function failed: ${res.status} ${res.statusText} - ${errorText}`)
+  }
+  return (await res.json()) as T
+}
 
 const toPreviewString = (value: unknown, limit = 4000) => {
   try {
@@ -390,25 +412,40 @@ export async function POST(req: NextRequest) {
       await writeFile(tempRefPath, refBuffer)
 
       try {
-        const scriptPath = path.join(process.cwd(), "lib/python/past_report_workflow.py")
-        const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [scriptPath, tempRefPath], {
-          env: { ...process.env },
-          maxBuffer: 1024 * 1024 * 5, // 5MB buffer
-        })
+        if (USE_REMOTE_PYTHON) {
+          structureHint = await callPythonApi("/api/past_report_workflow", {
+            file_base64: refBuffer.toString("base64"),
+            filename: referenceFile.file_name || "reference.docx",
+          })
+        } else {
+          const scriptPath = path.join(process.cwd(), "lib/python/past_report_workflow.py")
+          const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [scriptPath, tempRefPath], {
+            env: { ...process.env },
+            maxBuffer: 1024 * 1024 * 5, // 5MB buffer
+          })
 
-        if (stderr) {
-          logInfo("reports/generate:hint-extraction-stderr", { stderr })
-        }
-
-        try {
-          structureHint = JSON.parse(stdout)
-          if (structureHint.error) {
-            throw new Error(structureHint.error)
+          if (stderr) {
+            logInfo("reports/generate:hint-extraction-stderr", { stderr })
           }
-          logInfo("reports/generate:hint-extracted", { sections: structureHint.sections?.length })
-        } catch (parseError) {
-          logError("reports/generate:hint-parse-error", parseError, { stdout })
-          throw new Error("Failed to parse hint extraction output")
+
+          try {
+            structureHint = JSON.parse(stdout)
+            if (structureHint.error) {
+              throw new Error(structureHint.error)
+            }
+            logInfo("reports/generate:hint-extracted", { sections: structureHint.sections?.length })
+          } catch (parseError) {
+            logError("reports/generate:hint-parse-error", parseError, { stdout })
+            throw new Error("Failed to parse hint extraction output")
+          }
+        }
+      } catch (hintError: any) {
+        // If Python is missing in the environment, skip hint extraction instead of failing the whole flow
+        if (hintError && hintError.code === "ENOENT") {
+          logError("reports/generate:python-not-found-hint", hintError, { pythonBin: PYTHON_BIN })
+          structureHint = null
+        } else {
+          throw hintError
         }
       } finally {
         await unlink(tempRefPath).catch(() => { })
@@ -424,25 +461,32 @@ export async function POST(req: NextRequest) {
       await writeFile(tempDocPath, docBuffer)
 
       try {
-        // Execute Python script
-        const scriptPath = path.join(process.cwd(), "lib/python/optimized_workflow.py")
-        const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [scriptPath, tempDocPath], {
-          env: { ...process.env },
-          maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-        })
+        if (USE_REMOTE_PYTHON) {
+          analysisResult = await callPythonApi("/api/optimized_workflow", {
+            file_base64: docBuffer.toString("base64"),
+            filename: firstDoc.file_name || `upload${ext}`,
+          })
+        } else {
+          // Execute Python script
+          const scriptPath = path.join(process.cwd(), "lib/python/optimized_workflow.py")
+          const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [scriptPath, tempDocPath], {
+            env: { ...process.env },
+            maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+          })
 
-        if (stderr) {
-          logInfo("reports/generate:python-stderr", { stderr })
-        }
-
-        try {
-          analysisResult = JSON.parse(stdout)
-          if (analysisResult.error) {
-            throw new Error(analysisResult.error)
+          if (stderr) {
+            logInfo("reports/generate:python-stderr", { stderr })
           }
-        } catch (parseError) {
-          logError("reports/generate:python-output-parse-error", parseError, { stdout })
-          throw new Error("Failed to parse Python script output")
+
+          try {
+            analysisResult = JSON.parse(stdout)
+            if (analysisResult.error) {
+              throw new Error(analysisResult.error)
+            }
+          } catch (parseError) {
+            logError("reports/generate:python-output-parse-error", parseError, { stdout })
+            throw new Error("Failed to parse Python script output")
+          }
         }
       } catch (pythonError: any) {
         // If Python is not available, fall back to legacy analysis
