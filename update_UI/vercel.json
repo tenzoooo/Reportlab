@@ -13,6 +13,14 @@
         {
             "src": "/api/generate_docx",
             "dest": "/api/generate_docx.py"
+        },
+        {
+            "src": "/api/optimized_workflow",
+            "dest": "/api/optimized_workflow.py"
+        },
+        {
+            "src": "/api/past_report_workflow",
+            "dest": "/api/past_report_workflow.py"
         }
     ]
 }
