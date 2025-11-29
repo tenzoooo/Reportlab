@@ -33,6 +33,8 @@ export default function SettingsPage() {
   const tabParam = searchParams.get("tab") || "profile"
   const [activeTab, setActiveTab] = useState<string>(tabParam)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [isResuming, setIsResuming] = useState(false)
 
   // State for real data
   const [loading, setLoading] = useState(true)
@@ -212,6 +214,48 @@ export default function SettingsPage() {
     }
   }
 
+  const handleCancelSubscription = async () => {
+    setIsCancelling(true)
+    try {
+      const res = await fetch("/api/stripe/cancel-subscription", {
+        method: "POST",
+      })
+      const data = await res.json()
+      if (data.error) {
+        throw new Error(data.error)
+      }
+      toast.success("サブスクリプションを解約しました。期間終了時まで利用できます。")
+      setShowCancelDialog(false)
+      // Reload data to reflect the change
+      window.location.reload()
+    } catch (error) {
+      console.error(error)
+      toast.error(error instanceof Error ? error.message : "解約に失敗しました")
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+  const handleResumeSubscription = async () => {
+    setIsResuming(true)
+    try {
+      const res = await fetch("/api/stripe/resume-subscription", {
+        method: "POST",
+      })
+      const data = await res.json()
+      if (data.error) {
+        throw new Error(data.error)
+      }
+      toast.success("サブスクリプションを再開しました")
+      // Reload data to reflect the change
+      window.location.reload()
+    } catch (error) {
+      console.error(error)
+      toast.error(error instanceof Error ? error.message : "再開に失敗しました")
+    } finally {
+      setIsResuming(false)
+    }
+  }
+
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, staggerChildren: 0.1 } },
@@ -382,24 +426,57 @@ export default function SettingsPage() {
                   </div>
 
                   {subscription && (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-amber-900">プランの管理</h4>
-                          <p className="text-sm text-amber-700 mt-1">
-                            お支払い方法の変更や解約はカスタマーポータルから行えます。
-                          </p>
+                    <div className="space-y-3">
+                      {subscription.cancel_at_period_end ? (
+                        <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                          <div className="flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-orange-900">解約予定</h4>
+                              <p className="text-sm text-orange-700 mt-1">
+                                現在のサブスクリプションは期間終了時に解約されます。それまでは引き続きご利用いただけます。
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                            onClick={handleResumeSubscription}
+                            disabled={isResuming}
+                          >
+                            {isResuming ? "処理中..." : "解約をキャンセル（継続する）"}
+                          </Button>
                         </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        className="w-full border-amber-300 text-amber-900 hover:bg-amber-100 bg-transparent"
-                        onClick={handlePortal}
-                        disabled={isProcessing}
-                      >
-                        {isProcessing ? "読み込み中..." : "サブスクリプションを管理"}
-                      </Button>
+                      ) : (
+                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+                          <div className="flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-amber-900">プランの管理</h4>
+                              <p className="text-sm text-amber-700 mt-1">
+                                お支払い方法の変更はカスタマーポータルから行えます。
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              variant="outline"
+                              className="w-full border-amber-300 text-amber-900 hover:bg-amber-100 bg-transparent"
+                              onClick={handlePortal}
+                              disabled={isProcessing}
+                            >
+                              {isProcessing ? "読み込み中..." : "サブスクリプションを管理"}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              className="w-full"
+                              onClick={() => setShowCancelDialog(true)}
+                              disabled={isProcessing}
+                            >
+                              サブスクリプションを解約
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -629,6 +706,28 @@ export default function SettingsPage() {
           </TabsContent>
         </Tabs>
       </motion.div>
+
+      {/* Cancel Subscription Confirmation Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>サブスクリプションを解約しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              解約後も現在の請求期間の終了時まではサービスをご利用いただけます。期間終了後、自動的にFreeプランに移行します。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelSubscription}
+              disabled={isCancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCancelling ? "処理中..." : "解約する"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
