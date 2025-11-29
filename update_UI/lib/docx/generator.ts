@@ -30,6 +30,17 @@ logDocxDebug("module loaded", {
   rendererPath: PY_RENDERER_PATH,
 })
 
+const PROTECTION_BYPASS_TOKEN =
+  process.env.VERCEL_PROTECTION_BYPASS_TOKEN ||
+  process.env.VERCEL_DEPLOYMENT_PROTECTION_BYPASS_TOKEN ||
+  process.env.VERCEL_BYPASS_TOKEN
+
+const getBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "")
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`.replace(/\/+$/, "")
+  return "http://localhost:3000"
+}
+
 const decodeAndStripTags = (value: string): string => {
   const decoded = value.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
   return decoded.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
@@ -172,17 +183,18 @@ const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<
     // Determine API URL
     // On Vercel, we can usually use a relative URL if calling from the frontend, 
     // but here we are likely server-side. 
-    // VERCEL_URL is provided by Vercel (without protocol).
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"
-    const apiUrl = `${baseUrl}/api/generate_docx`
+    const apiUrl = `${getBaseUrl()}/api/generate_docx`
 
     console.log(`Sending request to ${apiUrl}`)
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" }
+    if (PROTECTION_BYPASS_TOKEN) {
+      headers["x-vercel-protection-bypass"] = PROTECTION_BYPASS_TOKEN
+    }
+
     const response = await fetch(apiUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(payload),
     })
 
