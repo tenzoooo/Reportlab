@@ -18,14 +18,21 @@ export async function POST(req: Request) {
   console.log("***** [WEBHOOK] Secret first 5 chars:", secret?.substring(0, 5))
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      secret
-    )
+    event = stripe.webhooks.constructEvent(body, signature, secret)
   } catch (error: any) {
     console.error("[WEBHOOK] Signature verification failed:", error.message)
-    return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 })
+    // 開発環境では署名検証に失敗しても処理を続行できるようにする
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        console.warn("[WEBHOOK] Falling back to unsafe JSON.parse in development")
+        event = JSON.parse(body) as Stripe.Event
+      } catch (parseError: any) {
+        console.error("[WEBHOOK] JSON parse fallback failed:", parseError?.message ?? parseError)
+        return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 })
+      }
+    } else {
+      return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 })
+    }
   }
   console.log("[WEBHOOK] Event type:", event.type)
 
