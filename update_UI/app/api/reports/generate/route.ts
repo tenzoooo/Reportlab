@@ -401,52 +401,60 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      // Download the reference DOCX
       const refObjectPath = sanitizeStoragePath(referenceFile.file_url)
-      let refBuffer: Buffer
-      try {
-        const { data, error } = await admin.storage.from(BUCKET_NAME).download(refObjectPath)
-        if (error || !data) {
-          throw new Error(error?.message || "Failed to download reference report")
-        }
-        const arrayBuffer = await data.arrayBuffer()
-        refBuffer = Buffer.from(arrayBuffer)
-      } catch (downloadError) {
-        logError("reports/generate:reference-download-failed", downloadError)
-        await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
-        return NextResponse.json({ error: "Failed to download reference report" }, { status: 500 })
-      }
-
-      // Save to temp file and run hint extraction
-      const tempRefPath = path.join("/tmp", `reference-${randomUUID()}.docx`)
-      await writeFile(tempRefPath, refBuffer)
 
       try {
         if (USE_REMOTE_PYTHON) {
+          // Generate signed URL for the reference file
+          const { data: signedUrlData, error: signedUrlError } = await admin.storage
+            .from(BUCKET_NAME)
+            .createSignedUrl(refObjectPath, 60) // 60 seconds validity
+
+          if (signedUrlError || !signedUrlData) {
+            throw new Error(signedUrlError?.message || "Failed to create signed URL for reference report")
+          }
+
           structureHint = await callPythonApi("/api/past_report_workflow", {
-            file_base64: refBuffer.toString("base64"),
+            file_url: signedUrlData.signedUrl,
             filename: referenceFile.file_name || "reference.docx",
           })
         } else {
-          const scriptPath = path.join(process.cwd(), "lib/python/past_report_workflow.py")
-          const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [scriptPath, tempRefPath], {
-            env: { ...process.env },
-            maxBuffer: 1024 * 1024 * 5, // 5MB buffer
-          })
-
-          if (stderr) {
-            logInfo("reports/generate:hint-extraction-stderr", { stderr })
+          // Local execution: Download and save to temp file
+          let refBuffer: Buffer
+          try {
+            const { data, error } = await admin.storage.from(BUCKET_NAME).download(refObjectPath)
+            if (error || !data) {
+              throw new Error(error?.message || "Failed to download reference report")
+            }
+            const arrayBuffer = await data.arrayBuffer()
+            refBuffer = Buffer.from(arrayBuffer)
+          } catch (downloadError) {
+            logError("reports/generate:reference-download-failed", downloadError)
+            await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
+            return NextResponse.json({ error: "Failed to download reference report" }, { status: 500 })
           }
 
+          const tempRefPath = path.join("/tmp", `reference-${randomUUID()}.docx`)
+          await writeFile(tempRefPath, refBuffer)
+
           try {
+            const scriptPath = path.join(process.cwd(), "lib/python/past_report_workflow.py")
+            const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [scriptPath, tempRefPath], {
+              env: { ...process.env },
+              maxBuffer: 1024 * 1024 * 5, // 5MB buffer
+            })
+
+            if (stderr) {
+              logInfo("reports/generate:hint-extraction-stderr", { stderr })
+            }
+
             structureHint = JSON.parse(stdout)
             if (structureHint.error) {
               throw new Error(structureHint.error)
             }
             logInfo("reports/generate:hint-extracted", { sections: structureHint.sections?.length })
-          } catch (parseError) {
-            logError("reports/generate:hint-parse-error", parseError, { stdout })
-            throw new Error("Failed to parse hint extraction output")
+          } finally {
+            await unlink(tempRefPath).catch(() => { })
           }
         }
       } catch (hintError: any) {
@@ -457,8 +465,6 @@ export async function POST(req: NextRequest) {
         } else {
           throw hintError
         }
-      } finally {
-        await unlink(tempRefPath).catch(() => { })
       }
     }
 
@@ -466,36 +472,45 @@ export async function POST(req: NextRequest) {
     if (workflowType === "optimized" || workflowType === "past_report") {
       logInfo("reports/generate:start-optimized-analysis", { file: firstDoc.file_name, workflowType })
 
-      // Save buffer to a temp file (PDF or DOCX)
-      const tempDocPath = path.join("/tmp", `upload-${randomUUID()}${ext}`)
-      await writeFile(tempDocPath, docBuffer)
-
       try {
         if (USE_REMOTE_PYTHON) {
+          // Generate signed URL for the experiment file
+          const { data: signedUrlData, error: signedUrlError } = await admin.storage
+            .from(BUCKET_NAME)
+            .createSignedUrl(objectPath, 60) // 60 seconds validity
+
+          if (signedUrlError || !signedUrlData) {
+            throw new Error(signedUrlError?.message || "Failed to create signed URL for experiment file")
+          }
+
           analysisResult = await callPythonApi("/api/optimized_workflow", {
-            file_base64: docBuffer.toString("base64"),
+            file_url: signedUrlData.signedUrl,
             filename: firstDoc.file_name || `upload${ext}`,
           })
         } else {
-          // Execute Python script
-          const scriptPath = path.join(process.cwd(), "lib/python/optimized_workflow.py")
-          const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [scriptPath, tempDocPath], {
-            env: { ...process.env },
-            maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-          })
-
-          if (stderr) {
-            logInfo("reports/generate:python-stderr", { stderr })
-          }
+          // Local execution: Save buffer to a temp file
+          const tempDocPath = path.join("/tmp", `upload-${randomUUID()}${ext}`)
+          await writeFile(tempDocPath, docBuffer)
 
           try {
+            // Execute Python script
+            const scriptPath = path.join(process.cwd(), "lib/python/optimized_workflow.py")
+            const { stdout, stderr } = await execFileAsync(PYTHON_BIN, [scriptPath, tempDocPath], {
+              env: { ...process.env },
+              maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+            })
+
+            if (stderr) {
+              logInfo("reports/generate:python-stderr", { stderr })
+            }
+
             analysisResult = JSON.parse(stdout)
             if (analysisResult.error) {
               throw new Error(analysisResult.error)
             }
-          } catch (parseError) {
-            logError("reports/generate:python-output-parse-error", parseError, { stdout })
-            throw new Error("Failed to parse Python script output")
+          } finally {
+            // Clean up temp file
+            await unlink(tempDocPath).catch(() => { })
           }
         }
       } catch (pythonError: any) {
@@ -507,9 +522,6 @@ export async function POST(req: NextRequest) {
         } else {
           throw pythonError
         }
-      } finally {
-        // Clean up temp file
-        await unlink(tempDocPath).catch(() => {})
       }
 
     } else {

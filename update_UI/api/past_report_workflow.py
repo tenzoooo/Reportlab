@@ -26,15 +26,23 @@ class handler(BaseHTTPRequestHandler):
       body = self.rfile.read(content_length)
       payload = json.loads(body.decode("utf-8"))
 
+      file_url = payload.get("file_url")
       file_b64 = payload.get("file_base64")
       filename = payload.get("filename") or "reference.docx"
-      if not file_b64:
-        raise ValueError("file_base64 is required")
-
+      
       suffix = os.path.splitext(filename)[1] or ".docx"
-      with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(base64.b64decode(file_b64))
-        temp_path = tmp.name
+
+      if file_url:
+        import urllib.request
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+          temp_path = tmp.name
+        urllib.request.urlretrieve(file_url, temp_path)
+      elif file_b64:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+          tmp.write(base64.b64decode(file_b64))
+          temp_path = tmp.name
+      else:
+        raise ValueError("file_url or file_base64 is required")
 
       result = asyncio.run(run_past_report(temp_path))
 
