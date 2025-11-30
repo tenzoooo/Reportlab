@@ -144,6 +144,11 @@ export default function SettingsPage() {
   const handleCheckout = async (priceId: string) => {
     setIsProcessing(true)
     try {
+      if (!priceId) {
+        toast.error("価格IDが設定されていません。環境変数 NEXT_PUBLIC_STRIPE_PRICE_ID_* を確認してください。")
+        setIsProcessing(false)
+        return
+      }
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -273,22 +278,16 @@ export default function SettingsPage() {
   }
 
   // Determine current plan name
-  // This logic depends on your Price IDs. 
-  // Ideally, store plan name in DB or map price_id to name.
-  // For now, simple check:
-  // Determine current plan name from profile if available, otherwise fallback or default to Free
-  // The user explicitly wants to manage status via profiles table.
   let planName = "Free"
   if (profile.plan === "premium") {
     planName = "Premium"
-  } else if (profile.plan === "credit_only") {
-    planName = "Credit Only"
+  } else if (profile.plan === "standard") {
+    planName = "Standard"
   } else if (subscription) {
-    // Fallback to subscription table check if profile plan is not set (legacy/safety)
     if (subscription.price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM) {
       planName = "Premium"
-    } else if (subscription.price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS) {
-      planName = "Credit Only"
+    } else if (subscription.price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD) {
+      planName = "Standard"
     }
   }
 
@@ -404,15 +403,15 @@ export default function SettingsPage() {
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
                         {planName === "Premium"
-                          ? "すべての機能をご利用いただけます"
-                          : planName === "Credit Only"
-                            ? "クレジット定期購入プラン"
+                          ? "最上位の機能をご利用いただけます"
+                          : planName === "Standard"
+                            ? "標準的な機能をご利用いただけます"
                             : "基本機能をご利用いただけます"}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-foreground">
-                        {planName === "Premium" ? "¥980" : planName === "Credit Only" ? "¥500" : "¥0"}
+                        {planName === "Premium" ? "¥1,980" : planName === "Standard" ? "¥980" : "¥0"}
                       </p>
                       <p className="text-sm text-muted-foreground">/月</p>
                     </div>
@@ -549,7 +548,7 @@ export default function SettingsPage() {
 
               <motion.div variants={itemVariants}>
                 <h3 className="text-xl font-semibold text-foreground mb-4">プラン比較</h3>
-                <div className="grid md:grid-cols-3 gap-6">
+                <div className="grid md:grid-cols-3 gap-4">
                   {/* Free Plan */}
                   <Card className={`border-2 ${planName === "Free" ? "border-primary" : "border-border"}`}>
                     <CardHeader>
@@ -580,45 +579,12 @@ export default function SettingsPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Credit Only Plan */}
-                  <Card className={`border-2 ${planName === "Credit Only" ? "border-primary" : "border-border"}`}>
-                    <CardHeader>
-                      <CardTitle>Credit Only</CardTitle>
-                      <div className="mt-4">
-                        <span className="text-4xl font-bold text-foreground">¥500</span>
-                        <span className="text-muted-foreground">/月</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <ul className="space-y-3">
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span className="text-foreground text-sm">毎月400クレジット</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span className="text-foreground text-sm">ストレージ 500MB</span>
-                        </li>
-                      </ul>
-                      <Button
-                        className="w-full"
-                        disabled={planName === "Credit Only" || isProcessing}
-                        onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS!)}
-                      >
-                        {planName === "Credit Only" ? "現在のプラン" : "アップグレード"}
-                      </Button>
-                    </CardContent>
-                  </Card>
 
-                  {/* Premium Plan */}
-                  <Card
-                    className={`border-2 ${planName === "Premium" ? "border-primary" : "border-border"} shadow-lg relative overflow-hidden`}
-                  >
-                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-semibold rounded-bl-lg">
-                      おすすめ
-                    </div>
+
+                  {/* Standard Plan (Old Premium) */}
+                  <Card className={`border-2 ${planName === "Standard" ? "border-primary" : "border-border"}`}>
                     <CardHeader>
-                      <CardTitle>Premium</CardTitle>
+                      <CardTitle>Standard</CardTitle>
                       <div className="mt-4">
                         <span className="text-4xl font-bold text-foreground">¥980</span>
                         <span className="text-muted-foreground">/月</span>
@@ -637,6 +603,45 @@ export default function SettingsPage() {
                         <li className="flex items-center gap-2">
                           <Check className="h-5 w-5 text-primary" />
                           <span className="text-foreground text-sm">高度なAI分析</span>
+                        </li>
+                      </ul>
+                      <Button
+                        className="w-full"
+                        disabled={planName === "Standard" || isProcessing}
+                        onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD!)}
+                      >
+                        {planName === "Standard" ? "現在のプラン" : "アップグレード"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Premium Plan (New) */}
+                  <Card
+                    className={`border-2 ${planName === "Premium" ? "border-primary" : "border-border"} shadow-lg relative overflow-hidden`}
+                  >
+                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-semibold rounded-bl-lg">
+                      おすすめ
+                    </div>
+                    <CardHeader>
+                      <CardTitle>Premium</CardTitle>
+                      <div className="mt-4">
+                        <span className="text-4xl font-bold text-foreground">¥1,980</span>
+                        <span className="text-muted-foreground">/月</span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <ul className="space-y-3">
+                        <li className="flex items-center gap-2">
+                          <Check className="h-5 w-5 text-primary" />
+                          <span className="text-foreground text-sm">毎月1000クレジット</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-5 w-5 text-primary" />
+                          <span className="text-foreground text-sm">ストレージ 5GB</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-5 w-5 text-primary" />
+                          <span className="text-foreground text-sm">最優先サポート</span>
                         </li>
                       </ul>
                       <Button

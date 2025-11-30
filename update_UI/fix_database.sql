@@ -15,7 +15,7 @@ create table public.profiles (
   department text,
   grade text,
   plan text default 'free',
-  credits integer default 0,
+  credits integer default 200,
 
   primary key (id),
   unique(username),

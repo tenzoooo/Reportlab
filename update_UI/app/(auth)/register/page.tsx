@@ -6,7 +6,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Mail, Lock, User, AlertCircle } from "lucide-react"
+import { Mail, Lock, User, AlertCircle, Eye, EyeOff, CheckCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 export default function RegisterPage() {
@@ -15,8 +15,11 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   const validatePassword = (pwd: string) => {
     return pwd.length >= 8 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /[0-9]/.test(pwd)
@@ -62,14 +65,41 @@ export default function RegisterPage() {
         return
       }
 
-      // Depending on your Supabase Auth settings, email confirmation may be required.
-      // For now, navigate to login so the user can continue.
-      router.push("/login")
+      // Show success message instead of redirecting
+      setEmailSent(true)
     } catch (err) {
       setError("登録中にエラーが発生しました")
     } finally {
       setLoading(false)
     }
+  }
+
+  if (emailSent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 text-center">
+            <div className="flex justify-center mb-6">
+              <div className="h-20 w-20 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-10 w-10 text-green-600" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">確認メールを送信しました</h2>
+            <p className="text-gray-600 mb-8">
+              ご登録いただいたメールアドレス ({email}) に確認リンクを送信しました。
+              <br />
+              メール内のリンクをクリックして、アカウント登録を完了してください。
+            </p>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center w-full px-4 py-3 text-base font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              ログインページへ
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -143,13 +173,20 @@ export default function RegisterPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="••••••••"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
               <p className="text-xs text-gray-500">8文字以上、大文字・小文字・数字を含む</p>
             </div>
@@ -163,13 +200,20 @@ export default function RegisterPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   id="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="••••••••"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
             </div>
 

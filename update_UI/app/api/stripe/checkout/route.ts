@@ -5,6 +5,9 @@ import { NextResponse } from "next/server"
 export async function POST(req: Request) {
     try {
         const { priceId } = await req.json()
+        if (!priceId || typeof priceId !== "string") {
+            return NextResponse.json({ error: "Missing or invalid priceId" }, { status: 400 })
+        }
         const stripe = getStripeClient()
         const supabase = await createClient()
 

@@ -305,10 +305,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Check plan restrictions
-  if (workflowType !== "conventional" && profile.plan !== "premium") {
+  if (workflowType !== "conventional" && profile.plan !== "premium" && profile.plan !== "standard") {
     logInfo("reports/generate:plan-restriction", { userId: user.id, plan: profile.plan, workflowType })
     return NextResponse.json(
-      { error: "This workflow is available for Premium users only." },
+      { error: "This workflow is available for Paid Plan (Standard/Premium) users only." },
       { status: 403 }
     )
   }

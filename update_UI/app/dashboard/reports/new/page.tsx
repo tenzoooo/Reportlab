@@ -267,6 +267,8 @@ export default function NewReportPage() {
 
         if (profile?.plan === "premium") {
           setSubscriptionPlan("premium")
+        } else if (profile?.plan === "standard") {
+          setSubscriptionPlan("standard")
         } else {
           setSubscriptionPlan("free")
         }
@@ -318,6 +320,8 @@ export default function NewReportPage() {
 
       if (profile?.plan === "premium") {
         setSubscriptionPlan("premium")
+      } else if (profile?.plan === "standard") {
+        setSubscriptionPlan("standard")
       } else {
         setSubscriptionPlan("free")
       }
@@ -1329,9 +1333,9 @@ export default function NewReportPage() {
                       <div className="h-full relative">
                         <Label
                           htmlFor="wf-optimized"
-                          className={`flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 h-full ${subscriptionPlan === "premium"
-                              ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                              : "opacity-60 cursor-not-allowed"
+                          className={`flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 h-full ${subscriptionPlan === "premium" || subscriptionPlan === "standard"
+                            ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                            : "opacity-60 cursor-not-allowed"
                             }`}
                         >
                           <div className="flex items-center gap-2 mb-2">
@@ -1339,17 +1343,17 @@ export default function NewReportPage() {
                               value="optimized"
                               id="wf-optimized"
                               className="peer"
-                              disabled={subscriptionPlan !== "premium"}
+                              disabled={subscriptionPlan !== "premium" && subscriptionPlan !== "standard"}
                             />
                             <span className="text-lg font-bold">最適化モード (Beta)</span>
                           </div>
                           <span className="text-xs text-muted-foreground text-left">
                             より詳細な分析と高品質な文章生成を行います。
                           </span>
-                          {subscriptionPlan !== "premium" && (
+                          {subscriptionPlan !== "premium" && subscriptionPlan !== "standard" && (
                             <div className="absolute top-2 right-2 flex items-center text-amber-500 text-xs font-semibold bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
                               <Lock className="w-3 h-3 mr-1" />
-                              Premium
+                              Paid Plan
                             </div>
                           )}
                         </Label>
@@ -1359,9 +1363,9 @@ export default function NewReportPage() {
                       <div className="h-full relative">
                         <Label
                           htmlFor="wf-past-report"
-                          className={`flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 h-full ${subscriptionPlan === "premium"
-                              ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                              : "opacity-60 cursor-not-allowed"
+                          className={`flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 h-full ${subscriptionPlan === "premium" || subscriptionPlan === "standard"
+                            ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                            : "opacity-60 cursor-not-allowed"
                             }`}
                         >
                           <div className="flex items-center gap-2 mb-2">
@@ -1369,17 +1373,17 @@ export default function NewReportPage() {
                               value="past_report"
                               id="wf-past-report"
                               className="peer"
-                              disabled={subscriptionPlan !== "premium"}
+                              disabled={subscriptionPlan !== "premium" && subscriptionPlan !== "standard"}
                             />
                             <span className="text-lg font-bold">過去レポ再現</span>
                           </div>
                           <span className="text-xs text-muted-foreground text-left">
                             過去のレポートをアップロードし、その構成と文体を再現します。
                           </span>
-                          {subscriptionPlan !== "premium" && (
+                          {subscriptionPlan !== "premium" && subscriptionPlan !== "standard" && (
                             <div className="absolute top-2 right-2 flex items-center text-amber-500 text-xs font-semibold bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
                               <Lock className="w-3 h-3 mr-1" />
-                              Premium
+                              Paid Plan
                             </div>
                           )}
                         </Label>
