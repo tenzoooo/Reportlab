@@ -39,13 +39,27 @@ export default function PrivacyPage() {
                         <li>上記の利用目的に付随する目的</li>
                     </ol>
 
-                    <h2>第4条（利用目的の変更）</h2>
+                    <h2>第4条（AI生成サービスにおける情報の取扱い）</h2>
+                    <ol>
+                        <li>当サービスは、AIによる文章生成機能を提供するために、OpenAI, L.L.C.（米国）が提供するAPIを使用しています。</li>
+                        <li>ユーザーが入力した情報は、処理のためにOpenAI社のサーバー（米国）に送信されます。</li>
+                        <li><strong>【重要】</strong> 当サービスはOpenAI APIを利用しており、<strong>ユーザーが入力したデータがOpenAI社のAIモデルの学習に使用されることはありません。</strong>（OpenAIのAPI利用規約に基づく）</li>
+                        <li>ただし、不正利用の監視目的で、OpenAI社側で最大30日間データが保持される場合があります。</li>
+                    </ol>
+
+                    <h2>第5条（データの保管および外部委託）</h2>
+                    <ol>
+                        <li>ユーザーの個人情報およびサービス利用データは、Supabase Inc.（および関連会社）が提供するデータベースサービスを利用して管理しています。</li>
+                        <li>データの物理的な保管場所は、<strong>日本国内（東京リージョン）</strong>のサーバーを選択していますが、サービスの運用管理において、外国（シンガポールおよび米国）にある事業者がデータを取り扱う場合があります。</li>
+                    </ol>
+
+                    <h2>第6条（利用目的の変更）</h2>
                     <ol>
                         <li>当社は，利用目的が変更前と関連性を有すると合理的に認められる場合に限り，個人情報の利用目的を変更するものとします。</li>
                         <li>利用目的の変更を行った場合には，変更後の目的について，当社所定の方法により，ユーザーに通知し，または本ウェブサイト上に公表するものとします。</li>
                     </ol>
 
-                    <h2>第5条（個人情報の第三者提供）</h2>
+                    <h2>第7条（個人情報の第三者提供）</h2>
                     <ol>
                         <li>当社は，次に掲げる場合を除いて，あらかじめユーザーの同意を得ることなく，第三者に個人情報を提供することはありません。ただし，個人情報保護法その他の法令で認められる場合を除きます。
                             <ul>
@@ -72,7 +86,51 @@ export default function PrivacyPage() {
                         </li>
                     </ol>
 
-                    <h2>第6条（個人情報の開示）</h2>
+                    <h3>外国にある第三者への提供</h3>
+                    <p>当社は、以下のとおり外国にある第三者に個人情報を提供することがあります。</p>
+                    <div className="overflow-x-auto my-4">
+                        <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700">
+                            <thead>
+                                <tr className="bg-gray-100 dark:bg-gray-800">
+                                    <th className="border border-gray-300 dark:border-gray-700 px-4 py-2">提供先サービス</th>
+                                    <th className="border border-gray-300 dark:border-gray-700 px-4 py-2">運営会社</th>
+                                    <th className="border border-gray-300 dark:border-gray-700 px-4 py-2">所在国</th>
+                                    <th className="border border-gray-300 dark:border-gray-700 px-4 py-2">提供する情報の項目</th>
+                                    <th className="border border-gray-300 dark:border-gray-700 px-4 py-2">利用目的</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">OpenAI API</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">OpenAI, L.L.C.</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">米国 (カリフォルニア州)</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">ユーザーが入力したテキストデータ</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">AIによる回答生成のため</td>
+                                </tr>
+                                <tr>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">Supabase</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">Supabase Pte. Ltd.</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">シンガポール / 米国</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">メールアドレス、パスワード(ハッシュ化)、利用ログ</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">ユーザー認証、データ保管のため</td>
+                                </tr>
+                                <tr>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">Stripe</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">Stripe, Inc.</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">米国</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">クレジットカード情報、決済履歴</td>
+                                    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">決済処理のため（※当方ではカード情報を一切保存しません）</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3>ソーシャルログイン利用時の情報の取扱い</h3>
+                    <p>
+                        Googleアカウント等の外部サービスでログインする場合、当方は当該外部サービスから、ユーザーのメールアドレス、氏名、プロフィール画像の提供を受け、アカウント作成および識別に利用します。
+                    </p>
+
+                    <h2>第8条（個人情報の開示）</h2>
                     <ol>
                         <li>当社は，本人から個人情報の開示を求められたときは，本人に対し，遅滞なくこれを開示します。ただし，開示することにより次のいずれかに該当する場合は，その全部または一部を開示しないこともあり，開示しない決定をした場合には，その旨を遅滞なく通知します。
                             <ul>
@@ -84,14 +142,14 @@ export default function PrivacyPage() {
                         <li>前項の定めにかかわらず，履歴情報および特性情報などの個人情報以外の情報については，原則として開示いたしません。</li>
                     </ol>
 
-                    <h2>第7条（個人情報の訂正および削除）</h2>
+                    <h2>第9条（個人情報の訂正および削除）</h2>
                     <ol>
                         <li>ユーザーは，当社の保有する自己の個人情報が誤った情報である場合には，当社が定める手続きにより，当社に対して個人情報の訂正，追加または削除（以下，「訂正等」といいます。）を請求することができます。</li>
                         <li>当社は，ユーザーから前項の請求を受けてその請求に応じる必要があると判断した場合には，遅滞なく，当該個人情報の訂正等を行うものとします。</li>
                         <li>当社は，前項の規定に基づき訂正等を行った場合，または訂正等を行わない旨の決定をしたときは遅滞なく，これをユーザーに通知します。</li>
                     </ol>
 
-                    <h2>第8条（個人情報の利用停止等）</h2>
+                    <h2>第10条（個人情報の利用停止等）</h2>
                     <ol>
                         <li>当社は，本人から，個人情報が，利用目的の範囲を超えて取り扱われているという理由，または不正の手段により取得されたものであるという理由により，その利用の停止または消去（以下，「利用停止等」といいます。）を求められた場合には，遅滞なく必要な調査を行います。</li>
                         <li>前項の調査結果に基づき，その請求に応じる必要があると判断した場合には，遅滞なく，当該個人情報の利用停止等を行います。</li>
@@ -99,13 +157,13 @@ export default function PrivacyPage() {
                         <li>前2項にかかわらず，利用停止等に多額の費用を有する場合その他利用停止等を行うことが困難な場合であって，ユーザーの権利利益を保護するために必要なこれに代わるべき措置をとれる場合は，この代替策を講じるものとします。</li>
                     </ol>
 
-                    <h2>第9条（プライバシーポリシーの変更）</h2>
+                    <h2>第11条（プライバシーポリシーの変更）</h2>
                     <ol>
                         <li>本ポリシーの内容は，法令その他本ポリシーに別段の定めのある事項を除いて，ユーザーに通知することなく，変更することができるものとします。</li>
                         <li>当社が別途定める場合を除いて，変更後のプライバシーポリシーは，本ウェブサイトに掲載したときから効力を生じるものとします。</li>
                     </ol>
 
-                    <h2>第10条（お問い合わせ窓口）</h2>
+                    <h2>第12条（お問い合わせ窓口）</h2>
                     <p>本ポリシーに関するお問い合わせは，下記の窓口までお願いいたします。</p>
                     <p>
                         Eメールアドレス：reportlab@outlook.jp

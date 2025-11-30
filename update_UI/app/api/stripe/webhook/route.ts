@@ -46,6 +46,33 @@ export async function POST(req: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+  const setReceiptEmailOnPaymentIntent = async (session: Stripe.Checkout.Session) => {
+    const email = session.customer_details?.email ?? session.customer_email
+    if (!email) return
+
+    let paymentIntentId: string | undefined
+    if (typeof session.payment_intent === "string") {
+      paymentIntentId = session.payment_intent
+    } else if (typeof session.invoice === "string") {
+      try {
+        const invoice = await stripe.invoices.retrieve(session.invoice)
+        if (typeof invoice.payment_intent === "string") {
+          paymentIntentId = invoice.payment_intent
+        }
+      } catch (err) {
+        console.error("[WEBHOOK] Failed to retrieve invoice for receipt email:", err)
+      }
+    }
+
+    if (!paymentIntentId) return
+    try {
+      await stripe.paymentIntents.update(paymentIntentId, { receipt_email: email })
+      console.log("[WEBHOOK] Set receipt_email on PaymentIntent", paymentIntentId)
+    } catch (err) {
+      console.error("[WEBHOOK] Failed to set receipt_email:", err)
+    }
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -58,6 +85,9 @@ export async function POST(req: Request) {
         console.log("[WEBHOOK] Mode:", session.mode)
         console.log("[WEBHOOK] Subscription ID:", subscriptionId)
         console.log("[WEBHOOK] User ID from metadata:", userId)
+
+        // Ensure Stripe sends receipts by attaching customer email to the PaymentIntent
+        await setReceiptEmailOnPaymentIntent(session)
 
         if (!userId) {
           console.error("[WEBHOOK] Missing userId in metadata")
@@ -154,23 +184,31 @@ export async function POST(req: Request) {
           console.log("[WEBHOOK] Subscription upsert success")
         }
 
-        // Add credits if applicable (e.g. 400 credits for specific plans)
-        // You might want to check price_id to decide how many credits to add
-        // For now, let's assume all subscriptions give 400 credits on creation
-        // In a real app, map price_id to credit amount
-        const creditsToAdd = 400
+        // Add credits depending on price_id
+        const getCreditsForPrice = (id: string) => {
+          if (id === premiumPriceId) return 400 // Premium: 400/month
+          if (id === creditsPriceId) return 400 // Credit Only: 400/month (adjust if needed)
+          return 0
+        }
 
-        await supabase.rpc("increment_credits", {
-          user_id_arg: userId,
-          amount_arg: creditsToAdd
-        })
+        const creditsToAdd = getCreditsForPrice(priceId)
+        if (creditsToAdd > 0) {
+          await supabase.rpc("increment_credits", {
+            user_id_arg: userId,
+            amount_arg: creditsToAdd
+          })
 
-        // Log transaction
-        await supabase.from("credit_transactions").insert({
-          user_id: userId,
-          amount: creditsToAdd,
-          description: "Subscription started - Monthly credits",
-        })
+          // Log transaction
+          await supabase.from("credit_transactions").insert({
+            user_id: userId,
+            amount: creditsToAdd,
+            description: "Subscription started - Monthly credits",
+          })
+        }
+
+        if (creditsToAdd === 0) {
+          console.log("[WEBHOOK] No credits granted for price:", priceId)
+        }
 
         break
       }
@@ -193,17 +231,24 @@ export async function POST(req: Request) {
             .single()
 
           if (sub) {
-            const creditsToAdd = 400
-            await supabase.rpc("increment_credits", {
-              user_id_arg: sub.user_id,
-              amount_arg: creditsToAdd
-            })
+            // Determine credits based on price ID
+            const priceId = (invoice.lines.data[0]?.price?.id as string) || ""
+            const creditsToAdd = getCreditsForPrice(priceId)
 
-            await supabase.from("credit_transactions").insert({
-              user_id: sub.user_id,
-              amount: creditsToAdd,
-              description: "Subscription renewal - Monthly credits",
-            })
+            if (creditsToAdd > 0) {
+              await supabase.rpc("increment_credits", {
+                user_id_arg: sub.user_id,
+                amount_arg: creditsToAdd
+              })
+
+              await supabase.from("credit_transactions").insert({
+                user_id: sub.user_id,
+                amount: creditsToAdd,
+                description: "Subscription renewal - Monthly credits",
+              })
+            } else {
+              console.log("[WEBHOOK] Renewal: No credits granted for price:", priceId)
+            }
           }
         }
         break

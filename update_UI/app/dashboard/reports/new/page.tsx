@@ -1039,10 +1039,10 @@ export default function NewReportPage() {
                     <Label className="text-base font-semibold text-card-foreground">Excel表を貼り付け（任意）</Label>
                     <div className="flex items-center gap-2">
                       {hasUploadedTables && <CompletionBadge label="表を追加済み" />}
-                      {subscriptionPlan !== "premium" && (
+                      {subscriptionPlan !== "premium" && subscriptionPlan !== "standard" && (
                         <div className="flex items-center text-amber-500 text-xs font-semibold">
                           <Lock className="w-3 h-3 mr-1" />
-                          Premium限定
+                          Paid Plan
                         </div>
                       )}
                     </div>
@@ -1051,7 +1051,7 @@ export default function NewReportPage() {
                     コピーした表を貼り付けると参照用データとして保存されます。複数貼り付けると順番に追加されます。
                   </p>
 
-                  {subscriptionPlan === "premium" ? (
+                  {subscriptionPlan === "premium" || subscriptionPlan === "standard" ? (
                     <>
                       <div className="flex items-start gap-2">
                         <textarea
@@ -1119,11 +1119,11 @@ export default function NewReportPage() {
                     <div className="relative rounded-md border border-dashed p-6 bg-muted/30 flex flex-col items-center justify-center text-center space-y-3">
                       <Lock className="w-8 h-8 text-muted-foreground" />
                       <div>
-                        <p className="font-semibold text-foreground">この機能はPremiumプラン限定です</p>
+                        <p className="font-semibold text-foreground">この機能は有料プラン限定です</p>
                         <p className="text-sm text-muted-foreground mt-1">Excelの表データを直接貼り付けて、レポートの参照データとして利用できます。</p>
                       </div>
                       <Button variant="default" size="sm" onClick={() => router.push("/dashboard/settings?tab=subscription")}>
-                        Premiumにアップグレード
+                        有料プランにアップグレード
                       </Button>
                     </div>
                   )}
@@ -1136,16 +1136,16 @@ export default function NewReportPage() {
                     </Label>
                     <div className="flex items-center gap-2">
                       {hasUploadedImages && <CompletionBadge label="画像を追加済み" />}
-                      {subscriptionPlan !== "premium" && (
+                      {subscriptionPlan !== "premium" && subscriptionPlan !== "standard" && (
                         <div className="flex items-center text-amber-500 text-xs font-semibold">
                           <Lock className="w-3 h-3 mr-1" />
-                          Premium限定
+                          Paid Plan
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {subscriptionPlan === "premium" ? (
+                  {subscriptionPlan === "premium" || subscriptionPlan === "standard" ? (
                     <>
                       <input id="image-upload" type="file" multiple accept="image/*" onChange={handleImageSelect} className="sr-only" />
                       <p className="text-sm text-muted-foreground">

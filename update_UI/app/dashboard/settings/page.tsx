@@ -26,6 +26,7 @@ import { toast } from "sonner"
 
 const CREDITS_PER_PACK = Number(process.env.NEXT_PUBLIC_CREDITS_PER_UNIT ?? 100)
 const MAX_CREDIT_PACKS = 20
+const MONTHLY_CREDITS = 400
 
 export default function SettingsPage() {
   const searchParams = useSearchParams()
@@ -281,12 +282,15 @@ export default function SettingsPage() {
   let planName = "Free"
   if (profile.plan === "premium") {
     planName = "Premium"
-  } else if (profile.plan === "standard") {
+  } else if (profile.plan === "standard" || profile.plan === "credit_only") {
     planName = "Standard"
   } else if (subscription) {
     if (subscription.price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM) {
       planName = "Premium"
-    } else if (subscription.price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD) {
+    } else if (
+      subscription.price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD ||
+      subscription.price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS
+    ) {
       planName = "Standard"
     }
   }
@@ -548,114 +552,138 @@ export default function SettingsPage() {
 
               <motion.div variants={itemVariants}>
                 <h3 className="text-xl font-semibold text-foreground mb-4">プラン比較</h3>
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-3 gap-8">
                   {/* Free Plan */}
-                  <Card className={`border-2 ${planName === "Free" ? "border-primary" : "border-border"}`}>
-                    <CardHeader>
-                      <CardTitle>Free</CardTitle>
-                      <div className="mt-4">
-                        <span className="text-4xl font-bold text-foreground">¥0</span>
-                        <span className="text-muted-foreground">/月</span>
+                  <motion.div
+                    whileHover={{ scale: 1.05, y: -10 }}
+                    className={`card ${planName === "Free" ? "border-2 border-primary" : ""}`}
+                  >
+                    <div className="space-y-6 h-full flex flex-col">
+                      <div>
+                        <h3 className="text-2xl font-bold text-foreground mb-2">Free</h3>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-4xl font-bold text-foreground">¥0</span>
+                          <span className="text-muted-foreground">/月</span>
+                        </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <ul className="space-y-3">
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span className="text-foreground text-sm">レポート作成 5件/月</span>
+                      <ul className="space-y-3 flex-grow">
+                        <li className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">月次クレジット付与なし</span>
                         </li>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span className="text-foreground text-sm">ストレージ 100MB</span>
+                        <li className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">必要な分だけクレジットパックを購入して利用</span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">基本的なレポート生成機能</span>
                         </li>
                       </ul>
                       <Button
                         variant="outline"
-                        className="w-full bg-transparent"
-                        disabled={planName === "Free"}
+                        className="w-full bg-transparent text-foreground border-foreground/20"
+                        disabled={true}
                       >
                         {planName === "Free" ? "現在のプラン" : "選択不可"}
                       </Button>
-                    </CardContent>
-                  </Card>
-
-
-
-                  {/* Standard Plan (Old Premium) */}
-                  <Card className={`border-2 ${planName === "Standard" ? "border-primary" : "border-border"}`}>
-                    <CardHeader>
-                      <CardTitle>Standard</CardTitle>
-                      <div className="mt-4">
-                        <span className="text-4xl font-bold text-foreground">¥980</span>
-                        <span className="text-muted-foreground">/月</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <ul className="space-y-3">
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span className="text-foreground text-sm">毎月400クレジット</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span className="text-foreground text-sm">ストレージ 1GB</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span className="text-foreground text-sm">高度なAI分析</span>
-                        </li>
-                      </ul>
-                      <Button
-                        className="w-full"
-                        disabled={planName === "Standard" || isProcessing}
-                        onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD!)}
-                      >
-                        {planName === "Standard" ? "現在のプラン" : "アップグレード"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  {/* Premium Plan (New) */}
-                  <Card
-                    className={`border-2 ${planName === "Premium" ? "border-primary" : "border-border"} shadow-lg relative overflow-hidden`}
-                  >
-                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-semibold rounded-bl-lg">
-                      おすすめ
                     </div>
-                    <CardHeader>
-                      <CardTitle>Premium</CardTitle>
-                      <div className="mt-4">
-                        <span className="text-4xl font-bold text-foreground">¥1,980</span>
-                        <span className="text-muted-foreground">/月</span>
+                  </motion.div>
+
+                  {/* Standard Plan */}
+                  <motion.div
+                    whileHover={{ scale: 1.05, y: -10 }}
+                    className={`card ${planName === "Standard" ? "border-2 border-primary" : ""} relative`}
+                  >
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-full text-center z-10">
+                      <span className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-6 py-2 rounded-full text-base font-bold shadow-lg inline-block">
+                        おすすめ
+                      </span>
+                    </div>
+                    <div className="space-y-6 h-full flex flex-col">
+                      <div>
+                        <h3 className="text-2xl font-bold text-foreground mb-2">Standard</h3>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-4xl font-bold text-foreground">¥980</span>
+                          <span className="text-muted-foreground">/月</span>
+                        </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <ul className="space-y-3">
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span className="text-foreground text-sm">毎月1000クレジット</span>
+                      <ul className="space-y-3 flex-grow">
+                        <li className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">毎月{MONTHLY_CREDITS}クレジットを自動付与</span>
                         </li>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span className="text-foreground text-sm">ストレージ 5GB</span>
+                        <li className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">クレジットを消費して生成/アップロード</span>
                         </li>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-5 w-5 text-primary" />
-                          <span className="text-foreground text-sm">最優先サポート</span>
+                        <li className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">不足分はクレジットパックで補充可能</span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">過去レポ再現モードを利用可能</span>
                         </li>
                       </ul>
-                      <Button
-                        className={`w-full ${planName === "Premium"
-                          ? ""
-                          : "bg-gradient-to-r from-pink-500 via-yellow-500 to-pink-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-lg hover:shadow-xl transition-shadow"
-                          }`}
-                        disabled={planName === "Premium" || isProcessing}
-                        onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM!)}
-                      >
-                        {planName === "Premium" ? "現在のプラン" : "アップグレード"}
-                      </Button>
-                    </CardContent>
-                  </Card>
+                      {planName === "Standard" ? (
+                        <Button className="w-full bg-muted text-muted-foreground" disabled>
+                          現在のプラン
+                        </Button>
+                      ) : (
+                        <Button
+                          className="w-full secondary-button"
+                          disabled={isProcessing}
+                          onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS!)}
+                        >
+                          Standardを始める
+                        </Button>
+                      )}
+                    </div>
+                  </motion.div>
+
+                  {/* Premium Plan */}
+                  <motion.div
+                    whileHover={{ scale: 1.05, y: -10 }}
+                    className={`card ${planName === "Premium" ? "border-2 border-primary" : ""} relative`}
+                  >
+                    <div className="space-y-6 h-full flex flex-col pt-4">
+                      <div>
+                        <h3 className="text-2xl font-bold text-foreground mb-2">Premium</h3>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-4xl font-bold text-primary">¥1,980</span>
+                          <span className="text-muted-foreground">/月</span>
+                        </div>
+                      </div>
+                      <ul className="space-y-3 flex-grow">
+                        <li className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">毎月{MONTHLY_CREDITS}クレジットを自動付与</span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">高度なAI分析と全機能を利用可能</span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <Check className="h-5 w-5 text-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-sm">不足時はクレジットパックで追加購入</span>
+                        </li>
+                      </ul>
+                      {planName === "Premium" ? (
+                        <Button className="w-full bg-muted text-muted-foreground" disabled>
+                          現在のプラン
+                        </Button>
+                      ) : (
+                        <Button
+                          className="w-full primary-button"
+                          disabled={isProcessing}
+                          onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM!)}
+                        >
+                          Premiumを始める
+                        </Button>
+                      )}
+                    </div>
+                  </motion.div>
                 </div>
               </motion.div>
             </motion.div>
