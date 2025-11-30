@@ -289,7 +289,7 @@ export default function SettingsPage() {
       planName = "Premium"
     } else if (
       subscription.price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD ||
-      subscription.price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS
+      subscription.price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD
     ) {
       planName = "Standard"
     }
@@ -634,7 +634,7 @@ export default function SettingsPage() {
                         <Button
                           className="w-full secondary-button"
                           disabled={isProcessing}
-                          onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS!)}
+                          onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD!)}
                         >
                           Standardを始める
                         </Button>

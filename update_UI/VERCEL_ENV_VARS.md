@@ -34,9 +34,9 @@ Stripeのリダイレクトや内部API呼び出しに使用されます。
 - **値**: StripeのPublishable Key（本番モード用）
 - **キー**: `NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM`
 - **値**: Stripe本番環境でのPremiumプランのPrice ID
-- **キー**: `NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS`
+- **キー**: `NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD`
 - **値**: クレジット定期購入（サブスク）のPrice ID
-- **キー**: `STRIPE_PRICE_ID_CREDITS`（任意）
+- **キー**: `STRIPE_PRICE_ID_STANDARD`（任意）
 - **値**: サーバー側でも同じIDを参照したい場合にセット（クレジット定期購入）。未設定でも動作します。
 - **キー**: `STRIPE_PRICE_ID_CREDIT_PACK`
 - **値**: 100クレジット単位で購入する際のPrice ID（Checkout用・サーバーのみ）。**必ず one_time のPrice ID を指定**してください。

@@ -141,7 +141,7 @@ export async function POST(req: Request) {
         // Determine plan name
         const priceId = subscription.items.data[0].price.id
         const premiumPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM
-        const creditsPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS
+        const creditsPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD
 
         console.log("[WEBHOOK] Received Price ID:", priceId)
         console.log("[WEBHOOK] Expected Premium ID:", premiumPriceId)
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
         if (priceId === premiumPriceId) {
           planName = 'premium'
         } else if (priceId === creditsPriceId) {
-          planName = 'credit_only'
+          planName = 'standard' // legacy: credit_only -> standard
         }
         console.log("[WEBHOOK] Determined Plan Name:", planName)
 
@@ -261,8 +261,8 @@ export async function POST(req: Request) {
         if (subscription.status === 'active') {
           if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM) {
             planName = 'premium'
-          } else if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_CREDITS) {
-            planName = 'credit_only'
+          } else if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD) {
+            planName = 'standard'
           }
         }
 

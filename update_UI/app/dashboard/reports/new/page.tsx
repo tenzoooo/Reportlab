@@ -267,7 +267,7 @@ export default function NewReportPage() {
 
         if (profile?.plan === "premium") {
           setSubscriptionPlan("premium")
-        } else if (profile?.plan === "standard") {
+        } else if (profile?.plan === "standard" || profile?.plan === "credit_only") {
           setSubscriptionPlan("standard")
         } else {
           setSubscriptionPlan("free")
@@ -320,7 +320,7 @@ export default function NewReportPage() {
 
       if (profile?.plan === "premium") {
         setSubscriptionPlan("premium")
-      } else if (profile?.plan === "standard") {
+      } else if (profile?.plan === "standard" || profile?.plan === "credit_only") {
         setSubscriptionPlan("standard")
       } else {
         setSubscriptionPlan("free")
