@@ -1,11 +1,12 @@
 import { getStripeClient } from "@/lib/stripe/client"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
     try {
         const stripe = getStripeClient()
         const supabase = await createClient()
+        const adminSupabase = createServiceClient()
 
         const {
             data: { user },
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
         }
 
         // Find the active subscription that is scheduled to cancel
-        const { data: subscription, error: subError } = await supabase
+        const { data: subscription, error: subError } = await adminSupabase
             .from("subscriptions")
             .select("id")
             .eq("user_id", user.id)
@@ -36,12 +37,19 @@ export async function POST(req: Request) {
         }
 
         // Resume the subscription by setting cancel_at_period_end to false
-        const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
-            cancel_at_period_end: false,
-        })
+        let updatedSubscription
+        try {
+            updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+                cancel_at_period_end: false,
+            })
+        } catch (stripeError) {
+            console.error("[RESUME_SUBSCRIPTION] Stripe error:", stripeError)
+            const message = stripeError instanceof Error ? stripeError.message : "Failed to resume subscription with Stripe"
+            return NextResponse.json({ error: message }, { status: 400 })
+        }
 
         // Update the local database
-        const { error: updateError } = await supabase
+        const { error: updateError } = await adminSupabase
             .from("subscriptions")
             .update({ cancel_at_period_end: false })
             .eq("id", subscription.id)

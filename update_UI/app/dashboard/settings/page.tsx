@@ -241,16 +241,18 @@ export default function SettingsPage() {
       const res = await fetch("/api/stripe/resume-subscription", {
         method: "POST",
       })
-      const data = await res.json()
-      if (data.error) {
-        throw new Error(data.error)
+      const data = await res.json().catch(() => ({}))
+      const errorMessage = (data && data.error) || (!res.ok ? "サブスクリプションの再開に失敗しました" : null)
+      if (errorMessage) {
+        toast.error(errorMessage)
+        return
       }
       toast.success("サブスクリプションを再開しました")
       // Reload data to reflect the change
       window.location.reload()
     } catch (error) {
       console.error(error)
-      toast.error(error instanceof Error ? error.message : "再開に失敗しました")
+      toast.error("再開に失敗しました")
     } finally {
       setIsResuming(false)
     }

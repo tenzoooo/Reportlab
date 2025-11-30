@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -153,6 +153,18 @@ const getImageFallbackExtension = (file: File) => {
   return "png"
 }
 
+const CompletionBadge = ({ label }: { label: string }) => (
+  <motion.span
+    initial={{ opacity: 0, scale: 0.9, y: 2 }}
+    animate={{ opacity: 1, scale: 1, y: 0 }}
+    transition={{ type: "spring", stiffness: 260, damping: 18, mass: 0.6 }}
+    className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 shadow-sm"
+  >
+    <CheckCircle2 className="h-3.5 w-3.5" />
+    {label}
+  </motion.span>
+)
+
 type ProcessingState = {
   reportId: string
   startedAt: number
@@ -206,6 +218,13 @@ export default function NewReportPage() {
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
   const [workflowType, setWorkflowType] = useState<"conventional" | "optimized" | "past_report">("conventional")
   const [pastReportFile, setPastReportFile] = useState<File | null>(null)
+  const hasUploadedTables = pastedTables.length > 0 || existingTables.length > 0
+  const hasUploadedImages = figureImages.length > 0 || existingImages.length > 0
+  const [lastAddedTableId, setLastAddedTableId] = useState<string | null>(null)
+  const tableHighlightTimer = useRef<number | null>(null)
+  const [lastAddedImageIndex, setLastAddedImageIndex] = useState<number | null>(null)
+  const [lastAddedImageLabel, setLastAddedImageLabel] = useState<string | null>(null)
+  const imageHighlightTimer = useRef<number | null>(null)
 
   const searchParams = useSearchParams()
   const resumeReportId = searchParams.get("reportId")
@@ -395,7 +414,20 @@ export default function NewReportPage() {
         })
       })
     if (normalized.length > 0) {
-      setFigureImages((prev) => [...prev, ...normalized])
+      setFigureImages((prev) => {
+        const next = [...prev, ...normalized]
+        const newIndex = next.length - 1
+        setLastAddedImageIndex(newIndex)
+        setLastAddedImageLabel(`画像 ${newIndex + 1} を追加しました`)
+        if (imageHighlightTimer.current) {
+          window.clearTimeout(imageHighlightTimer.current)
+        }
+        imageHighlightTimer.current = window.setTimeout(() => {
+          setLastAddedImageIndex(null)
+          setLastAddedImageLabel(null)
+        }, 2200)
+        return next
+      })
     }
   }
 
@@ -424,6 +456,10 @@ export default function NewReportPage() {
 
   const removeImage = (index: number) => {
     setFigureImages((prev) => prev.filter((_, i) => i !== index))
+    if (lastAddedImageIndex === index) {
+      setLastAddedImageIndex(null)
+      setLastAddedImageLabel(null)
+    }
   }
 
   const moveImage = (index: number, direction: "up" | "down") => {
@@ -448,7 +484,15 @@ export default function NewReportPage() {
     }
     if (rows.length > 0) {
       event.preventDefault()
-      setPastedTables((prev) => [...prev, { id: crypto.randomUUID(), rows }])
+      const newId = crypto.randomUUID()
+      setPastedTables((prev) => [...prev, { id: newId, rows }])
+      setLastAddedTableId(newId)
+      if (tableHighlightTimer.current) {
+        window.clearTimeout(tableHighlightTimer.current)
+      }
+      tableHighlightTimer.current = window.setTimeout(() => {
+        setLastAddedTableId(null)
+      }, 2200)
     }
   }
 
@@ -989,12 +1033,15 @@ export default function NewReportPage() {
                 <div className="space-y-3 relative">
                   <div className="flex items-center justify-between">
                     <Label className="text-base font-semibold text-card-foreground">Excel表を貼り付け（任意）</Label>
-                    {subscriptionPlan !== "premium" && (
-                      <div className="flex items-center text-amber-500 text-xs font-semibold">
-                        <Lock className="w-3 h-3 mr-1" />
-                        Premium限定
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {hasUploadedTables && <CompletionBadge label="表を追加済み" />}
+                      {subscriptionPlan !== "premium" && (
+                        <div className="flex items-center text-amber-500 text-xs font-semibold">
+                          <Lock className="w-3 h-3 mr-1" />
+                          Premium限定
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     コピーした表を貼り付けると参照用データとして保存されます。複数貼り付けると順番に追加されます。
@@ -1002,17 +1049,29 @@ export default function NewReportPage() {
 
                   {subscriptionPlan === "premium" ? (
                     <>
-                      <textarea
-                        id="table-paste-area"
-                        className="w-full rounded-md border px-3 py-2 text-sm"
-                        rows={4}
-                        placeholder="ここに Ctrl/Cmd+V で貼り付け"
-                        onPaste={handleTablePaste}
-                      />
+                      <div className="flex items-start gap-2">
+                        <textarea
+                          id="table-paste-area"
+                          className="w-full rounded-md border px-3 py-2 text-sm"
+                          rows={4}
+                          placeholder="ここに Ctrl/Cmd+V で貼り付け"
+                          onPaste={handleTablePaste}
+                        />
+                        {lastAddedTableId && (
+                          <CompletionBadge label={`表 ${pastedTables.length} を追加しました`} />
+                        )}
+                      </div>
                       {pastedTables.length > 0 ? (
                         <div className="space-y-3">
                           {pastedTables.map((table, idx) => (
-                            <div key={table.id} className="overflow-x-auto rounded-md border bg-muted/30">
+                            <motion.div
+                              key={table.id}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.18, delay: Math.min(idx * 0.02, 0.2) }}
+                              className={`overflow-x-auto rounded-md border bg-muted/30 transition-colors ${lastAddedTableId === table.id ? "border-emerald-200 bg-emerald-50/80 shadow-sm" : ""
+                                }`}
+                            >
                               <div className="flex items-center justify-between border-b px-3 py-2 text-sm font-semibold">
                                 <span>
                                   表 {idx + 1}（{table.rows.length} 行）
@@ -1037,7 +1096,7 @@ export default function NewReportPage() {
                               {table.rows.length > 6 && (
                                 <p className="px-2 py-1 text-xs text-muted-foreground">先頭6行を表示しています。全 {table.rows.length} 行。</p>
                               )}
-                            </div>
+                            </motion.div>
                           ))}
                           <Button variant="outline" size="sm" onClick={clearTables}>
                             すべてクリア
@@ -1071,12 +1130,15 @@ export default function NewReportPage() {
                     <Label htmlFor="image-upload" className="text-base font-semibold text-card-foreground">
                       実験結果の画像（任意）
                     </Label>
-                    {subscriptionPlan !== "premium" && (
-                      <div className="flex items-center text-amber-500 text-xs font-semibold">
-                        <Lock className="w-3 h-3 mr-1" />
-                        Premium限定
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {hasUploadedImages && <CompletionBadge label="画像を追加済み" />}
+                      {subscriptionPlan !== "premium" && (
+                        <div className="flex items-center text-amber-500 text-xs font-semibold">
+                          <Lock className="w-3 h-3 mr-1" />
+                          Premium限定
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {subscriptionPlan === "premium" ? (
@@ -1085,35 +1147,42 @@ export default function NewReportPage() {
                       <p className="text-sm text-muted-foreground">
                         図キャプションの直前に表示したい実験結果の画像をアップロードしてください。アップロードした順番でレポートに挿入されます（後から並べ替え可能）。
                       </p>
-                      <div
-                        id="image-paste-box"
-                        className="mt-2 flex flex-col gap-2 border rounded-lg p-3 bg-muted/40"
-                        onPaste={handleImagePasteBoxPaste}
-                        tabIndex={0}
-                        role="textbox"
-                        aria-label="画像の貼り付け"
-                      >
-                        <p className="text-xs font-semibold text-card-foreground">ここに Ctrl/Cmd+V で画像を貼り付け</p>
-                        <p className="text-xs text-muted-foreground">
-                          スクリーンショットやグラフ画像をコピーして、このボックスを選択した状態で貼り付けてください。ページ上のどこで貼り付けても画像として追加されます。
-                        </p>
-                      </div>
-                      <div
-                        onDragOver={handleImageDragOver}
-                        onDragLeave={handleImageDragLeave}
-                        onDrop={handleImageDrop}
-                        className={`border-2 border-dashed rounded-lg transition-all duration-300 py-5 px-4 bg-card ${isImageDragging ? "border-primary bg-primary/10 scale-[1.01]" : "border-border bg-muted/30 hover:bg-muted/50"
-                          }`}
-                      >
-                        <div className="flex flex-col items-center text-center space-y-2">
-                          <ImagePlus className="w-10 h-10 text-muted-foreground" />
-                          <p className="font-semibold text-card-foreground">画像をドラッグ&ドロップ</p>
-                          <p className="text-xs text-muted-foreground">JPG / PNG / HEIC などの画像ファイルに対応</p>
-                          <label htmlFor="image-upload">
-                            <Button variant="outline" size="sm" className="cursor-pointer mt-2 bg-transparent hover:bg-primary/10" asChild>
-                              <span>画像を選択</span>
-                            </Button>
-                          </label>
+                      <div className="flex flex-col gap-3">
+                        <div
+                          id="image-paste-box"
+                          className="flex flex-col gap-2 border rounded-lg p-3 bg-muted/40"
+                          onPaste={handleImagePasteBoxPaste}
+                          tabIndex={0}
+                          role="textbox"
+                          aria-label="画像の貼り付け"
+                        >
+                          <p className="text-xs font-semibold text-card-foreground">ここに Ctrl/Cmd+V で画像を貼り付け</p>
+                          <p className="text-xs text-muted-foreground">
+                            スクリーンショットやグラフ画像をコピーして、このボックスを選択した状態で貼り付けてください。ページ上のどこで貼り付けても画像として追加されます。
+                          </p>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <div
+                            onDragOver={handleImageDragOver}
+                            onDragLeave={handleImageDragLeave}
+                            onDrop={handleImageDrop}
+                            className={`flex-1 border-2 border-dashed rounded-lg transition-all duration-300 py-5 px-4 bg-card ${isImageDragging ? "border-primary bg-primary/10 scale-[1.01]" : "border-border bg-muted/30 hover:bg-muted/50"
+                              }`}
+                          >
+                            <div className="flex flex-col items-center text-center space-y-2">
+                              <ImagePlus className="w-10 h-10 text-muted-foreground" />
+                              <p className="font-semibold text-card-foreground">画像をドラッグ&ドロップ</p>
+                              <p className="text-xs text-muted-foreground">JPG / PNG / HEIC などの画像ファイルに対応</p>
+                              <label htmlFor="image-upload">
+                                <Button variant="outline" size="sm" className="cursor-pointer mt-2 bg-transparent hover:bg-primary/10" asChild>
+                                  <span>画像を選択</span>
+                                </Button>
+                              </label>
+                            </div>
+                          </div>
+                          {lastAddedImageLabel && (
+                            <CompletionBadge label={lastAddedImageLabel} />
+                          )}
                         </div>
                       </div>
 
@@ -1129,7 +1198,7 @@ export default function NewReportPage() {
                                 initial={{ opacity: 0, y: 5 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.2 }}
-                                className="flex items-center justify-between p-4 border rounded-lg bg-card/80"
+                                className={`flex items-center justify-between p-4 border rounded-lg bg-card/80 transition-colors ${lastAddedImageIndex === index ? "border-emerald-200 bg-emerald-50/80 shadow-sm" : ""}`}
                               >
                                 <div className="flex items-center space-x-3 w-full">
                                   <div className="relative h-16 w-20 overflow-hidden rounded-md bg-muted border">
@@ -1257,42 +1326,62 @@ export default function NewReportPage() {
                       </div>
 
                       {/* Optimized */}
-                      <div className="h-full">
+                      <div className="h-full relative">
                         <Label
                           htmlFor="wf-optimized"
-                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-full"
+                          className={`flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 h-full ${subscriptionPlan === "premium"
+                              ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                              : "opacity-60 cursor-not-allowed"
+                            }`}
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <RadioGroupItem
                               value="optimized"
                               id="wf-optimized"
                               className="peer"
+                              disabled={subscriptionPlan !== "premium"}
                             />
                             <span className="text-lg font-bold">最適化モード (Beta)</span>
                           </div>
                           <span className="text-xs text-muted-foreground text-left">
                             より詳細な分析と高品質な文章生成を行います。
                           </span>
+                          {subscriptionPlan !== "premium" && (
+                            <div className="absolute top-2 right-2 flex items-center text-amber-500 text-xs font-semibold bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
+                              <Lock className="w-3 h-3 mr-1" />
+                              Premium
+                            </div>
+                          )}
                         </Label>
                       </div>
 
                       {/* Past Report */}
-                      <div className="h-full">
+                      <div className="h-full relative">
                         <Label
                           htmlFor="wf-past-report"
-                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-full"
+                          className={`flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 h-full ${subscriptionPlan === "premium"
+                              ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                              : "opacity-60 cursor-not-allowed"
+                            }`}
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <RadioGroupItem
                               value="past_report"
                               id="wf-past-report"
                               className="peer"
+                              disabled={subscriptionPlan !== "premium"}
                             />
                             <span className="text-lg font-bold">過去レポ再現</span>
                           </div>
                           <span className="text-xs text-muted-foreground text-left">
                             過去のレポートをアップロードし、その構成と文体を再現します。
                           </span>
+                          {subscriptionPlan !== "premium" && (
+                            <div className="absolute top-2 right-2 flex items-center text-amber-500 text-xs font-semibold bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
+                              <Lock className="w-3 h-3 mr-1" />
+                              Premium
+                            </div>
+                          )}
                         </Label>
                       </div>
                     </RadioGroup>

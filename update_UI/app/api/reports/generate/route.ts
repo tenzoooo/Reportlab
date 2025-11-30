@@ -295,13 +295,22 @@ export async function POST(req: NextRequest) {
   const REQUIRED_CREDITS = 100
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("credits")
+    .select("credits, plan")
     .eq("id", user.id)
     .single()
 
   if (profileError || !profile) {
     logError("reports/generate:profile-error", profileError)
     return NextResponse.json({ error: "Failed to fetch user profile" }, { status: 500 })
+  }
+
+  // Check plan restrictions
+  if (workflowType !== "conventional" && profile.plan !== "premium") {
+    logInfo("reports/generate:plan-restriction", { userId: user.id, plan: profile.plan, workflowType })
+    return NextResponse.json(
+      { error: "This workflow is available for Premium users only." },
+      { status: 403 }
+    )
   }
 
   if ((profile.credits ?? 0) < REQUIRED_CREDITS) {
