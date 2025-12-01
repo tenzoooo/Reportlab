@@ -1,10 +1,10 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion, useScroll, useTransform, useSpring, useMotionValue } from "framer-motion"
 import Link from "next/link"
-import { FileText, Zap, Shield, TrendingUp, Clock, CheckCircle, ArrowRight } from "lucide-react"
+import { FileText, Zap, Shield, TrendingUp, Clock, CheckCircle, ArrowRight, Sparkles, Cpu, Activity } from "lucide-react"
 import dynamic from "next/dynamic"
-import { Suspense } from "react"
+import { Suspense, useRef, useState, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 
@@ -12,8 +12,8 @@ const FloatingBeaker = dynamic(() => import("@/components/3d/floating-beaker"), 
 const DataVisualization = dynamic(() => import("@/components/3d/data-visualization"), { ssr: false })
 
 const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" as const } },
 }
 
 const staggerContainer = {
@@ -21,46 +21,93 @@ const staggerContainer = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.15,
+      delayChildren: 0.2,
+    },
+  },
+}
+
+const glitchAnimation = {
+  hidden: { opacity: 0, x: -10 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+      damping: 10,
     },
   },
 }
 
 export default function LandingPage() {
+  const { scrollYProgress } = useScroll()
+  const y = useTransform(scrollYProgress, [0, 1], [0, -50])
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+
+  const springConfig = { damping: 25, stiffness: 150, mass: 0.5 }
+  const mouseXSpring = useSpring(mouseX, springConfig)
+  const mouseYSpring = useSpring(mouseY, springConfig)
+
+  // Parallax transforms
+  const backgroundX = useTransform(mouseXSpring, [-1, 1], [20, -20])
+  const backgroundY = useTransform(mouseYSpring, [-1, 1], [20, -20])
+
+  const floatingX = useTransform(mouseXSpring, [-1, 1], [-40, 40])
+  const floatingY = useTransform(mouseYSpring, [-1, 1], [-40, 40])
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // Calculate normalized position (-1 to 1)
+      const x = (e.clientX / window.innerWidth) * 2 - 1
+      const y = (e.clientY / window.innerHeight) * 2 - 1
+
+      mouseX.set(x)
+      mouseY.set(y)
+    }
+    window.addEventListener("mousemove", handleMouseMove)
+    return () => window.removeEventListener("mousemove", handleMouseMove)
+  }, [mouseX, mouseY])
+
   return (
-    <div className="min-h-screen bg-background cyber-grid">
+    <div className="min-h-screen bg-background cyber-grid selection:bg-primary/30 selection:text-primary-foreground overflow-x-hidden">
       {/* Header */}
       <motion.header
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border"
-        style={{ boxShadow: "0 0 15px rgba(94, 234, 212, 0.1)" }}
+        transition={{ duration: 0.8, ease: "circOut" as const }}
+        className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-white/5"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <motion.div
-              className="flex items-center gap-2"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 400 }}
+              className="flex items-center gap-3 group cursor-pointer"
+              whileHover={{ scale: 1.02 }}
             >
-              <Image src="/app-icon.png" alt="App Icon" width={32} height={32} />
-              <span className="text-xl font-bold text-foreground">Reportlab</span>
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/50 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <Image src="/app-icon.png" alt="App Icon" width={36} height={36} className="relative z-10" />
+              </div>
+              <span className="text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70 group-hover:from-primary group-hover:to-secondary transition-all duration-300">
+                Reportlab
+              </span>
             </motion.div>
-            <nav className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-muted-foreground hover:text-primary transition-colors">
-                機能
-              </a>
-              <a href="#workflow" className="text-muted-foreground hover:text-primary transition-colors">
-                使い方
-              </a>
-              <a href="#pricing" className="text-muted-foreground hover:text-primary transition-colors">
-                料金
-              </a>
-              <Link href="/login" className="text-primary hover:text-primary/90 font-semibold transition-colors">
+            <nav className="hidden md:flex items-center gap-8">
+              {["機能", "使い方", "料金"].map((item, i) => (
+                <a
+                  key={i}
+                  href={`#${item === "機能" ? "features" : item === "使い方" ? "workflow" : "pricing"}`}
+                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors relative group"
+                >
+                  {item}
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
+                </a>
+              ))}
+              <Link href="/login" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
                 ログイン
               </Link>
-              <Button className="primary-button" asChild>
+              <Button className="primary-button font-bold tracking-wide" asChild>
                 <Link href="/register">無料で始める</Link>
               </Button>
             </nav>
@@ -69,79 +116,97 @@ export default function LandingPage() {
       </motion.header>
 
       {/* Hero Section */}
-      <section className="py-20 lg:py-32 relative overflow-hidden">
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"
-          animate={{
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-20 pb-32">
+        {/* Dynamic Background Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div
+            className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[128px]"
+            style={{ x: backgroundX, y: backgroundY }}
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.5, 0.3]
+            }}
+            transition={{ duration: 5, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
+          />
+          <motion.div
+            className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-[128px]"
+            style={{ x: backgroundX, y: backgroundY }}
+            animate={{
+              scale: [1.2, 1, 1.2],
+              opacity: [0.3, 0.5, 0.3]
+            }}
+            transition={{ duration: 7, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
+          />
+        </div>
 
-        <div className="absolute right-0 top-0 w-1/3 h-full opacity-20 pointer-events-none">
+        <motion.div
+          className="absolute right-0 top-0 w-full md:w-1/2 h-full opacity-20 md:opacity-40 pointer-events-none mix-blend-screen"
+          style={{ x: floatingX, y: floatingY }}
+        >
           <Suspense fallback={<div />}>
             <FloatingBeaker />
           </Suspense>
-        </div>
+        </motion.div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <motion.div className="text-center space-y-8" initial="hidden" animate="visible" variants={staggerContainer}>
-            <motion.div
-              variants={fadeInUp}
-              className="inline-block px-4 py-2 bg-primary/20 text-primary rounded-full text-sm font-semibold border border-primary/30"
-              style={{ boxShadow: "0 0 15px rgba(94, 234, 212, 0.3)" }}
-            >
-              AI駆動のレポート作成
+        {/* Text Background Glow for Readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-transparent to-background/80 pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+          <motion.div
+            className="max-w-4xl mx-auto text-center space-y-10"
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+          >
+            <motion.div variants={fadeInUp} className="inline-block">
+              <span className="px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-sm font-bold tracking-wider uppercase backdrop-blur-md shadow-[0_0_20px_rgba(94,234,212,0.2)]">
+                Next Gen Lab Assistant
+              </span>
             </motion.div>
-            <motion.h1
-              variants={fadeInUp}
-              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground tracking-tight"
-            >
-              実験レポートの面倒なところは
-              <br />
-              <span className="text-primary text-5xl sm:text-6xl lg:text-7xl">AIでいい</span>。
+
+            <motion.h1 variants={fadeInUp} className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tighter leading-[1.1]">
+              <span className="block text-foreground">
+                考察以外は、
+              </span>
+              <span className="block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-black via-gray-600 to-gray-900 opacity-100 pb-4">
+                書かなくていい。
+              </span>
             </motion.h1>
-            <motion.p variants={fadeInUp} className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              AIが実験データを自動分析。統計処理、グラフ生成、参考文献検索を一瞬で完了。 あなたは考察に集中するだけ。
+
+            <motion.p variants={fadeInUp} className="text-xl sm:text-2xl text-muted-foreground/90 max-w-2xl mx-auto leading-relaxed font-light">
+              レポートの実験結果のページを
+              <br />
+              自動で作成。
             </motion.p>
-            <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button className="primary-button text-lg px-8 py-4 w-full sm:w-auto" asChild>
-                <Link href="/register">今すぐ無料で始める</Link>
+
+            <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
+              <Button className="primary-button text-lg px-10 py-6 w-full sm:w-auto text-lg hover:scale-105 transition-transform" asChild>
+                <Link href="/register">今すぐ解放される</Link>
               </Button>
-              <Button className="secondary-button text-lg px-8 py-4 w-full sm:w-auto" asChild>
-                <Link href="#workflow">使い方を見る</Link>
+              <Button variant="ghost" className="text-lg px-8 py-6 w-full sm:w-auto hover:bg-white/5 hover:text-primary transition-all group" asChild>
+                <Link href="#workflow" className="flex items-center gap-2">
+                  仕組みを見る
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </Button>
             </motion.div>
 
-            {/* KPI Band */}
+            {/* KPI Stats */}
             <motion.div
               variants={staggerContainer}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-12 max-w-4xl mx-auto"
+              className="grid grid-cols-2 md:grid-cols-4 gap-8 pt-20 border-t border-white/5 mt-20"
             >
               {[
-                { value: "80%", label: "作成時間削減", color: "text-primary" },
-                { value: "10分", label: "平均処理時間", color: "text-secondary" },
-                { value: "1,000+", label: "利用学生数", color: "text-success" },
-              ].map((kpi, i) => (
-                <motion.div
-                  key={i}
-                  variants={fadeInUp}
-                  whileHover={{ scale: 1.1, y: -5 }}
-                  className="text-center space-y-2"
-                >
-                  <motion.div
-                    className={`text-4xl font-bold ${kpi.color}`}
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5 + i * 0.2, type: "spring" }}
-                  >
-                    {kpi.value}
-                  </motion.div>
-                  <div className="text-muted-foreground">{kpi.label}</div>
+                { value: "90%", label: "時間削減", icon: Clock },
+                { value: "5分", label: "平均生成時間", icon: Zap },
+                { value: "∞", label: "可能性", icon: TrendingUp },
+              ].map((stat, i) => (
+                <motion.div key={i} variants={fadeInUp} className="text-center group">
+                  <div className="flex justify-center mb-3 text-muted-foreground group-hover:text-primary transition-colors">
+                    <stat.icon className="w-6 h-6" />
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-black text-foreground mb-1 tracking-tight">{stat.value}</div>
+                  <div className="text-xs sm:text-sm font-bold uppercase tracking-widest text-muted-foreground/70">{stat.label}</div>
                 </motion.div>
               ))}
             </motion.div>
@@ -150,286 +215,144 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section
-        id="features"
-        className="py-20 bg-card/50 backdrop-blur-sm relative overflow-hidden border-y border-border/50"
-      >
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-primary/5 to-secondary/5"
-          animate={{
-            opacity: [0.2, 0.4, 0.2],
-          }}
-          transition={{
-            duration: 5,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
-
-        <div className="absolute left-0 top-1/4 w-1/4 h-1/2 opacity-10 pointer-events-none">
-          <Suspense fallback={<div />}>
-            <DataVisualization />
-          </Suspense>
-        </div>
+      <section id="features" className="py-32 relative overflow-hidden">
+        <div className="absolute inset-0 bg-card/30 backdrop-blur-3xl skew-y-3 transform origin-top-left scale-110" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center space-y-4 mb-16"
+            className="mb-20"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">主な機能</h2>
-            <p className="text-xl text-muted-foreground">AIがあなたのレポート作成をフルサポート</p>
+            <h2 className="text-4xl sm:text-5xl font-black mb-6 tracking-tight">
+              圧倒的<span className="text-primary">パフォーマンス</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl">
+              もう、WordとExcelを行き来する必要はありません。
+              <br />
+              Reportlabが、あなたの研究時間を最大化します。
+            </p>
           </motion.div>
 
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
-          >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
                 icon: Zap,
-                title: "AI自動分析",
-                color: "text-primary",
-                bgColor: "bg-primary/10",
-                hoverBg: "bg-primary",
-                items: ["統計処理（平均値、標準偏差、相関係数）", "グラフ自動生成", "理論値との誤差分析"],
+                title: "一瞬で、完成",
+                desc: "PDFをドラッグ＆ドロップするだけ。章立て、図表、フォーマット、全てAIが自動で構築します。",
+                color: "from-yellow-400 to-orange-500"
               },
               {
-                icon: FileText,
-                title: "Word自動生成",
-                color: "text-secondary",
-                bgColor: "bg-secondary/10",
-                hoverBg: "bg-secondary",
-                items: ["実験結果セクションの完全自動化", "参考文献の自動検索・挿入", "大学指定フォーマット対応"],
+                icon: Cpu,
+                title: "レポート特化型AI",
+                desc: "実験書の文脈を理解し、最適なフォーマットを自動生成。考察に必要な要素を自動で抽出します。",
+                color: "from-blue-400 to-cyan-500"
               },
               {
-                icon: Clock,
-                title: "過去資産活用",
-                color: "text-success",
-                bgColor: "bg-success/10",
-                hoverBg: "bg-success",
-                items: ["過去レポートからテンプレート抽出", "構成やフォーマットの再利用", "レポート履歴の一元管理"],
-              },
+                icon: Activity,
+                title: "完全な管理",
+                desc: "過去のレポートも、実験データも、全てクラウドで一元管理。いつでもどこでも、続きから。",
+                color: "from-purple-400 to-pink-500"
+              }
             ].map((feature, i) => (
               <motion.div
                 key={i}
-                variants={fadeInUp}
-                whileHover={{
-                  scale: 1.05,
-                  y: -10,
-                  transition: { type: "spring", stiffness: 300 },
-                }}
-                className="feature-card group cursor-pointer"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.2 }}
+                whileHover={{ y: -10 }}
+                className="group relative p-8 rounded-3xl bg-card border border-white/5 hover:border-primary/50 transition-all duration-500 overflow-hidden"
               >
-                <motion.div
-                  className={`h-12 w-12 ${feature.bgColor} rounded-lg flex items-center justify-center mb-4 group-hover:${feature.hoverBg} transition-colors`}
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <feature.icon
-                    className={`h-6 w-6 ${feature.color} group-hover:text-primary-foreground transition-colors`}
-                  />
-                </motion.div>
-                <h3 className="text-xl font-semibold mb-3 text-foreground">{feature.title}</h3>
-                <ul className="space-y-2 text-muted-foreground">
-                  {feature.items.map((item, j) => (
-                    <motion.li
-                      key={j}
-                      initial={{ opacity: 0, x: -10 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.1 * j }}
-                      className="flex items-start gap-2"
-                    >
-                      <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </motion.li>
-                  ))}
-                </ul>
+                <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+                <div className="relative z-10">
+                  <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border border-white/10 group-hover:border-primary/50">
+                    <feature.icon className="w-7 h-7 text-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4 group-hover:text-primary transition-colors">{feature.title}</h3>
+                  <p className="text-muted-foreground/90 leading-relaxed">
+                    {feature.desc}
+                  </p>
+                </div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* Workflow Section */}
-      <section id="workflow" className="py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10" />
-        <motion.div
-          className="absolute inset-0"
-          animate={{
-            background: [
-              "radial-gradient(circle at 0% 0%, rgba(94,234,212,0.1) 0%, transparent 50%)",
-              "radial-gradient(circle at 100% 100%, rgba(168,85,247,0.1) 0%, transparent 50%)",
-              "radial-gradient(circle at 0% 0%, rgba(94,234,212,0.1) 0%, transparent 50%)",
-            ],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
+      <section id="workflow" className="py-32 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="text-center space-y-4 mb-16"
+            className="text-center mb-24"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">3ステップで完成</h2>
-            <p className="text-xl text-muted-foreground">シンプルな操作で高品質なレポートを作成</p>
+            <h2 className="text-4xl sm:text-5xl font-black mb-6 tracking-tight">驚くほど、シンプル</h2>
+            <p className="text-xl text-muted-foreground">
+              複雑な操作は一切不要。直感的な3ステップ。
+            </p>
           </motion.div>
 
-          <div className="space-y-12">
+          <div className="relative">
+            {/* Connecting Line */}
+            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary/50 to-transparent hidden md:block" />
+
             {[
               {
-                step: 1,
-                title: "データをアップロード",
-                description:
-                  "Excel、画像、コードなど、実験データをドラッグ&ドロップ。オシロスコープの画像も、手書きメモの写真も対応。",
-                color: "bg-primary",
+                step: "01",
+                title: "Upload",
+                desc: "実験書PDFと生データを投げる。",
+                detail: "画像、Excel、テキスト...形式は問いません。",
+                align: "left"
               },
               {
-                step: 2,
-                title: "AIが自動分析",
-                description:
-                  "数分待つだけで、統計処理、グラフ生成、傾向分析が完了。 進捗はリアルタイムで確認できます。",
-                color: "bg-secondary",
+                step: "02",
+                title: "Analyze",
+                desc: "AIが構造化する。",
+                detail: "構造解析、フォーマット生成、考察課題の抽出。",
+                align: "right"
               },
               {
-                step: 3,
-                title: "レポートをダウンロード",
-                description: "完成したWord文書をダウンロード。 考察部分はあなたが記入する形で、学習効果も確保。",
-                color: "bg-success",
-              },
-            ].map((workflow, i) => (
+                step: "03",
+                title: "Done",
+                desc: "レポートを受け取る。",
+                detail: "あとは考察を書くだけ。Word形式でダウンロード。",
+                align: "left"
+              }
+            ].map((item, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, x: i % 2 === 0 ? -50 : 50 }}
+                initial={{ opacity: 0, x: item.align === "left" ? -50 : 50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: i * 0.2 }}
-                className={`flex flex-col ${i % 2 === 1 ? "md:flex-row-reverse" : "md:flex-row"} items-center gap-8`}
+                transition={{ duration: 0.8, delay: i * 0.2 }}
+                className={`flex items-center gap-12 mb-24 ${item.align === "right" ? "flex-row-reverse" : ""} relative`}
               >
-                <div className="flex-1 space-y-4">
-                  <motion.div
-                    className={`inline-flex items-center justify-center h-12 w-12 rounded-full ${workflow.color} text-primary-foreground font-bold text-xl`}
-                    whileHover={{ scale: 1.2, rotate: 360 }}
-                    transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                  >
-                    {workflow.step}
-                  </motion.div>
-                  <h3 className="text-2xl font-bold text-foreground">{workflow.title}</h3>
-                  <p className="text-lg text-muted-foreground leading-relaxed">{workflow.description}</p>
+                <div className={`flex-1 ${item.align === "right" ? "text-left" : "text-right"}`}>
+                  <div className="inline-block">
+                    <span className="text-8xl font-black text-white/5 absolute -top-10 -z-10 select-none">
+                      {item.step}
+                    </span>
+                    <h3 className="text-4xl font-bold mb-2">{item.title}</h3>
+                    <p className="text-xl font-medium text-primary mb-2">{item.desc}</p>
+                    <p className="text-muted-foreground">{item.detail}</p>
+                  </div>
                 </div>
-                <motion.div
-                  className="flex-1"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  {/* Workflow visual cards */}
-                  {workflow.step === 1 && (
-                    <div className="bg-card rounded-2xl shadow-xl p-8 border-2 border-dashed border-border">
-                      <div className="text-center space-y-4">
-                        <motion.div
-                          className="h-24 w-24 mx-auto bg-primary/10 rounded-full flex items-center justify-center"
-                          animate={{ y: [0, -10, 0] }}
-                          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                        >
-                          <FileText className="h-12 w-12 text-primary" />
-                        </motion.div>
-                        <p className="font-semibold text-foreground">ファイルをドロップ</p>
-                        <p className="text-sm text-muted-foreground">Excel, 画像, コード対応</p>
-                      </div>
-                    </div>
-                  )}
-                  {workflow.step === 2 && (
-                    <div className="bg-card rounded-2xl shadow-xl p-8">
-                      <div className="space-y-6">
-                        <motion.div
-                          className="flex items-center gap-4"
-                          initial={{ opacity: 0, x: -20 }}
-                          whileInView={{ opacity: 1, x: 0 }}
-                          viewport={{ once: true }}
-                        >
-                          <div className="h-10 w-10 bg-success/10 rounded-full flex items-center justify-center">
-                            <CheckCircle className="h-6 w-6 text-success" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-foreground">統計処理完了</p>
-                            <div className="h-2 bg-success/20 rounded-full mt-2">
-                              <motion.div
-                                className="h-2 bg-success rounded-full"
-                                initial={{ width: 0 }}
-                                whileInView={{ width: "100%" }}
-                                viewport={{ once: true }}
-                                transition={{ duration: 1, delay: 0.3 }}
-                              />
-                            </div>
-                          </div>
-                        </motion.div>
-                        <motion.div
-                          className="flex items-center gap-4"
-                          initial={{ opacity: 0, x: -20 }}
-                          whileInView={{ opacity: 1, x: 0 }}
-                          viewport={{ once: true }}
-                          transition={{ delay: 0.2 }}
-                        >
-                          <motion.div
-                            className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
-                            animate={{ scale: [1, 1.1, 1] }}
-                            transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
-                          >
-                            <TrendingUp className="h-6 w-6 text-primary" />
-                          </motion.div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-foreground">グラフ生成中...</p>
-                            <div className="h-2 bg-muted rounded-full mt-2">
-                              <motion.div
-                                className="h-2 bg-primary rounded-full"
-                                animate={{ width: ["0%", "66%"] }}
-                                transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                              />
-                            </div>
-                          </div>
-                        </motion.div>
-                      </div>
-                    </div>
-                  )}
-                  {workflow.step === 3 && (
-                    <div className="bg-card rounded-2xl shadow-xl p-8">
-                      <div className="space-y-4">
-                        <motion.div
-                          className="border-2 border-border rounded-lg p-4"
-                          whileHover={{ borderColor: "#3B82F6" }}
-                        >
-                          <div className="flex items-center gap-3 mb-2">
-                            <FileText className="h-6 w-6 text-primary" />
-                            <span className="font-semibold text-foreground">実験レポート.docx</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">2.3 MB • 2024/10/28</p>
-                        </motion.div>
-                        <motion.button
-                          className="primary-button w-full"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <span className="flex items-center justify-center gap-2">
-                            ダウンロード
-                            <ArrowRight className="h-5 w-5" />
-                          </span>
-                        </motion.button>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
+
+                <div className="relative z-10 hidden md:flex items-center justify-center w-16 h-16 rounded-full bg-background border-4 border-card shadow-[0_0_30px_rgba(94,234,212,0.3)]">
+                  <div className="w-4 h-4 rounded-full bg-primary animate-pulse" />
+                </div>
+
+                <div className="flex-1">
+                  <div className="aspect-video rounded-2xl bg-card/50 border border-white/10 backdrop-blur-sm p-8 flex items-center justify-center group hover:border-primary/50 transition-colors duration-500">
+                    {i === 0 && <FileText className="w-20 h-20 text-white/20 group-hover:text-primary transition-colors duration-500" />}
+                    {i === 1 && <Activity className="w-20 h-20 text-white/20 group-hover:text-secondary transition-colors duration-500" />}
+                    {i === 2 && <CheckCircle className="w-20 h-20 text-white/20 group-hover:text-success transition-colors duration-500" />}
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -437,336 +360,153 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-card/50 backdrop-blur-sm border-y border-border/50">
+      <section id="pricing" className="py-32 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center space-y-4 mb-16"
+            className="text-center mb-20"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">シンプルな料金プラン</h2>
-            <p className="text-xl text-muted-foreground">まずは無料で試せます</p>
+            <h2 className="text-4xl sm:text-5xl font-black mb-6 tracking-tight">
+              未来への<span className="text-primary">投資</span>
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              コーヒー1杯分の価格で、あなたの週末を取り戻します。
+            </p>
           </motion.div>
 
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
-          >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-center">
             {[
               {
                 name: "Free",
                 price: "¥0",
-                features: ["レポート作成 5件/月", "ストレージ 100MB", "基本的なAI分析機能"],
-                highlighted: false,
-                buttonText: "無料で始める",
-                href: "/register"
+                desc: "まずは体験してください",
+                features: ["月次クレジットなし", "ストレージ 100MB", "基本機能へのアクセス"],
+                cta: "無料で始める",
+                href: "/register",
+                highlight: false
               },
               {
                 name: "Standard",
                 price: "¥980",
-                features: ["毎月400クレジット付与", "ストレージ 1GB", "高度なAI分析機能", "基本機能はFreeと同じ"],
-                highlighted: false,
-                buttonText: "Standardを始める",
-                href: "/register?plan=standard"
+                desc: "最も選ばれているプラン",
+                features: ["毎月400クレジット", "ストレージ 1GB", "優先処理キュー", "高度なAIモデル利用"],
+                cta: "Standardで始める",
+                href: "/register?plan=standard",
+                highlight: true
               },
               {
                 name: "Premium",
                 price: "¥1,980",
-                features: ["毎月1000クレジット付与", "ストレージ 5GB", "最優先サポート", "高度なAI分析機能"],
-                highlighted: true,
-                buttonText: "Premiumを始める",
-                href: "/register?plan=premium"
-              },
+                desc: "本気で研究する人へ",
+                features: ["毎月1000クレジット", "ストレージ 5GB", "最優先サポート", "新機能への早期アクセス"],
+                cta: "Premiumで始める",
+                href: "/register?plan=premium",
+                highlight: false
+              }
             ].map((plan, i) => (
               <motion.div
                 key={i}
-                variants={fadeInUp}
-                whileHover={{ scale: 1.05, y: -10 }}
-                className={`card ${plan.highlighted ? "border-2 border-primary relative mt-8 md:mt-0" : ""}`}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                whileHover={{ scale: plan.highlight ? 1.05 : 1.02 }}
+                className={`relative p-8 rounded-3xl ${plan.highlight
+                  ? "bg-card border-2 border-primary shadow-[0_0_50px_rgba(94,234,212,0.15)] z-10"
+                  : "bg-card/50 border border-white/5"
+                  }`}
               >
-                {plan.highlighted && (
-                  <motion.div
-                    className="absolute -top-4 left-1/2 -translate-x-1/2 w-full text-center z-10"
-                    animate={{
-                      y: [0, -5, 0],
-                      scale: [1, 1.1, 1],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Number.POSITIVE_INFINITY,
-                      ease: "easeInOut",
-                    }}
-                  >
-                    <span
-                      className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-6 py-2 rounded-full text-base font-bold shadow-lg inline-block"
-                    >
-                      おすすめ
+                {plan.highlight && (
+                  <div className="absolute -top-5 left-0 right-0 flex justify-center">
+                    <span className="bg-gradient-to-r from-primary to-secondary text-background font-bold px-6 py-1.5 rounded-full text-sm shadow-lg animate-pulse">
+                      RECOMMENDED
                     </span>
-                  </motion.div>
-                )}
-                <div className="space-y-6 h-full flex flex-col">
-                  <div>
-                    <h3 className="text-2xl font-bold text-foreground mb-2">{plan.name}</h3>
-                    <div className="flex items-baseline gap-2">
-                      <motion.span
-                        className={`text-4xl font-bold ${plan.highlighted ? "text-primary" : "text-foreground"}`}
-                        initial={{ opacity: 0, scale: 0 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
-                        transition={{ type: "spring", delay: 0.3 }}
-                      >
-                        {plan.price}
-                      </motion.span>
-                      <span className="text-muted-foreground">/月</span>
-                    </div>
                   </div>
-                  <ul className="space-y-3 flex-grow">
-                    {plan.features.map((feature, j) => (
-                      <motion.li
-                        key={j}
-                        initial={{ opacity: 0, x: -10 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: 0.1 * j }}
-                        className="flex items-start gap-3"
-                      >
-                        <CheckCircle className="h-5 w-5 text-foreground flex-shrink-0 mt-0.5" />
-                        <span className="text-muted-foreground text-sm">{feature}</span>
-                      </motion.li>
-                    ))}
-                  </ul>
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Link
-                      href={plan.href}
-                      className={`${plan.highlighted ? "primary-button" : "secondary-button"} w-full block text-center`}
-                    >
-                      {plan.buttonText}
-                    </Link>
-                  </motion.div>
+                )}
+
+                <div className="text-center mb-8">
+                  <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                  <div className="flex items-baseline justify-center gap-1 mb-2">
+                    <span className="text-4xl font-black">{plan.price}</span>
+                    <span className="text-muted-foreground">/月</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{plan.desc}</p>
                 </div>
+
+                <ul className="space-y-4 mb-8">
+                  {plan.features.map((feature, j) => (
+                    <li key={j} className="flex items-center gap-3 text-sm">
+                      <CheckCircle className={`w-5 h-5 ${plan.highlight ? "text-primary" : "text-muted-foreground"}`} />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  className={`w-full py-6 font-bold tracking-wide ${plan.highlight ? "primary-button" : "secondary-button"
+                    }`}
+                  asChild
+                >
+                  <Link href={plan.href}>{plan.cta}</Link>
+                </Button>
               </motion.div>
             ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Security Section */}
-      <section className="py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-primary/5" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center gap-12">
-            <motion.div
-              className="flex-1"
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <motion.div
-                className="inline-flex items-center justify-center h-20 w-20 bg-primary/10 rounded-2xl mb-6"
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.6 }}
-              >
-                <Shield className="h-10 w-10 text-primary" />
-              </motion.div>
-              <h2 className="text-3xl font-bold text-foreground mb-4">安全なデータ管理</h2>
-              <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-                あなたの実験データは暗号化され、厳重に保護されます。
-                データは本人のみがアクセス可能で、外部に公開されることは一切ありません。
-              </p>
-              <ul className="space-y-3">
-                {["HTTPS通信による暗号化", "個人情報保護法準拠", "定期的なセキュリティ監査"].map((item, i) => (
-                  <motion.li
-                    key={i}
-                    initial={{ opacity: 0, x: -10 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.1 * i }}
-                    className="flex items-start gap-3"
-                  >
-                    <CheckCircle className="h-6 w-6 text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-card-foreground">{item}</span>
-                  </motion.li>
-                ))}
-              </ul>
-            </motion.div>
-            <motion.div
-              className="flex-1"
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="bg-card rounded-2xl shadow-2xl p-8">
-                <div className="space-y-4">
-                  {["データ暗号化", "アクセス制御", "バックアップ"].map((item, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.2 * i }}
-                      whileHover={{ scale: 1.05 }}
-                      className="flex items-center justify-between p-4 bg-success/10 rounded-lg"
-                    >
-                      <span className="font-semibold text-foreground">{item}</span>
-                      <motion.div
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, delay: i * 0.3 }}
-                      >
-                        <CheckCircle className="h-6 w-6 text-success" />
-                      </motion.div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <motion.section
-        className="py-20 neon-gradient relative overflow-hidden"
-        style={{ boxShadow: "0 0 50px rgba(94, 234, 212, 0.3)" }}
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-      >
-        <motion.div
-          className="absolute inset-0 opacity-10"
-          animate={{
-            backgroundPosition: ["0% 0%", "100% 100%"],
-          }}
-          transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-          style={{
-            backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
-            backgroundSize: "50px 50px",
-          }}
-        />
+      <section className="py-32 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/10 via-transparent to-transparent" />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <motion.h2
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="text-3xl sm:text-4xl font-bold text-primary-foreground mb-6"
+            className="text-5xl sm:text-6xl font-black mb-8 tracking-tighter"
           >
-            レポート作成時間を今すぐ削減
+            準備はいいですか？
           </motion.h2>
           <motion.p
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="text-xl text-primary-foreground/90 mb-8 leading-relaxed"
+            className="text-xl text-muted-foreground mb-12"
           >
-            無料プランで今日から始められます。クレジットカード不要。
+            クレジットカードは不要です。<br />
+            まずは無料で、その圧倒的なスピードを体感してください。
           </motion.p>
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.4 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            whileHover={{ scale: 1.05 }}
           >
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link
-                href="/register"
-                className="bg-card text-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-card/90 transition-all shadow-lg hover:shadow-xl w-full sm:w-auto inline-block"
-              >
-                無料で始める
-              </Link>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link
-                href="#features"
-                className="bg-primary-foreground/20 text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg hover:bg-primary-foreground/30 transition-all w-full sm:w-auto inline-block"
-              >
-                詳しく見る
-              </Link>
-            </motion.div>
+            <Button className="primary-button text-xl px-12 py-8 rounded-full shadow-[0_0_40px_rgba(94,234,212,0.4)] hover:shadow-[0_0_60px_rgba(94,234,212,0.6)] transition-all" asChild>
+              <Link href="/register">無料で始める</Link>
+            </Button>
           </motion.div>
         </div>
-      </motion.section>
+      </section>
 
       {/* Footer */}
-      <footer className="bg-card border-t border-border/50 text-foreground py-12">
+      <footer className="border-t border-white/10 bg-black/20 backdrop-blur-lg py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Image src="/app-icon.png" alt="App Icon" width={24} height={24} />
-                <span className="font-bold">Reportlab</span>
-              </div>
-              <p className="text-background/70 text-sm">AIで実験レポート作成を効率化</p>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="flex items-center gap-2">
+              <Image src="/app-icon.png" alt="App Icon" width={24} height={24} className="opacity-70" />
+              <span className="font-bold text-muted-foreground">Reportlab</span>
             </div>
-            <div>
-              <h3 className="font-semibold mb-4">製品</h3>
-              <ul className="space-y-2 text-background/70 text-sm">
-                <li>
-                  <a href="#features" className="hover:text-background transition-colors">
-                    機能
-                  </a>
-                </li>
-                <li>
-                  <a href="#pricing" className="hover:text-background transition-colors">
-                    料金
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-background transition-colors">
-                    セキュリティ
-                  </a>
-                </li>
-              </ul>
+            <div className="flex gap-8 text-sm text-muted-foreground">
+              <Link href="/legal/terms" className="hover:text-primary transition-colors">利用規約</Link>
+              <Link href="/legal/privacy-policy" className="hover:text-primary transition-colors">プライバシーポリシー</Link>
+              <Link href="/legal/commercial-disclosure" className="hover:text-primary transition-colors">特定商取引法に基づく表記</Link>
             </div>
-            <div>
-              <h3 className="font-semibold mb-4">サポート</h3>
-              <ul className="space-y-2 text-background/70 text-sm">
-                <li>
-                  <a href="/help" className="hover:text-background transition-colors">
-                    ヘルプセンター
-                  </a>
-                </li>
-                <li>
-                  <a href="/help/email" className="hover:text-background transition-colors">
-                    お問い合わせ
-                  </a>
-                </li>
-                <li>
-                  <a href="/help/faq" className="hover:text-background transition-colors">
-                    FAQ
-                  </a>
-                </li>
-              </ul>
+            <div className="text-sm text-muted-foreground/50">
+              © 2025 Reportlab. All rights reserved.
             </div>
-            <div>
-              <h3 className="font-semibold mb-4">法的事項</h3>
-              <ul className="space-y-2 text-background/70 text-sm">
-                <li>
-                  <a href="/legal/terms" className="hover:text-background transition-colors">
-                    利用規約
-                  </a>
-                </li>
-                <li>
-                  <a href="/legal/privacy-policy" className="hover:text-background transition-colors">
-                    プライバシーポリシー
-                  </a>
-                </li>
-                <li>
-                  <a href="/legal/commercial-disclosure" className="hover:text-background transition-colors">
-                    特定商取引法に基づく表記
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-background/20 mt-8 pt-8 text-center text-background/70 text-sm">
-            © 2025 Reportlab. All rights reserved.
           </div>
         </div>
       </footer>
