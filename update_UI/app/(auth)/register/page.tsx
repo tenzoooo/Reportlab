@@ -171,7 +171,7 @@ export default function RegisterPage() {
         {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Image src="/icon.png" alt="App Icon" width={160} height={160} className="h-40 w-40" />
+            <Image src="/icon.png" alt="App Icon" width={0} height={0} sizes="100vw" className="h-20 w-auto" />
             <span className="text-2xl font-bold text-gray-900">Reportlab</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">新規登録</h1>
