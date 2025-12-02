@@ -166,17 +166,15 @@ export default function LandingPage() {
 
             <motion.h1 variants={fadeInUp} className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tighter leading-[1.1]">
               <span className="block text-foreground">
-                考察以外は、
+                理系大学生のための
               </span>
               <span className="block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-black via-gray-600 to-gray-900 opacity-100 pb-4">
-                書かなくていい。
+                レポート支援ツール ReportLab
               </span>
             </motion.h1>
 
-            <motion.p variants={fadeInUp} className="text-xl sm:text-2xl text-muted-foreground/90 max-w-2xl mx-auto leading-relaxed font-light">
-              レポートの実験結果のページを
-              <br />
-              自動で作成。
+            <motion.p variants={fadeInUp} className="text-xl sm:text-2xl text-muted-foreground/90 max-w-3xl mx-auto leading-relaxed font-light">
+              実験書から実験結果のページの基盤→結果の挿入→キャプション生成→考察を能動態にした形に整形→まとめの生成→参考文献のプレースフォルダーの作成を一気に行います。これで学生は考察の部分に集中することができます。
             </motion.p>
 
             <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
@@ -391,7 +389,7 @@ export default function LandingPage() {
                 name: "Standard",
                 price: "¥980",
                 desc: "最も選ばれているプラン",
-                features: ["毎月400クレジット", "ストレージ 1GB", "優先処理キュー", "高度なAIモデル利用"],
+                features: ["毎月1200クレジット", "ストレージ 1GB", "優先処理キュー", "高度なAIモデル利用"],
                 cta: "Standardで始める",
                 href: "/register?plan=standard",
                 highlight: true
@@ -400,7 +398,7 @@ export default function LandingPage() {
                 name: "Premium",
                 price: "¥1,980",
                 desc: "本気で研究する人へ",
-                features: ["毎月1000クレジット", "ストレージ 5GB", "最優先サポート", "新機能への早期アクセス"],
+                features: ["毎月3000クレジット", "ストレージ 5GB", "最優先サポート", "新機能への早期アクセス"],
                 cta: "Premiumで始める",
                 href: "/register?plan=premium",
                 highlight: false

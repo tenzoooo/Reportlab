@@ -26,7 +26,8 @@ import { toast } from "sonner"
 
 const CREDITS_PER_PACK = Number(process.env.NEXT_PUBLIC_CREDITS_PER_UNIT ?? 100)
 const MAX_CREDIT_PACKS = 20
-const MONTHLY_CREDITS = 400
+const MONTHLY_CREDITS_STANDARD = 1200
+const MONTHLY_CREDITS_PREMIUM = 3000
 
 export default function SettingsPage() {
   const searchParams = useSearchParams()
@@ -611,7 +612,7 @@ export default function SettingsPage() {
                       <ul className="space-y-3 flex-grow">
                         <li className="flex items-center gap-3">
                           <Check className="h-5 w-5 text-foreground flex-shrink-0" />
-                          <span className="text-muted-foreground text-sm">毎月{MONTHLY_CREDITS}クレジットを自動付与</span>
+                          <span className="text-muted-foreground text-sm">毎月{MONTHLY_CREDITS_STANDARD}クレジットを自動付与</span>
                         </li>
                         <li className="flex items-center gap-3">
                           <Check className="h-5 w-5 text-foreground flex-shrink-0" />
@@ -658,7 +659,7 @@ export default function SettingsPage() {
                       <ul className="space-y-3 flex-grow">
                         <li className="flex items-center gap-3">
                           <Check className="h-5 w-5 text-foreground flex-shrink-0" />
-                          <span className="text-muted-foreground text-sm">毎月{MONTHLY_CREDITS}クレジットを自動付与</span>
+                          <span className="text-muted-foreground text-sm">毎月{MONTHLY_CREDITS_PREMIUM}クレジットを自動付与</span>
                         </li>
                         <li className="flex items-center gap-3">
                           <Check className="h-5 w-5 text-foreground flex-shrink-0" />
