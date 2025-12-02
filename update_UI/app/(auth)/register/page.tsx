@@ -20,6 +20,9 @@ export default function RegisterPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resendError, setResendError] = useState("")
+  const [resendSuccess, setResendSuccess] = useState("")
 
   const validatePassword = (pwd: string) => {
     return pwd.length >= 8 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /[0-9]/.test(pwd)
@@ -74,6 +77,36 @@ export default function RegisterPage() {
     }
   }
 
+  const handleResendEmail = async () => {
+    if (!email) {
+      setResendError("登録したメールアドレスが確認できませんでした。最初からやり直してください。")
+      return
+    }
+
+    setResendError("")
+    setResendSuccess("")
+    setResending(true)
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      setResendSuccess("確認メールを再送しました。数分後に受信ボックスをご確認ください。")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "メールの再送に失敗しました"
+      setResendError(message)
+    } finally {
+      setResending(false)
+    }
+  }
+
   if (emailSent) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 py-12">
@@ -90,6 +123,36 @@ export default function RegisterPage() {
               <br />
               メール内のリンクをクリックして、アカウント登録を完了してください。
             </p>
+            {resendSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-left mb-4">
+                <p className="text-sm text-green-700">{resendSuccess}</p>
+              </div>
+            )}
+            {resendError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-left mb-4">
+                <p className="text-sm text-red-700">{resendError}</p>
+              </div>
+            )}
+            <div className="space-y-3 mb-6">
+              <button
+                type="button"
+                onClick={handleResendEmail}
+                disabled={resending}
+                className="inline-flex items-center justify-center w-full px-4 py-3 text-base font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              >
+                {resending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    再送信中...
+                  </span>
+                ) : (
+                  "確認メールを再送する"
+                )}
+              </button>
+              <p className="text-sm text-gray-600">
+                メールが見つからない場合は迷惑メールフォルダをご確認のうえ、数分待ってから再送をお試しください。
+              </p>
+            </div>
             <Link
               href="/login"
               className="inline-flex items-center justify-center w-full px-4 py-3 text-base font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
@@ -108,7 +171,7 @@ export default function RegisterPage() {
         {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Image src="/app-icon.png" alt="App Icon" width={40} height={40} className="h-10 w-10" />
+            <Image src="/icon.png" alt="App Icon" width={160} height={160} className="h-40 w-40" />
             <span className="text-2xl font-bold text-gray-900">Reportlab</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">新規登録</h1>

@@ -87,7 +87,7 @@ export default function LandingPage() {
             >
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/50 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <Image src="/app-icon.png" alt="App Icon" width={36} height={36} className="relative z-10" />
+                <Image src="/icon.png" alt="App Icon" width={144} height={144} className="relative z-10" />
               </div>
               <span className="text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70 group-hover:from-primary group-hover:to-secondary transition-all duration-300">
                 Reportlab
@@ -494,7 +494,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="flex items-center gap-2">
-              <Image src="/app-icon.png" alt="App Icon" width={24} height={24} className="opacity-70" />
+              <Image src="/icon.png" alt="App Icon" width={96} height={96} className="opacity-70" />
               <span className="font-bold text-muted-foreground">Reportlab</span>
             </div>
             <div className="flex gap-8 text-sm text-muted-foreground">

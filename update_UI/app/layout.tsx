@@ -3,25 +3,23 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
-  icons: {
-    icon: [
+  metadataBase: new URL('https://reportlab.net'),
+  title: 'Reportlab - 理系学生のためのレポート作成支援ツール',
+  description: 'PDFの実験手順書からレポートテンプレートを自動生成。実験レポート作成にかかる時間を大幅に短縮します。',
+  openGraph: {
+    title: 'Reportlab - 理系学生のためのレポート作成支援ツール',
+    description: 'PDFの実験手順書からレポートテンプレートを自動生成。実験レポート作成にかかる時間を大幅に短縮します。',
+    url: 'https://reportlab.net',
+    siteName: 'Reportlab',
+    images: [
       {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
       },
     ],
-    apple: '/apple-icon.png',
+    locale: 'ja_JP',
+    type: 'website',
   },
 }
 

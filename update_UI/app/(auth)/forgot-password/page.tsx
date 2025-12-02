@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Image src="/app-icon.png" alt="App Icon" width={40} height={40} className="h-10 w-10" />
+            <Image src="/icon.png" alt="App Icon" width={160} height={160} className="h-40 w-40" />
             <span className="text-2xl font-bold text-foreground">Reportlab</span>
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">パスワード再設定</h1>

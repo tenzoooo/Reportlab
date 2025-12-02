@@ -1,26 +1,56 @@
 <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
   <style>
-    @media (prefers-color-scheme: light) {
-      .background { fill: black; }
-      .foreground { fill: white; }
+    :root {
+      --bg: #0b1224;
+      --glass: #dce6f5;
+      --liquid: #1dd3f8;
+      --bubble: #9be8ff;
+      --highlight: #7dd3fc;
+      --glow: #0ea5e9;
     }
-    @media (prefers-color-scheme: dark) {
-      .background { fill: white; }
-      .foreground { fill: black; }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f6f8fb;
+        --glass: #0f172a;
+        --liquid: #0ea5e9;
+        --bubble: #0f172a;
+        --highlight: #2563eb;
+        --glow: #22d3ee;
+      }
     }
   </style>
-  <g clip-path="url(#clip0_7960_43945)">
-    <rect class="background" width="180" height="180" rx="37" />
-    <g style="transform: scale(95%); transform-origin: center">
-      <path class="foreground"
-        d="M101.141 53H136.632C151.023 53 162.689 64.6662 162.689 79.0573V112.904H148.112V79.0573C148.112 78.7105 148.098 78.3662 148.072 78.0251L112.581 112.898C112.701 112.902 112.821 112.904 112.941 112.904H148.112V126.672H112.941C98.5504 126.672 86.5638 114.891 86.5638 100.5V66.7434H101.141V100.5C101.141 101.15 101.191 101.792 101.289 102.422L137.56 66.7816C137.255 66.7563 136.945 66.7434 136.632 66.7434H101.141V53Z" />
-      <path class="foreground"
-        d="M65.2926 124.136L14 66.7372H34.6355L64.7495 100.436V66.7372H80.1365V118.47C80.1365 126.278 70.4953 129.958 65.2926 124.136Z" />
-    </g>
+  <rect width="180" height="180" rx="32" fill="var(--bg)" />
+  <g filter="url(#softGlow)">
+    <circle cx="90" cy="104" r="70" fill="var(--glow)" opacity="0.32" />
   </g>
+  <g opacity="0.14">
+    <path d="M24 118c18-12 48-18 66-8s40 7.5 64-9" stroke="var(--highlight)" stroke-width="6" stroke-linecap="round" />
+    <path d="M46 54c9 10 27 14 42 10s28-15 44-16" stroke="var(--highlight)" stroke-width="6" stroke-linecap="round" />
+  </g>
+  <g filter="url(#flaskShadow)">
+    <path
+      d="M76 36h28c2.2 0 4 1.8 4 4v37l17 35.5c1.9 4-1 8.5-5.5 8.5H60.5c-4.5 0-7.4-4.5-5.5-8.5L72 77V40c0-2.2 1.8-4 4-4Z"
+      fill="var(--glass)" />
+    <path d="M60 96c18-7 42-7 60 0l8 17c1.4 3-0.8 6.5-4.2 6.5H56.2c-3.4 0-5.6-3.5-4.2-6.5Z"
+      fill="var(--liquid)" fill-opacity="0.95" />
+  </g>
+  <rect x="76" y="36" width="28" height="11" rx="5.5" fill="var(--liquid)" fill-opacity="0.92" />
+  <path d="M103 50v56" stroke="var(--highlight)" stroke-width="6" stroke-linecap="round" opacity="0.75" />
+  <circle cx="90" cy="72" r="4" fill="var(--bubble)" />
+  <circle cx="104" cy="82" r="3" fill="var(--bubble)" fill-opacity="0.85" />
+  <circle cx="98" cy="66" r="3" fill="var(--bubble)" fill-opacity="0.8" />
+  <circle cx="88" cy="108" r="4.5" fill="var(--bubble)" fill-opacity="0.9" />
   <defs>
-    <clipPath id="clip0_7960_43945">
-      <rect width="180" height="180" fill="white" />
-    </clipPath>
+    <filter id="softGlow" x="0" y="14" width="180" height="166" filterUnits="userSpaceOnUse"
+      color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+      </feMerge>
+    </filter>
+    <filter id="flaskShadow" x="38" y="26" width="104" height="129" filterUnits="userSpaceOnUse"
+      color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="black" flood-opacity="0.18" />
+    </filter>
   </defs>
 </svg>
