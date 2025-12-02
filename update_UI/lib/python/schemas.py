@@ -94,6 +94,8 @@ class RawExperimentItem(BaseModel):
     name: str
     condition: str
     type: Literal["測定", "計算", "分析"]
+    table_captions: List[str] = Field(default_factory=list, description="必要な表のキャプションリスト")
+    figure_captions: List[str] = Field(default_factory=list, description="必要な図のキャプションリスト")
 
 class MethodExtractionResult(BaseModel):
     experiments: List[RawExperimentItem]

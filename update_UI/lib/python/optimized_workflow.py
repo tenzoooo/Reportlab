@@ -49,39 +49,70 @@ class LabReportBuilder:
             tables = []
             figures = []
             
-            # 実験タイプごとのロジック
-            if e_type == "測定":
-                # 表と図の両方
+            # 1. 表の生成
+            # LLMが抽出したキャプションがあればそれを使う
+            if exp.table_captions:
+                for cap in exp.table_captions:
+                    t_lbl = f"表{self.chapter}.{t_cnt}"
+                    tables.append(TableItem(label=t_lbl, caption=cap))
+                    t_cnt += 1
+            # なければ、タイプに応じてデフォルト生成 (後方互換性)
+            elif e_type in ["測定", "分析"]:
                 t_lbl = f"表{self.chapter}.{t_cnt}"
-                f_lbl = f"図{self.chapter}.{f_cnt}"
-                
-                tables.append(TableItem(label=t_lbl, caption=f"{name}測定データ"))
-                figures.append(FigureItem(label=f_lbl, caption=name))
-                
-                # テンプレート適用
-                desc = f"{name}において、{cond}の条件で測定した結果を{t_lbl}および{f_lbl}に示す。"
-                
+                tables.append(TableItem(label=t_lbl, caption=f"{name}"))
                 t_cnt += 1
+
+            # 2. 図の生成
+            # LLMが抽出したキャプションがあればそれを使う
+            if exp.figure_captions:
+                for cap in exp.figure_captions:
+                    f_lbl = f"図{self.chapter}.{f_cnt}"
+                    figures.append(FigureItem(label=f_lbl, caption=cap))
+                    f_cnt += 1
+            # なければ、デフォルト生成
+            else:
+                f_lbl = f"図{self.chapter}.{f_cnt}"
+                figures.append(FigureItem(label=f_lbl, caption=f"{name}"))
                 f_cnt += 1
 
-            elif e_type == "分析":
-                # 結果表と図
-                t_lbl = f"表{self.chapter}.{t_cnt}"
-                f_lbl = f"図{self.chapter}.{f_cnt}"
-                
-                tables.append(TableItem(label=t_lbl, caption=f"{name}"))
-                figures.append(FigureItem(label=f_lbl, caption=f"{name}"))
-                
-                desc = f"{name}の結果を整理して表を作成し、求めた結果を{t_lbl}および{f_lbl}に示す。"
-                
-                t_cnt += 1
-                f_cnt += 1
+            # 3. 説明文の生成
+            # 生成された図表ラベルを収集
+            t_labels = [t.label for t in tables]
+            f_labels = [f.label for f in figures]
             
-            else: # 計算など
-                f_lbl = f"図{self.chapter}.{f_cnt}"
-                figures.append(FigureItem(label=f_lbl, caption=f"計算上の{name}"))
-                desc = f"{name}を計算した結果を{f_lbl}に示す。"
-                f_cnt += 1
+            ref_str = ""
+            if t_labels and f_labels:
+                # 表と図の両方がある場合
+                if len(t_labels) == 1:
+                    t_ref = t_labels[0]
+                else:
+                    t_ref = f"{t_labels[0]}〜{t_labels[-1]}"
+                
+                if len(f_labels) == 1:
+                    f_ref = f_labels[0]
+                else:
+                    f_ref = f"{f_labels[0]}〜{f_labels[-1]}"
+                
+                ref_str = f"{t_ref}および{f_ref}"
+            elif t_labels:
+                # 表のみ
+                if len(t_labels) == 1:
+                    ref_str = t_labels[0]
+                else:
+                    ref_str = f"{t_labels[0]}〜{t_labels[-1]}"
+            elif f_labels:
+                # 図のみ
+                if len(f_labels) == 1:
+                    ref_str = f_labels[0]
+                else:
+                    ref_str = f"{f_labels[0]}〜{f_labels[-1]}"
+
+            if e_type == "測定":
+                desc = f"{name}において、{cond}の条件で測定した結果を{ref_str}に示す。"
+            elif e_type == "分析":
+                desc = f"{name}の結果を整理して表を作成し、求めた結果を{ref_str}に示す。"
+            else:
+                desc = f"{name}を計算した結果を{ref_str}に示す。"
 
             # ExperimentItemの作成
             item = ExperimentItem(
@@ -192,7 +223,7 @@ async def extract_methods(text: str) -> MethodExtractionResult:
         model=MODEL,
         messages=[
             {"role": "system", "content": "あなたは優秀な理系学生です。実験レポートの「実験方法」セクションから、実験手順を構造化して抽出してください。"},
-            {"role": "user", "content": f"以下の「実験方法」テキストから、実験項目を抽出してください。\n各項目の『階層（idx, subidx）』、『名称(name)』、『実験タイプ（type: 測定/計算/分析）』、『条件（condition: IB=20μAなど）』のみを抽出してください。\n図表番号やDescriptionは生成しないでください。\n\n{text}"}
+            {"role": "user", "content": f"以下の「実験方法」テキストから、実験項目を抽出してください。\n各項目の『階層（idx, subidx）』、『名称(name)』、『実験タイプ（type: 測定/計算/分析）』、『条件（condition: IB=20μAなど）』を抽出してください。\nまた、文脈から判断して、その実験項目に対して作成すべき『表のキャプションリスト(table_captions)』と『図のキャプションリスト(figure_captions)』も抽出してください。\n例: 測定データと計算結果の表が必要なら table_captions=['測定データ', '計算結果'] とする。\n\n{text}"}
         ],
         response_format=MethodExtractionResult,
     )
