@@ -55,7 +55,7 @@ Instructions:
     *   **Description**: Extract the "Experimental Methods" (実験方法) section and summarize it briefly into \`description_brief\`.
 4.  **Tables & Figures**: Extract tables and figures mentioned.
     *   Look for "表" (Table) and "図" (Figure).
-    *   Extract captions and labels.
+    *   Extract captions and labels. **Do NOT include the figure/table number (e.g., "図1", "Table 1") in the 'caption' field. Only include the descriptive text.**
     *   For tables, try to reconstruct the rows from the text if possible.
 5.  **Consideration (考察)**: Extract the "Discussion" or "Consideration" (考察) section.
     *   Identify individual discussion topics or questions (often numbered or labeled as "考察課題").

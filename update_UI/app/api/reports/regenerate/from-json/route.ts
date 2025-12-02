@@ -58,7 +58,8 @@ const fitFigureImageSize = (width?: number | null, height?: number | null) => {
 
 const downloadFigureImages = async (
     admin: ReturnType<typeof createAdminClient>,
-    files: ExperimentFileRecord[]
+    files: ExperimentFileRecord[],
+    imageOrder?: string[]
 ): Promise<DocTemplateFigureImage[]> => {
     const images = files
         .filter((file) => file.file_type === "image")
@@ -68,8 +69,19 @@ const downloadFigureImages = async (
         return []
     }
 
+    // Reorder images if imageOrder is provided
+    let orderedImages = images
+    if (imageOrder && imageOrder.length > 0) {
+        const orderMap = new Map(imageOrder.map((name, index) => [name, index]))
+        orderedImages = images.sort((a, b) => {
+            const indexA = orderMap.get(a.file_name || "") ?? Number.MAX_SAFE_INTEGER
+            const indexB = orderMap.get(b.file_name || "") ?? Number.MAX_SAFE_INTEGER
+            return indexA - indexB
+        })
+    }
+
     const results: DocTemplateFigureImage[] = []
-    for (const file of images) {
+    for (const file of orderedImages) {
         const objectPath = sanitizeStoragePath(file.file_url)
         if (!objectPath) {
             continue
@@ -299,11 +311,6 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "No document (PDF) found for the report" }, { status: 400 })
         }
 
-        const figureImages = await downloadFigureImages(admin, experimentFiles ?? [])
-        const tableRows = await downloadTableRows(admin, experimentFiles ?? [])
-
-        const firstDoc = docs[0]
-
         let difyOutput: unknown = extractResultJson(analysisResult.dify_response)
         if (typeof difyOutput === "string") {
             try {
@@ -312,6 +319,12 @@ export async function POST(req: NextRequest) {
                 // keep string
             }
         }
+
+        const imageOrder = (difyOutput as any)?.image_order as string[] | undefined
+        const figureImages = await downloadFigureImages(admin as any, experimentFiles ?? [], imageOrder)
+        const tableRows = await downloadTableRows(admin as any, experimentFiles ?? [])
+
+        const firstDoc = docs[0]
 
         const difyWithTables = applyTablesToDify(difyOutput, tableRows)
 

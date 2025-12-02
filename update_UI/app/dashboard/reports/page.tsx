@@ -196,11 +196,10 @@ export default function ReportsPage() {
           <button
             key={tab.id}
             onClick={() => setActiveFilter(tab.id)}
-            className={`px-4 py-3 text-sm font-semibold transition-colors relative ${
-              activeFilter === tab.id
+            className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeFilter === tab.id
                 ? "text-primary border-b-2 border-primary"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             {tab.label}
             <span className="ml-2 text-xs bg-muted px-2 py-1 rounded-full">{tab.count}</span>
@@ -275,15 +274,14 @@ export default function ReportsPage() {
                   {/* Status */}
                   <div className="col-span-1 md:col-span-3">
                     <span
-                      className={`status-pill ${
-                        report.status === "completed"
+                      className={`status-pill ${report.status === "completed"
                           ? "bg-success/10 text-success"
                           : report.status === "processing"
                             ? "bg-primary/10 text-primary"
                             : report.status === "draft"
                               ? "bg-muted/20 text-muted-foreground"
                               : "bg-destructive/10 text-destructive"
-                      }`}
+                        }`}
                     >
                       {report.status === "completed"
                         ? "完了"
@@ -309,6 +307,12 @@ export default function ReportsPage() {
                             <Link href={`/dashboard/reports/${report.id}`} className="flex items-center gap-2">
                               <Eye className="h-4 w-4" />
                               詳細を見る
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/reports/${report.id}/edit`} className="flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              編集
                             </Link>
                           </DropdownMenuItem>
                           {report.status === "draft" && (
@@ -379,15 +383,15 @@ export default function ReportsPage() {
               .map((_, index) => {
                 const page = index + 1
                 return (
-              <Button
-                key={page}
-                variant={currentPage === page ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCurrentPage(page)}
-                className="w-10"
-              >
-                {page}
-              </Button>
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="w-10"
+                  >
+                    {page}
+                  </Button>
                 )
               })}
           </div>

@@ -43,7 +43,6 @@ const PROCESSING_STEPS: ProcessingStep[] = [
   { label: "実験の説明文を生成中...", duration: 1200 },
   { label: "まとめを作成中...", duration: 1200 },
   { label: "考察を作成中...", duration: 1200 },
-  { label: "DOCXを生成中...", duration: 1200 },
 ]
 
 const PROCESSING_STORAGE_KEY = "reportlab:processing-state"
@@ -352,7 +351,7 @@ export default function NewReportPage() {
 
       if (elapsed >= PROCESSING_TOTAL_DURATION) {
         clearProcessingState()
-        router.push(`/dashboard/reports/${processingReportId}`)
+        router.push(`/dashboard/reports/${processingReportId}/edit`)
         return
       }
 
@@ -781,7 +780,7 @@ export default function NewReportPage() {
       setCurrentStep(3)
       const token = session.access_token
       const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
-      const endpoint = `${baseUrl}/api/reports/generate`
+      const endpoint = `${baseUrl}/api/reports/extract`
       debugUpload("handleSubmit:generate-api:start", { endpoint, workflowType })
       const res = await fetch(endpoint, {
         method: "POST",

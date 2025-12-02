@@ -36,9 +36,9 @@ export default function CommercialDisclosurePage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 hover:bg-muted/50 transition-colors">
                                     <dt className="font-semibold text-foreground">所在地</dt>
                                     <dd className="sm:col-span-2 text-muted-foreground">
-                                        〒[郵便番号を入力]
+                                        〒2200072
                                         <br />
-                                        [住所を入力]
+                                        神奈川県横浜市西区浅間町1丁目4番3号ウィザードビル402
                                         <br />
                                         <span className="text-xs text-muted-foreground/80">※番地・建物名・部屋番号まで正確に記載してください</span>
                                     </dd>
@@ -47,7 +47,7 @@ export default function CommercialDisclosurePage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 hover:bg-muted/50 transition-colors">
                                     <dt className="font-semibold text-foreground">電話番号</dt>
                                     <dd className="sm:col-span-2 text-muted-foreground">
-                                        [070-6666-6666]
+                                        09074929341
                                         <br />
                                         <span className="text-xs text-muted-foreground/80">※確実に連絡が取れる番号（コンビニ決済利用時は携帯不可）</span>
                                     </dd>
