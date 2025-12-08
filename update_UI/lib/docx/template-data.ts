@@ -26,7 +26,7 @@ export type DocTemplateExperiment = {
   tables: DocTemplateTable[]
   figures: DocTemplateFigure[]
   blocks?: DocTemplateBlock[]
-  quant_comment: string
+  quant_comment: Array<{ type: "text" | "math"; content: string }>
 }
 
 export type DocTemplateBlock =
@@ -159,6 +159,12 @@ const normalizeExperiments = (value: unknown) => {
             .filter(Boolean) as DocTemplateFigure[])
           : []
 
+        const quantCommentRaw = Array.isArray(item.quant_comment) ? item.quant_comment : []
+        const quant_comment = quantCommentRaw.map((block: any) => ({
+          type: block?.type === "math" ? "math" : "text",
+          content: toStringSafe(block?.content)
+        })) as Array<{ type: "text" | "math"; content: string }>
+
         return {
           idx,
           subidx,
@@ -166,7 +172,7 @@ const normalizeExperiments = (value: unknown) => {
           description_brief: removeLonelyNumberLines(toStringSafe(item.description_brief)),
           tables,
           figures,
-          quant_comment: "",
+          quant_comment,
         }
       })
       .filter(Boolean) as DocTemplateExperiment[],

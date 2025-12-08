@@ -226,7 +226,16 @@ const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<
   await new Promise<void>((resolve, reject) => {
     const child = spawn(PYTHON_BIN, [PY_RENDERER_PATH], {
       cwd: process.cwd(),
-      stdio: ["pipe", "inherit", "inherit"],
+      stdio: ["pipe", "pipe", "pipe"],
+    })
+
+    let stderr = ""
+    let stdout = ""
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString()
+    })
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString()
     })
     child.stdin.write(JSON.stringify(payload))
     child.stdin.end()
@@ -236,7 +245,9 @@ const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<
       if (code === 0) {
         resolve()
       } else {
-        reject(new Error(`docxtpl renderer exited with code ${code}`))
+        const tail = (stderr || stdout || "").slice(-2000)
+        const message = `docxtpl renderer exited with code ${code}${tail ? `: ${tail}` : ""}`
+        reject(new Error(message))
       }
     })
   })

@@ -536,7 +536,8 @@ export async function POST(req: NextRequest) {
     } else {
       // Analyze the document locally (Legacy/Default)
       logInfo("reports/generate:start-analysis", { file: firstDoc.file_name })
-      analysisResult = await analyzeDocument(docBuffer)
+      const isPremium = profile.plan === "premium"
+      analysisResult = await analyzeDocument(docBuffer, isPremium)
     }
 
     // Save analysis result
@@ -564,7 +565,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch user profile for naming
-    const { data: profile } = await supabase
+    const { data: namingProfile } = await supabase
       .from("profiles")
       .select("grade, full_name")
       .eq("id", user.id)
@@ -573,9 +574,9 @@ export async function POST(req: NextRequest) {
     const experimentName = (firstDoc.file_name || "report").replace(/\.[^/.]+$/, "")
     let reportTitle = experimentName
 
-    if (profile) {
-      const studentId = profile.grade || ""
-      const name = profile.full_name || ""
+    if (namingProfile) {
+      const studentId = namingProfile.grade || ""
+      const name = namingProfile.full_name || ""
       if (studentId && name) {
         reportTitle = `${studentId}_${name}_${experimentName}`
       }

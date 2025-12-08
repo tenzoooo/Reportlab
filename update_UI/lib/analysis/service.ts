@@ -16,6 +16,8 @@ import {
   SUMMARY_SYSTEM_PROMPT,
   SUMMARY_SCHEMA,
   DISCUSSION_UNIT_SYSTEM_PROMPT,
+  QUANTITATIVE_COMMENT_PROMPT,
+  QUANTITATIVE_COMMENT_SCHEMA,
 } from "./prompts"
 import type { AnalysisResult } from "./types"
 import { logInfo, logError } from "@/lib/server/logger"
@@ -31,116 +33,14 @@ const openai = new OpenAI({
 
 logInfo("analysis:model", { model: MODEL })
 
+import { parsePdfText, cleanExtractedText } from "@/lib/pdf/parser"
+
 const resolvePdfWorkerSrc = (): string | null => {
-  // Try to locate pdfjs-dist worker within pnpm store
-  const pnpmDir = path.join(process.cwd(), "node_modules", ".pnpm")
-  if (!fs.existsSync(pnpmDir)) return null
-
-  const entries = fs.readdirSync(pnpmDir)
-  const pdfjsDir = entries.find((e) => e.startsWith("pdfjs-dist@"))
-  if (!pdfjsDir) return null
-
-  const base = path.join(pnpmDir, pdfjsDir, "node_modules", "pdfjs-dist")
-  const candidates = [
-    path.join(base, "build", "pdf.worker.min.mjs"),
-    path.join(base, "build", "pdf.worker.mjs"),
-    path.join(base, "legacy", "build", "pdf.worker.min.mjs"),
-    path.join(base, "legacy", "build", "pdf.worker.mjs"),
-  ]
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return pathToFileURL(candidate).toString()
-    }
-  }
-
+  // Deprecated: Logic moved to lib/pdf/parser.ts
   return null
 }
 
-const parsePdfText = async (buffer: Buffer): Promise<string> => {
-  // pdf-parse は ESM で default を持たないことがあるので動的 import で両対応する
-  const pdfParseModule = await import("pdf-parse")
-  const candidate = pdfParseModule as unknown as { default?: unknown; PDFParse?: unknown }
-
-  // Custom page render function to filter out artifacts
-  const renderPage = (pageData: any) => {
-    // check documents https://mozilla.github.io/pdf.js/
-    // pageData is a PDFPageProxy
-    return pageData.getTextContent({
-      normalizeWhitespace: true,
-      disableCombineTextItems: false,
-    }).then((textContent: any) => {
-      let lastY, text = '';
-      // Log that custom render is running (once per page)
-      // console.log(`[DEBUG] renderPage called for a page with ${textContent.items.length} items`)
-
-      for (let item of textContent.items) {
-        let str = item.str;
-
-        // Skip empty strings
-        if (!str || !str.trim()) continue;
-
-        // Aggressively strip XML-like tags from WITHIN the string
-        // This handles cases where the tag is attached to other text (e.g. "Text<w:r>")
-        str = str.replace(/<[/]?[a-zA-Z0-9:]+[^>]*>/g, "");
-
-        // If string became empty after stripping, skip it
-        if (!str.trim()) continue;
-
-        if (lastY == item.transform[5] || !lastY) {
-          text += str;
-        } else {
-          text += '\n' + str;
-        }
-        lastY = item.transform[5];
-      }
-      return text;
-    });
-  }
-
-  const options = {
-    pagerender: renderPage
-  }
-
-  if (typeof candidate.default === "function") {
-    const res = await (candidate.default as (input: Buffer, options?: any) => Promise<{ text: string }>)(buffer, options)
-    return res?.text ?? ""
-  }
-  if (typeof (pdfParseModule as unknown as any) === "function") {
-    const res = await (pdfParseModule as unknown as (input: Buffer, options?: any) => Promise<{ text: string }>)(buffer, options)
-    return res?.text ?? ""
-  }
-
-  const ParserClass = candidate.PDFParse
-  if (typeof ParserClass === "function") {
-    // Note: The class-based usage of pdf-parse might not support the options object in the constructor 
-    // the same way the function export does, or it might need a different approach.
-    // However, usually the function export is what's used.
-    // If we fall back to class, we might miss the custom render if not supported, 
-    // but the regex cleaning downstream will still catch it.
-    const parser = new (ParserClass as any)({ data: buffer })
-    // worker の import 失敗を避けるため、サーバー環境ではローカルの workerSrc を解決して設定する
-    if (typeof ParserClass.setWorker === "function") {
-      try {
-        const workerSrc = resolvePdfWorkerSrc() || ""
-        ParserClass.setWorker(workerSrc)
-      } catch {
-        // ignore
-      }
-    }
-    try {
-      const textResult = await parser.getText?.()
-      const text = textResult?.text ?? ""
-      return text
-    } finally {
-      if (typeof parser.destroy === "function") {
-        await parser.destroy()
-      }
-    }
-  }
-
-  throw new Error("pdf-parse module did not expose a usable parser")
-}
+// parsePdfText moved to lib/pdf/parser.ts
 
 const decodeAndStripTags = (value: string): string => {
   const decoded = value.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
@@ -165,12 +65,7 @@ const sanitizeDeep = (input: any): any => {
   return input
 }
 
-const cleanExtractedText = (raw: string): string => {
-  if (!raw) return ""
-  // Decode common HTML entities then strip XML/HTML-like tags and collapse whitespace
-  const decoded = raw.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
-  return decoded.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
-}
+// cleanExtractedText moved to lib/pdf/parser.ts
 
 const toPreviewString = (value: string, limit = 2000): string => {
   if (!value) return ""
@@ -399,7 +294,7 @@ const mergeOutputs = (input_json1: JsonRecord, input_json2: JsonRecord, input_js
   return { merged_json: merged }
 }
 
-export async function analyzeDocument(fileBuffer: Buffer): Promise<AnalysisResult> {
+export async function analyzeDocument(fileBuffer: Buffer, isPremium: boolean = false): Promise<AnalysisResult> {
   try {
     logInfo("analysis:start", { size: fileBuffer.length })
 
@@ -504,6 +399,50 @@ export async function analyzeDocument(fileBuffer: Buffer): Promise<AnalysisResul
       DESCRIPTION_SCHEMA as any
     )
     const descriptionsJSON = safeJSONParse<JsonRecord>(descriptionsRaw, { experiments: [] })
+
+    // Step 5.5: Premium Only - Generate Quantitative Comments
+    let experimentsWithComments = descriptionsJSON.experiments || []
+    if (isPremium) {
+      logInfo("analysis:premium-feature", { feature: "quantitative-comment" })
+
+      const experimentsList = Array.isArray(descriptionsJSON.experiments) ? descriptionsJSON.experiments : []
+
+      const commentPromises = experimentsList.map(async (exp: JsonRecord) => {
+        try {
+          // Prepare context for the experiment
+          const expName = exp.name || ""
+          const tables = exp.tables || []
+          const tablesText = JSON.stringify(tables, null, 2)
+
+          // Use the full PDF text as context to ensure theoretical background is included
+          const contextText = text
+
+          const prompt = QUANTITATIVE_COMMENT_PROMPT
+            .replace("{{experiment_name}}", expName)
+            .replace("{{experiment_tables}}", tablesText)
+            .replace("{{experiment_text}}", contextText)
+
+          const commentRaw = await callJSONCompletion(
+            [{ role: "user", content: prompt }],
+            QUANTITATIVE_COMMENT_SCHEMA as any
+          )
+
+          const commentJSON = safeJSONParse<JsonRecord>(commentRaw, { comment_blocks: [] })
+          return {
+            ...exp,
+            quant_comment: commentJSON.comment_blocks || []
+          }
+        } catch (err) {
+          logError("analysis:quant-comment-failed", err)
+          return { ...exp, quant_comment: [] }
+        }
+      })
+
+      experimentsWithComments = await Promise.all(commentPromises)
+
+      // Update descriptionsJSON with new comments
+      descriptionsJSON.experiments = experimentsWithComments
+    }
 
     // Step 6: JSON組み立て・検証
     const finalJsonResult = buildFinalJson(descriptionsJSON)

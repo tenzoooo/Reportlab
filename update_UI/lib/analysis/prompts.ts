@@ -751,3 +751,83 @@ export const DISCUSSION_UNIT_SYSTEM_PROMPT = `
 
 【安全策】
 - unitsが0件でも \`{ "units": [], "total_count": 0, "references": [], "reference_list_formatted": [] }\` を必ず返す（ただし通常は \`references\` を min=3 とする）。`
+
+export const QUANTITATIVE_COMMENT_PROMPT = `
+あなたは理系大学生の実験レポート作成支援AIである。
+与えられた「実験結果（表データ）」と「実験テキスト（理論値や期待される挙動）」を比較・解析し、
+**定量的コメント（Quantitative Comment）**を作成せよ。
+
+【入力データ】
+実験名: {{experiment_name}}
+実験結果（表）:
+{{experiment_tables}}
+
+実験テキスト（理論・背景）:
+{{experiment_text}}
+
+【タスク】
+1. **理論値との比較**: 実験結果が理論値や期待される挙動と一致しているか確認する。
+2. **誤差の検出**: 乖離がある場合、その誤差の大きさや傾向（定量的）を指摘する。
+3. **原因の特定**: 誤差の原因として考えられる物理的・実験的要因（測定ミス、素子のばらつき、近似の影響など）を推定する。
+
+【出力形式】
+解析結果を「テキストブロック」と「数式ブロック」のリストとしてJSONで出力する。
+- 数式ブロック ("type": "math") は、docxでディスプレイ数式として表示される。
+- 数式は **LaTeX形式** ではなく、**Wordの数式入力（Unicode Math / Linear Format）に近い形式** で記述すること。
+  - 分数: a/b
+  - 上付き: x^2
+  - 下付き: x_1
+  - ギリシャ文字: alpha, beta, Omega, mu (または直接 α, β, Ω, μ)
+  - 積分: \\int
+  - 例: "V_{out} = R_2 / (R_1 + R_2) * V_{in}"
+
+【出力JSON構造】
+{
+  "comment_blocks": [
+    { "type": "text", "content": "〜の結果、理論値と概ね一致した。" },
+    { "type": "math", "content": "Error = |V_{meas} - V_{theo}| / V_{theo} * 100" },
+    { "type": "text", "content": "誤差の原因として、抵抗値の公差（±5%）が考えられる。" }
+  ]
+}
+`
+
+export const QUANTITATIVE_COMMENT_SCHEMA = {
+  type: "json_schema",
+  json_schema: {
+    name: "quantitative_comment",
+    schema: {
+      "additionalProperties": false,
+      "properties": {
+        "comment_blocks": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "content": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "text",
+                  "math"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "content"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "comment_blocks"
+      ],
+      "type": "object"
+    },
+    strict: true
+  }
+}
+

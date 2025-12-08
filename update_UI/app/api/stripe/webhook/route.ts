@@ -87,7 +87,8 @@ export async function POST(req: Request) {
         console.log("[WEBHOOK] User ID from metadata:", userId)
 
         // Ensure Stripe sends receipts by attaching customer email to the PaymentIntent
-        await setReceiptEmailOnPaymentIntent(session)
+        // Moved to end of processing to ensure credits are added first
+        // await setReceiptEmailOnPaymentIntent(session)
 
         if (!userId) {
           console.error("[WEBHOOK] Missing userId in metadata")
@@ -127,6 +128,8 @@ export async function POST(req: Request) {
             description,
           })
 
+          // Ensure Stripe sends receipts by attaching customer email to the PaymentIntent
+          await setReceiptEmailOnPaymentIntent(session)
           break
         }
 
@@ -210,6 +213,8 @@ export async function POST(req: Request) {
           console.log("[WEBHOOK] No credits granted for price:", priceId)
         }
 
+        // Ensure Stripe sends receipts by attaching customer email to the PaymentIntent
+        await setReceiptEmailOnPaymentIntent(session)
         break
       }
 

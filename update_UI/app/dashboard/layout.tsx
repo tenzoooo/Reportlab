@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { FlaskConical, LayoutDashboard, FileText, Plus, Settings, User, MessageSquare, LogOut } from "lucide-react"
+import { FlaskConical, LayoutDashboard, FileText, Plus, Settings, User, MessageSquare, LogOut, Wand2 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
@@ -109,6 +109,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       title: "新規作成",
       href: "/dashboard/reports/new",
       icon: Plus,
+    },
+    {
+      title: "キャプション生成",
+      href: "/dashboard/caption-generation",
+      icon: Wand2,
     },
     /*
     {

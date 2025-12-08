@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Reorder } from "framer-motion"
-import { ArrowLeft, Save, FileText, ImageIcon, Loader2, GripVertical } from "lucide-react"
+import { ArrowLeft, Save, FileText, ImageIcon, Loader2, GripVertical, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from "@/components/ui/sheet"
 import { toast } from "sonner"
+import { CaptionGenerator } from "@/components/caption-generator/CaptionGenerator"
 
 type AnalysisData = {
     experiments: Experiment[]
@@ -20,6 +22,9 @@ type Experiment = {
     name: string
     figures: Figure[]
     tables: Table[]
+    description_brief?: string
+    summary?: string
+    quant_comment?: QuantBlock[] | string
     [key: string]: any
 }
 
@@ -37,6 +42,8 @@ type Table = {
     caption: string
     [key: string]: any
 }
+
+type QuantBlock = { type: "text" | "math"; content: string }
 
 type ImageFile = {
     file_name: string
@@ -71,6 +78,7 @@ export default function ReportEditorPage() {
     const [analysis, setAnalysis] = useState<AnalysisData | null>(null)
     const [images, setImages] = useState<ImageFile[]>([])
     const [orderedImages, setOrderedImages] = useState<ImageFile[]>([])
+    const [quantLoading, setQuantLoading] = useState<Record<number, boolean>>({})
 
     useEffect(() => {
         const fetchData = async () => {
@@ -207,6 +215,33 @@ export default function ReportEditorPage() {
         }
     }
 
+    const handleGenerateQuantComment = async (expIndex: number) => {
+        if (!analysis) return
+        setQuantLoading((prev) => ({ ...prev, [expIndex]: true }))
+        try {
+            const res = await fetch(`/api/reports/${reportId}/analysis/quant-comment`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ experiment_index: expIndex }),
+            })
+
+            if (!res.ok) {
+                const msg = await res.text()
+                throw new Error(msg || "定量的コメントの生成に失敗しました")
+            }
+
+            const data = await res.json()
+            const updated = data.result_json || analysis
+            setAnalysis(updated)
+            toast.success("定量的コメントを生成しました")
+        } catch (error) {
+            console.error(error)
+            toast.error("定量的コメントの生成に失敗しました")
+        } finally {
+            setQuantLoading((prev) => ({ ...prev, [expIndex]: false }))
+        }
+    }
+
     const updateExperimentName = (index: number, value: string) => {
         if (!analysis) return
         const newExperiments = [...analysis.experiments]
@@ -261,6 +296,25 @@ export default function ReportEditorPage() {
                     <h1 className="text-2xl font-bold">レポート編集</h1>
                 </div>
                 <div className="flex gap-2">
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <Button variant="outline" className="gap-2">
+                                <Wand2 className="h-4 w-4" />
+                                キャプション生成
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+                            <SheetHeader>
+                                <SheetTitle>キャプション自動生成</SheetTitle>
+                                <SheetDescription>
+                                    実験書と画像からキャプションを生成します。
+                                </SheetDescription>
+                            </SheetHeader>
+                            <div className="mt-6">
+                                <CaptionGenerator />
+                            </div>
+                        </SheetContent>
+                    </Sheet>
                     <Button variant="outline" onClick={() => handleSave()} disabled={saving || generating}>
                         {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                         保存
@@ -344,6 +398,58 @@ export default function ReportEditorPage() {
                                                                 value={slot.figure.caption}
                                                                 onChange={(e) => updateFigureCaption(slot.expIndex, slot.figIndex, e.target.value)}
                                                             />
+                                                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    disabled={quantLoading[slot.expIndex] || generating}
+                                                                    onClick={() => handleGenerateQuantComment(slot.expIndex)}
+                                                                >
+                                                                    {quantLoading[slot.expIndex] ? (
+                                                                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                                                    ) : null}
+                                                                    定量的コメントを生成
+                                                                </Button>
+                                                                {(() => {
+                                                                    const exp = analysis.experiments?.[slot.expIndex]
+                                                                    const quant = Array.isArray(exp?.quant_comment) ? exp?.quant_comment : []
+                                                                    const hasQuant = (Array.isArray(quant) && quant.length > 0) || (typeof exp?.quant_comment === "string" && exp?.quant_comment.trim() !== "")
+                                                                    if (!hasQuant) return null
+                                                                    const count = Array.isArray(quant) ? quant.length : 1
+                                                                    return (
+                                                                        <span className="text-xs text-muted-foreground">
+                                                                            {count}件のコメントが保存されています
+                                                                        </span>
+                                                                    )
+                                                                })()}
+                                                            </div>
+                                                            {(() => {
+                                                                const exp = analysis.experiments?.[slot.expIndex]
+                                                                if (!exp) return null
+                                                                const quantRaw = exp.quant_comment
+                                                                const quantBlocks: QuantBlock[] =
+                                                                    Array.isArray(quantRaw)
+                                                                        ? quantRaw
+                                                                        : typeof quantRaw === "string" && quantRaw.trim()
+                                                                            ? [{ type: "text", content: quantRaw }]
+                                                                            : []
+                                                                if (quantBlocks.length === 0) return null
+                                                                return (
+                                                                    <div className="mt-2 rounded-md border border-dashed bg-muted/50 p-2">
+                                                                        <div className="mb-1 text-xs font-semibold text-muted-foreground">定量的コメントプレビュー</div>
+                                                                        <div className="space-y-1 text-sm text-foreground">
+                                                                            {quantBlocks.map((block, idx) => (
+                                                                                <div key={idx} className="rounded bg-background px-2 py-1">
+                                                                                    <span className="mr-2 inline-block rounded-full bg-muted px-2 py-[1px] text-[10px] font-semibold text-muted-foreground">
+                                                                                        {block.type === "math" ? "MATH" : "TEXT"}
+                                                                                    </span>
+                                                                                    <span className="align-middle whitespace-pre-wrap break-words">{block.content}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )
+                                                            })()}
                                                         </div>
                                                     </>
                                                 ) : (
@@ -409,6 +515,58 @@ export default function ReportEditorPage() {
                                         value={slot.table.caption}
                                         onChange={(e) => updateTableCaption(slot.expIndex, slot.tblIndex, e.target.value)}
                                     />
+                                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={quantLoading[slot.expIndex] || generating}
+                                            onClick={() => handleGenerateQuantComment(slot.expIndex)}
+                                        >
+                                            {quantLoading[slot.expIndex] ? (
+                                                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                            ) : null}
+                                            定量的コメントを生成
+                                        </Button>
+                                        {(() => {
+                                            const exp = analysis.experiments?.[slot.expIndex]
+                                            const quant = Array.isArray(exp?.quant_comment) ? exp?.quant_comment : []
+                                            const hasQuant = (Array.isArray(quant) && quant.length > 0) || (typeof exp?.quant_comment === "string" && exp?.quant_comment.trim() !== "")
+                                            if (!hasQuant) return null
+                                            const count = Array.isArray(quant) ? quant.length : 1
+                                            return (
+                                                <span className="text-xs text-muted-foreground">
+                                                    {count}件のコメントが保存されています
+                                                </span>
+                                            )
+                                        })()}
+                                    </div>
+                                    {(() => {
+                                        const exp = analysis.experiments?.[slot.expIndex]
+                                        if (!exp) return null
+                                        const quantRaw = exp.quant_comment
+                                        const quantBlocks: QuantBlock[] =
+                                            Array.isArray(quantRaw)
+                                                ? quantRaw
+                                                : typeof quantRaw === "string" && quantRaw.trim()
+                                                    ? [{ type: "text", content: quantRaw }]
+                                                    : []
+                                        if (quantBlocks.length === 0) return null
+                                        return (
+                                            <div className="mt-2 rounded-md border border-dashed bg-muted/50 p-2">
+                                                <div className="mb-1 text-xs font-semibold text-muted-foreground">定量的コメントプレビュー</div>
+                                                <div className="space-y-1 text-sm text-foreground">
+                                                    {quantBlocks.map((block, idx) => (
+                                                        <div key={idx} className="rounded bg-background px-2 py-1">
+                                                            <span className="mr-2 inline-block rounded-full bg-muted px-2 py-[1px] text-[10px] font-semibold text-muted-foreground">
+                                                                {block.type === "math" ? "MATH" : "TEXT"}
+                                                            </span>
+                                                            <span className="align-middle whitespace-pre-wrap break-words">{block.content}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )
+                                    })()}
                                 </div>
                             ))
                         )}

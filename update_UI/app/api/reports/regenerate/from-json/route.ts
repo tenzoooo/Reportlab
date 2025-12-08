@@ -200,6 +200,9 @@ const applyTablesToDify = (source: unknown, tables: RowsTable[]): unknown => {
 
 const extractResultJson = (response: any): unknown => {
     if (!response || typeof response !== "object") return undefined
+    if (Object.prototype.hasOwnProperty.call(response, "result_json")) {
+        return (response as any).result_json
+    }
     if (response.output && typeof response.output === "object") {
         const maybe = (response.output as any).result_json
         if (maybe !== undefined) return maybe

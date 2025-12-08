@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from docxtpl import DocxTemplate, InlineImage, RichText
-from jinja2 import Environment
+from jinja2 import Environment, TemplateSyntaxError
 from docx.shared import Mm
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -478,7 +478,7 @@ def _is_unit_text(text: str) -> bool:
   return False
 
 
-def _convert_paragraph_to_omml(paragraph, text: str) -> None:
+def _convert_paragraph_to_omml(paragraph, text: str, display: bool = False) -> None:
   """
   Replace paragraph content with OMML math.
   """
@@ -487,18 +487,6 @@ def _convert_paragraph_to_omml(paragraph, text: str) -> None:
   p.clear_content()
   
   # Create OMML structure
-  # <m:oMathPara>
-  #   <m:oMath>
-  #     <m:r>
-  #       <m:t>text</m:t>
-  #     </m:r>
-  #   </m:oMath>
-  # </m:oMathPara>
-  
-  # Note: For table cells, we usually want inline math, but user asked for "display math".
-  # However, inside a table cell, oMathPara might be too much. 
-  # Let's try inserting oMath directly into the paragraph.
-  
   oMath = OxmlElement('m:oMath')
   r = OxmlElement('m:r')
   rPr = OxmlElement('m:rPr') # Math run properties
@@ -513,7 +501,53 @@ def _convert_paragraph_to_omml(paragraph, text: str) -> None:
   r.append(t)
   oMath.append(r)
   
-  p.append(oMath)
+  if display:
+    oMathPara = OxmlElement('m:oMathPara')
+    oMathPara.append(oMath)
+    p.append(oMathPara)
+  else:
+    p.append(oMath)
+
+
+def build_quant_comment_subdoc(doc: DocxTemplate, blocks: list) -> Optional[Any]:
+  if not blocks or not isinstance(blocks, list):
+    return None
+    
+  sub = doc.new_subdoc()
+  for block in blocks:
+    if not isinstance(block, dict):
+      continue
+      
+    b_type = block.get("type")
+    content = block.get("content") or ""
+    
+    if b_type == "math":
+      p = sub.add_paragraph()
+      _convert_paragraph_to_omml(p, content, display=True)
+    else:
+      # Text block
+      sub.add_paragraph(content)
+      
+  return sub
+
+
+def inject_quant_comments(doc: DocxTemplate, context: dict) -> dict:
+  """
+  Replace quant_comment blocks with subdocuments.
+  """
+  experiments = context.get("experiments") or []
+  for exp in experiments:
+    quant_comment = exp.get("quant_comment")
+    # If it's a list (blocks), convert to subdoc
+    if isinstance(quant_comment, list):
+      subdoc = build_quant_comment_subdoc(doc, quant_comment)
+      if subdoc:
+        exp["quant_comment"] = subdoc
+      else:
+        exp["quant_comment"] = ""
+    # If it's a string (legacy/empty), leave it as is
+    
+  return context
 
 
 def patch_template(doc: DocxTemplate, context: dict) -> None:
@@ -534,10 +568,31 @@ def patch_template(doc: DocxTemplate, context: dict) -> None:
     "{{ consideration | reference_lines }}": "{{ references_rt }}",
   }
 
+  block_loop_found = False
+  block_check_paragraphs = []
+  inserted_block_loop = False
+
   def patch_paragraphs(paragraphs):
+    nonlocal inserted_block_loop, block_loop_found
     for p in paragraphs:
-      if "{{" in p.text:
-        original = p.text
+      text = p.text
+      if not text:
+        continue
+
+      if "{% for block in exp.blocks" in text:
+        block_loop_found = True
+
+      # Insert missing block loop before the first block.type check to match existing {% endfor %}
+      if "{% if block.type" in text:
+        block_check_paragraphs.append(p)
+      if (not inserted_block_loop) and (not block_loop_found) and "{% if block.type" in text:
+        p.text = "{% for block in exp.blocks %}" + text
+        inserted_block_loop = True
+        block_loop_found = True
+        text = p.text
+
+      if "{{" in text:
+        original = text
         modified = original
         for old, new in replacements.items():
           if old in modified:
@@ -555,6 +610,14 @@ def patch_template(doc: DocxTemplate, context: dict) -> None:
     for row in t.rows:
       for cell in row.cells:
         patch_paragraphs(cell.paragraphs)
+  
+  # If we never saw the loop but did see block checks, inject as a fallback
+  if (not block_loop_found) and block_check_paragraphs:
+    target = block_check_paragraphs[0]
+    target.text = "{% for block in exp.blocks %}" + target.text
+    block_loop_found = True
+    inserted_block_loop = True
+    print("[INFO] Injected missing exp.blocks loop before render", file=sys.stderr)
 
 
 def render_report(payload: dict) -> bytes:
@@ -586,9 +649,16 @@ def render_report(payload: dict) -> bytes:
 
   context_with_images = inject_inline_images(doc, context)
   context_with_tables = inject_tables(doc, context_with_images)
-  context_with_blocks = inject_blocks(doc, context_with_tables)
+  context_with_comments = inject_quant_comments(doc, context_with_tables)
+  context_with_blocks = inject_blocks(doc, context_with_comments)
   env = build_jinja_env()
-  doc.render(context_with_blocks, jinja_env=env)
+  try:
+    doc.render(context_with_blocks, jinja_env=env)
+  except TemplateSyntaxError as exc:
+    message = str(exc)
+    if "unknown tag 'endfor'" in message:
+      raise RuntimeError("Docx template parse failed: unmatched {% endfor %}. Missing loop for exp.blocks?") from exc
+    raise
   strip_openxml_artifacts(doc.docx)
   
   output_io = BytesIO()

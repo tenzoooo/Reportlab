@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://reportlab.net
+
+# Sitemaps
+Sitemap: https://reportlab.net/sitemap.xml
