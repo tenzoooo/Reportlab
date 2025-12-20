@@ -8,6 +8,7 @@ import { generateReport } from "@/lib/docx/generator"
 import type { DocTemplateFigureImage } from "@/lib/docx/template-data"
 import { buildDocTemplateData } from "@/lib/docx/template-data"
 import { logError, logInfo } from "@/lib/server/logger"
+import { ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT } from "@/lib/config/feature-flags"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -226,6 +227,9 @@ const extractResultJson = (response: any): unknown => {
 }
 
 export async function POST(req: NextRequest) {
+    if (ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT) {
+        logInfo("reports/regenerate-json:feature-flag:image-grouping-method-context", { enabled: true })
+    }
     const supabase = await createClient()
     const {
         data: { user },

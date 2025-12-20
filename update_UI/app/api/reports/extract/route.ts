@@ -10,6 +10,7 @@ import { execFile } from "node:child_process"
 import { writeFile, unlink } from "node:fs/promises"
 import path from "node:path"
 import { promisify } from "node:util"
+import { ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT } from "@/lib/config/feature-flags"
 
 const execFileAsync = promisify(execFile)
 
@@ -155,11 +156,14 @@ const callPythonApi = async <T>(pathname: string, payload: any): Promise<T> => {
 }
 
 export async function POST(req: NextRequest) {
-    logRequest(req, "reports/extract:start")
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+  logRequest(req, "reports/extract:start")
+  if (ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT) {
+    logInfo("reports/extract:feature-flag:image-grouping-method-context", { enabled: true })
+  }
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
     if (!user) {
         logInfo("reports/extract:unauthorized")

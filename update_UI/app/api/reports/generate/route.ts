@@ -13,6 +13,7 @@ import { execFile } from "node:child_process"
 import { writeFile, unlink } from "node:fs/promises"
 import path from "node:path"
 import { promisify } from "node:util"
+import { ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT } from "@/lib/config/feature-flags"
 
 const execFileAsync = promisify(execFile)
 
@@ -252,6 +253,9 @@ const logDifyDebug = (label: string, payload: unknown) => {
 
 export async function POST(req: NextRequest) {
   logRequest(req, "reports/generate:start")
+  if (ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT) {
+    logInfo("reports/generate:feature-flag:image-grouping-method-context", { enabled: true })
+  }
   const supabase = await createClient()
   const {
     data: { user },

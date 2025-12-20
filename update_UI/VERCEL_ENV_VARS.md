@@ -53,6 +53,11 @@ AI機能（OpenAI）に必要です。
 - **キー**: `OPENAI_API_KEY`
 - **値**: OpenAIのAPIキー（`sk-...`）
 
+### 6. フィーチャーフラグ（任意）
+実験画像の割り当てに「実験方法テキスト」をコンテキストとして使う次期機能のためのトグルです。デフォルトは無効です。
+- **キー**: `ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT`
+- **値**: `true` で有効化（未設定またはその他の値で無効）
+
 > [!NOTE]
 > 以前のDify設定（`DIFY_API_URL`, `DIFY_API_KEY`）は不要になりました。
 
