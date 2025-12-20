@@ -10,6 +10,10 @@ export type DocTemplateFigureImage = {
   buffer: Buffer
   width: number
   height: number
+  file_name?: string
+  target_idx?: number
+  target_subidx?: string
+  confidence?: number
 }
 
 export type DocTemplateFigure = {

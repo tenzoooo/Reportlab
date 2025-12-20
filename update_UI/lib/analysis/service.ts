@@ -496,6 +496,8 @@ export async function analyzeDocument(fileBuffer: Buffer, isPremium: boolean = f
         reference_list_formatted: mergedResult.merged_json.reference_list_formatted ?? [],
         references: mergedResult.merged_json.references ?? [],
       },
+      method_text: methodText || "",
+      method_heading: methodJSON?.method?.heading || "",
     }
 
     const sanitizedMerged = sanitizeDeep(merged_json)

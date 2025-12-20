@@ -50,6 +50,13 @@ export const ObservedImageDataSchema = z.object({
         min_value: z.string().optional(),
         linearity: z.string().optional().describe("Assessment of linearity (High, Medium, Low)"),
         outliers: z.string().optional().describe("Any detected outliers")
+    }).optional(),
+    // Optional experiment mapping hint
+    experiment_hint: z.object({
+        experiment_idx: z.number().optional(),
+        experiment_name: z.string().optional(),
+        confidence: z.number().optional(),
+        rationale: z.string().optional()
     }).optional()
 });
 

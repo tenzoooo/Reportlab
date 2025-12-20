@@ -63,6 +63,8 @@ class ResultJson(BaseModel):
     total_count: int
     consideration: ConsiderationGroup
     reference_list_formatted: List[str]
+    method_text: Optional[str] = Field(default=None, description="実験方法セクションの抽出テキスト")
+    method_heading: Optional[str] = Field(default=None, description="実験方法セクションの見出し")
 
 # --- D. ラッパー (Wrappers for Dify Compatibility) ---
 
@@ -85,6 +87,8 @@ class RootResponse(BaseModel):
     total_count: int
     consideration: ConsiderationGroup
     reference_list_formatted: List[str]
+    method_text: Optional[str] = Field(default=None, description="実験方法セクションの抽出テキスト")
+    method_heading: Optional[str] = Field(default=None, description="実験方法セクションの見出し")
 
 # --- LLM Extraction Models (Intermediate) ---
 

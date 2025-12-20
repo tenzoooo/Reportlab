@@ -14,6 +14,7 @@ import { writeFile, unlink } from "node:fs/promises"
 import path from "node:path"
 import { promisify } from "node:util"
 import { ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT } from "@/lib/config/feature-flags"
+import { analyzeImage } from "@/lib/caption-generation/image-service"
 
 const execFileAsync = promisify(execFile)
 
@@ -111,6 +112,7 @@ const downloadFigureImages = async (
         buffer,
         width: size.width,
         height: size.height,
+        file_name: file.file_name ?? undefined,
       })
     } catch (error) {
       logInfo("reports/generate:figure-processing-error", {
@@ -121,6 +123,71 @@ const downloadFigureImages = async (
   }
 
   return results
+}
+
+const getExperimentsFromDify = (source: unknown) => {
+  const root = typeof source === "object" && source !== null ? (source as any) : {}
+  const candidates =
+    root.experiments ||
+    root?.result_json?.experiments ||
+    root?.output?.result_json?.experiments ||
+    root?.outputs?.result_json?.experiments ||
+    []
+
+  if (!Array.isArray(candidates)) return []
+  return candidates
+    .map((exp) => ({
+      idx: typeof exp?.idx === "number" ? exp.idx : Number(exp?.idx) || undefined,
+      name: typeof exp?.name === "string" ? exp.name : "",
+      description_brief: typeof exp?.description_brief === "string" ? exp.description_brief : "",
+    }))
+    .filter((exp) => Number.isFinite(exp.idx) && exp.name)
+}
+
+const getMethodTextFromDify = (source: unknown): string | undefined => {
+  const root = typeof source === "object" && source !== null ? (source as any) : {}
+  const candidates = [
+    root?.method_text,
+    root?.result_json?.method_text,
+    root?.output?.result_json?.method_text,
+    root?.outputs?.result_json?.method_text,
+  ]
+  return candidates.find((v) => typeof v === "string" && v.trim()) as string | undefined
+}
+
+const assignImagesToExperiments = async (
+  images: DocTemplateFigureImage[],
+  difyOutput: unknown,
+  methodText: string | undefined
+): Promise<DocTemplateFigureImage[]> => {
+  if (!images.length) return images
+  const experiments = getExperimentsFromDify(difyOutput)
+  if (!experiments.length) return images
+
+  const nameToIdx = (name: string) => {
+    const lowered = name.toLowerCase()
+    const found = experiments.find((exp) => exp.name.toLowerCase().includes(lowered))
+    return found?.idx
+  }
+
+  const assigned: DocTemplateFigureImage[] = []
+  for (const img of images) {
+    const result = await analyzeImage(img.buffer, { methodText, experiments })
+    const hint = result?.experiment_hint
+    let targetIdx: number | undefined
+    if (hint?.experiment_idx !== undefined && hint?.experiment_idx !== null) {
+      targetIdx = hint.experiment_idx
+    } else if (hint?.experiment_name) {
+      targetIdx = nameToIdx(hint.experiment_name)
+    }
+
+    assigned.push({
+      ...img,
+      target_idx: targetIdx,
+      confidence: hint?.confidence,
+    })
+  }
+  return assigned
 }
 
 const downloadTableRows = async (
@@ -559,6 +626,16 @@ export async function POST(req: NextRequest) {
     const difyOutput = analysisResult
 
     const difyWithTables = applyTablesToDify(difyOutput, tableRows)
+    let processedFigureImages = figureImages
+    if (ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT) {
+      const methodText = getMethodTextFromDify(difyWithTables)
+      try {
+        processedFigureImages = await assignImagesToExperiments(figureImages, difyWithTables, methodText)
+      } catch (assignError) {
+        logError("reports/generate:image-assignment-failed", assignError)
+        processedFigureImages = figureImages
+      }
+    }
     let templatePreview: unknown
     try {
       templatePreview = buildDocTemplateData(difyWithTables)
@@ -587,7 +664,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate DOCX from the template using Dify JSON
-    const buffer = await generateReport({ title: reportTitle, difyOutput: difyWithTables, figureImages })
+    const buffer = await generateReport({ title: reportTitle, difyOutput: difyWithTables, figureImages: processedFigureImages })
 
     // Upload generated file to storage
     // Use UUID for storage filename to avoid "Invalid key" errors with non-ASCII characters

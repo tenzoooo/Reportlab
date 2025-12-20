@@ -129,9 +129,9 @@ class LabReportBuilder:
             
         return results
 
-    def assemble_final_json(self, summary: str, units: list, experiments: list, refs: list) -> str:
+    def assemble_final_json(self, summary: str, units: list, experiments: list, refs: list, method_text: str = "", method_heading: str = "") -> str:
         """全パーツを結合してDify互換JSONを出力"""
-        
+
         # 1. 参考文献の整形
         ref_formatted = [
             f"[{r.id}]{r.authors} {r.title} {r.publisher} {r.year}" 
@@ -154,7 +154,9 @@ class LabReportBuilder:
             experiments=experiments,
             total_count=len(units),
             consideration=consideration,
-            reference_list_formatted=ref_formatted
+            reference_list_formatted=ref_formatted,
+            method_text=method_text,
+            method_heading=method_heading
         )
 
         # 4. Root Wrapper作成 (完全再現)
@@ -169,7 +171,9 @@ class LabReportBuilder:
             result_json=core,
             total_count=len(units),
             consideration=consideration,
-            reference_list_formatted=ref_formatted
+            reference_list_formatted=ref_formatted,
+            method_text=method_text,
+            method_heading=method_heading
         )
 
         return root.model_dump_json(indent=2)
@@ -280,7 +284,9 @@ async def main():
             summary=summary_res.summary,
             units=discussion_res.units,
             experiments=structured_experiments,
-            refs=discussion_res.references
+            refs=discussion_res.references,
+            method_text=contexts.method_text,
+            method_heading=""
         )
         
         # Output JSON to stdout

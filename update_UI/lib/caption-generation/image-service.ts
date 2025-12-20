@@ -9,12 +9,37 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function analyzeImage(imageBuffer: Buffer): Promise<ObservedImageData | null> {
+type ExperimentContext = { idx?: number; name?: string; description_brief?: string }
+
+export type AnalyzeImageOptions = {
+    methodText?: string;
+    experiments?: ExperimentContext[];
+};
+
+const buildContextText = (options?: AnalyzeImageOptions): string => {
+    if (!options) return "";
+    const chunks: string[] = [];
+    if (options.methodText) {
+        const trimmed = options.methodText.slice(0, 4000); // safety limit
+        chunks.push(`【実験方法抜粋】\n${trimmed}`);
+    }
+    if (options.experiments && options.experiments.length > 0) {
+        const summary = options.experiments
+            .slice(0, 12)
+            .map((exp) => `- idx:${exp.idx ?? "?"} ${exp.name ?? ""} ${exp.description_brief ?? ""}`)
+            .join("\n");
+        chunks.push(`【実験候補一覧】\n${summary}`);
+    }
+    return chunks.join("\n\n");
+};
+
+export async function analyzeImage(imageBuffer: Buffer, options?: AnalyzeImageOptions): Promise<ObservedImageData | null> {
     try {
         logInfo("caption-gen:image-analysis:start", { size: imageBuffer.length, model: MODEL });
 
         const base64Image = imageBuffer.toString("base64");
         const dataUrl = `data:image/jpeg;base64,${base64Image}`;
+        const contextText = buildContextText(options);
 
         const completion = await openai.chat.completions.create({
             model: MODEL,
@@ -23,7 +48,20 @@ export async function analyzeImage(imageBuffer: Buffer): Promise<ObservedImageDa
                 {
                     role: "user",
                     content: [
-                        { type: "text", text: "Analyze this experiment result image and extract data." },
+                        {
+                            type: "text",
+                            text:
+                                "Analyze this experiment result image and extract data. " +
+                                "If possible, determine which experiment (idx/name) this image likely belongs to, using the provided method text and candidate list.",
+                        },
+                        ...(contextText
+                            ? [
+                                {
+                                    type: "text",
+                                    text: contextText,
+                                } as const,
+                            ]
+                            : []),
                         {
                             type: "image_url",
                             image_url: {
@@ -47,7 +85,8 @@ export async function analyzeImage(imageBuffer: Buffer): Promise<ObservedImageDa
 
         logInfo("caption-gen:image-analysis:success", {
             headers: result.detected_headers,
-            metadata: result.metadata
+            metadata: result.metadata,
+            experiment_hint: result.experiment_hint,
         });
         return result;
 

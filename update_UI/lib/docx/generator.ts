@@ -85,48 +85,66 @@ const applyFigureImages = (
     return data
   }
 
-  let cursor = 0
   let hasChanges = false
-  const experiments = data.experiments.map((experiment) => {
-    if (experiment.figures.length === 0) {
-      return experiment
-    }
 
-    let figuresChanged = false
-    const figures = experiment.figures.map((figure) => {
-      const asset = figureImages[cursor]
-      if (!asset) {
-        return figure
-      }
-      cursor += 1
-      figuresChanged = true
-      hasChanges = true
-      return asset
-        ? {
-          figure_image: asset,
-          ...figure,
-        }
-        : figure
-    })
-
-    if (!figuresChanged) {
-      return experiment
-    }
-
-    return {
-      ...experiment,
-      figures,
+  // Bucket images by target_idx if provided
+  const bucket = new Map<number, DocTemplateFigureImage[]>()
+  const fallbackPool: DocTemplateFigureImage[] = []
+  figureImages.forEach((img) => {
+    if (typeof img.target_idx === "number") {
+      const list = bucket.get(img.target_idx) ?? []
+      list.push(img)
+      bucket.set(img.target_idx, list)
+    } else {
+      fallbackPool.push(img)
     }
   })
 
-  if (!hasChanges) {
-    return data
-  }
+  // Maintain original order for fallback pool
+  let fallbackCursor = 0
 
-  return {
-    ...data,
-    experiments,
-  }
+  const experiments = data.experiments.map((experiment) => {
+    if (!experiment.figures.length) return experiment
+
+    const targetedList = bucket.get(experiment.idx) ?? []
+    let targetedCursor = 0
+    let figuresChanged = false
+
+    const figures = experiment.figures.map((figure) => {
+      let selected: DocTemplateFigureImage | undefined
+
+      if (targetedCursor < targetedList.length) {
+        selected = targetedList[targetedCursor]
+        targetedCursor += 1
+      } else if (fallbackCursor < fallbackPool.length) {
+        selected = fallbackPool[fallbackCursor]
+        fallbackCursor += 1
+      }
+
+      if (!selected) return figure
+      figuresChanged = true
+      hasChanges = true
+
+      return {
+        ...figure,
+        figure_image: selected,
+      }
+    })
+
+    return figuresChanged
+      ? {
+        ...experiment,
+        figures,
+      }
+      : experiment
+  })
+
+  return hasChanges
+    ? {
+      ...data,
+      experiments,
+    }
+    : data
 }
 
 const toBase64Figures = (data: DocTemplateData): SerializableDocTemplateData => {
