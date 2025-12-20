@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,6 +28,7 @@ import { Progress } from "@/components/ui/progress"
 import { createClient } from "@/lib/supabase/client"
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { ReportProcessingSteps, type ProcessingStep as ProcessingStatusStep } from "@/components/report-processing-steps"
 
 
 type ProcessingStep = {
@@ -210,6 +211,7 @@ export default function NewReportPage() {
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [processingDialogOpen, setProcessingDialogOpen] = useState(false)
   const [error, setError] = useState<string>("")
   const [processingStart, setProcessingStart] = useState<number | null>(null)
   const [processingReportId, setProcessingReportId] = useState<string | null>(null)
@@ -218,6 +220,83 @@ export default function NewReportPage() {
   const [workflowType, setWorkflowType] = useState<"conventional" | "optimized" | "past_report">("conventional")
   const [pastReportFile, setPastReportFile] = useState<File | null>(null)
   const hasUploadedTables = pastedTables.length > 0 || existingTables.length > 0
+  const hasFigureUploads = figureImages.length > 0 || existingImages.length > 0
+
+  const processingDetailSteps = useMemo<ProcessingStatusStep[]>(() => {
+    const deriveStatus = (targetIndex: number): ProcessingStatusStep["status"] => {
+      if (!isProcessing) return "pending"
+      if (currentStep > targetIndex) return "done"
+      if (currentStep === targetIndex) return "active"
+      return "pending"
+    }
+
+    const steps: ProcessingStatusStep[] = [
+      {
+        key: "upload",
+        label: "ファイルを保存",
+        description: "PDFや画像、表データをクラウドにアップロードしています。",
+        status: deriveStatus(0),
+      },
+      {
+        key: "text",
+        label: "実験方法の抽出・構造化",
+        description: "PDFから実験方法を抽出し、章節構造と実験項目を整理しています。",
+        status: deriveStatus(1),
+      },
+    ]
+
+    if (hasFigureUploads) {
+      steps.push({
+        key: "image",
+        label: "画像解析と実験ひも付け",
+        description: "アップロードされた図表を解析し、該当する実験に割り当てています。",
+        status: deriveStatus(2),
+      })
+    }
+
+    steps.push({
+      key: "generate",
+      label: "DOCX生成",
+      description: "テンプレートにデータを流し込み、レポートを生成しています。",
+      status: deriveStatus(hasFigureUploads ? 3 : 2),
+    })
+
+    return steps
+  }, [currentStep, hasFigureUploads, isProcessing])
+
+  const stopProcessing = () => {
+    const reportId = processingReportId || resumeReportId
+    const cancel = async () => {
+      if (!reportId) return
+      try {
+        const supabase = createClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (!session) return
+
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
+        const endpoint = `${baseUrl}/api/reports/cancel`
+        await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ reportId }),
+        }).catch(() => undefined)
+      } finally {
+        clearProcessingState()
+        setIsProcessing(false)
+        setProcessingDialogOpen(false)
+        setProcessingReportId(null)
+        setProcessingStart(null)
+        setProgress(0)
+        setCurrentStep(0)
+      }
+    }
+    void cancel()
+  }
   const hasUploadedImages = figureImages.length > 0 || existingImages.length > 0
   const [lastAddedTableId, setLastAddedTableId] = useState<string | null>(null)
   const tableHighlightTimer = useRef<number | null>(null)
@@ -327,6 +406,10 @@ export default function NewReportPage() {
     }
     fetchSubscription()
   }, [])
+
+  useEffect(() => {
+    setProcessingDialogOpen(isProcessing)
+  }, [isProcessing])
 
   useEffect(() => {
     if (!processingStart || !processingReportId) return
@@ -893,6 +976,14 @@ export default function NewReportPage() {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
+                <ReportProcessingSteps
+                  open={processingDialogOpen}
+                  onOpenChange={setProcessingDialogOpen}
+                  steps={processingDetailSteps}
+                  footerNote="ブラウザを閉じても生成は続きます。完了後エディタへ移動します。"
+                  onCancel={stopProcessing}
+                  cancelLabel="キャンセル"
+                />
                 <div className="text-center space-y-4">
                   <motion.div
                     animate={{ rotate: 360 }}
@@ -1470,6 +1561,14 @@ export default function NewReportPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {isProcessing && !processingDialogOpen && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <Button variant="default" className="shadow-lg" onClick={() => setProcessingDialogOpen(true)}>
+            処理状況を表示
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

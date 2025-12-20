@@ -241,6 +241,24 @@ export async function POST(req: NextRequest) {
 
     await supabase.from("reports").update({ status: "processing" }).eq("id", reportId)
 
+    const assertNotCancelled = async (stage: string) => {
+        const { data: current, error: statusError } = await supabase
+            .from("reports")
+            .select("status")
+            .eq("id", reportId)
+            .eq("user_id", user.id)
+            .maybeSingle()
+        if (statusError) {
+            logError("reports/extract:cancel-check-error", statusError, { stage })
+            return
+        }
+        if (current && current.status !== "processing") {
+            throw new Error("CANCELLED")
+        }
+    }
+
+    await assertNotCancelled("after-processing-set")
+
     // Fetch experiment files
     const { data: experimentFiles, error: filesError } = await supabase
         .from("experiment_data")
@@ -273,6 +291,8 @@ export async function POST(req: NextRequest) {
     }
 
     const tableRows = await downloadTableRows(admin as any, experimentFiles ?? [])
+
+    await assertNotCancelled("after-file-fetch")
 
     // Download the primary document (PDF or Word)
     const firstDoc = docs[0]
@@ -384,6 +404,8 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        await assertNotCancelled("after-hint")
+
         // STEP 2: Analyze the experiment PDF (using optimized or conventional workflow)
         if (workflowType === "optimized" || workflowType === "past_report") {
             logInfo("reports/extract:start-optimized-analysis", { file: firstDoc.file_name, workflowType })
@@ -446,8 +468,12 @@ export async function POST(req: NextRequest) {
             analysisResult = await analyzeDocument(docBuffer)
         }
 
+        await assertNotCancelled("after-analysis")
+
         // Apply tables to the analysis result
         const difyWithTables = applyTablesToDify(analysisResult, tableRows)
+
+        await assertNotCancelled("before-save-analysis")
 
         // Save analysis result
         const { data: inserted, error: insertErr } = await supabase
@@ -488,6 +514,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, reportId, analysisId: inserted.id })
 
     } catch (error) {
+        if (error instanceof Error && error.message === "CANCELLED") {
+            logInfo("reports/extract:cancelled", { reportId })
+            await supabase.from("reports").update({ status: "draft" }).eq("id", reportId)
+            return NextResponse.json({ cancelled: true }, { status: 499 })
+        }
         logError("reports/extract:exception", error)
 
         // Refund credits on failure

@@ -404,6 +404,22 @@ export async function POST(req: NextRequest) {
 
   await supabase.from("reports").update({ status: "processing" }).eq("id", reportId)
 
+  const assertNotCancelled = async (stage: string) => {
+    const { data: current, error: statusError } = await supabase
+      .from("reports")
+      .select("status")
+      .eq("id", reportId)
+      .eq("user_id", user.id)
+      .maybeSingle()
+    if (statusError) {
+      logError("reports/generate:cancel-check-error", statusError, { stage })
+      return
+    }
+    if (current && current.status !== "processing") {
+      throw new Error("CANCELLED")
+    }
+  }
+
   // Fetch experiment files
   const { data: experimentFiles, error: filesError } = await supabase
     .from("experiment_data")
@@ -437,6 +453,8 @@ export async function POST(req: NextRequest) {
 
   const figureImages = await downloadFigureImages(admin as any, experimentFiles ?? [])
   const tableRows = await downloadTableRows(admin as any, experimentFiles ?? [])
+
+  await assertNotCancelled("after-file-fetch")
 
   // Download the primary document (PDF or Word)
   const firstDoc = docs[0]
@@ -611,6 +629,8 @@ export async function POST(req: NextRequest) {
       analysisResult = await analyzeDocument(docBuffer, isPremium)
     }
 
+    await assertNotCancelled("after-analysis")
+
     // Save analysis result
     const { data: inserted, error: insertErr } = await supabase
       .from("analysis_results")
@@ -626,6 +646,8 @@ export async function POST(req: NextRequest) {
     const difyOutput = analysisResult
 
     const difyWithTables = applyTablesToDify(difyOutput, tableRows)
+    await assertNotCancelled("after-tables")
+
     let processedFigureImages = figureImages
     if (ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT) {
       const methodText = getMethodTextFromDify(difyWithTables)
@@ -636,6 +658,8 @@ export async function POST(req: NextRequest) {
         processedFigureImages = figureImages
       }
     }
+
+    await assertNotCancelled("after-image-assignment")
     let templatePreview: unknown
     try {
       templatePreview = buildDocTemplateData(difyWithTables)
@@ -663,8 +687,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    await assertNotCancelled("before-docx")
+
     // Generate DOCX from the template using Dify JSON
     const buffer = await generateReport({ title: reportTitle, difyOutput: difyWithTables, figureImages: processedFigureImages })
+
+    await assertNotCancelled("before-upload")
 
     // Upload generated file to storage
     // Use UUID for storage filename to avoid "Invalid key" errors with non-ASCII characters
@@ -687,6 +715,11 @@ export async function POST(req: NextRequest) {
     logInfo("reports/generate:success", { reportId, fileUrl: storagePath, title: reportTitle })
     return NextResponse.json({ success: true, analysisId: inserted?.id, fileUrl: storagePath })
   } catch (error) {
+    if (error instanceof Error && error.message === "CANCELLED") {
+      logInfo("reports/generate:cancelled", { reportId })
+      await supabase.from("reports").update({ status: "draft" }).eq("id", reportId)
+      return NextResponse.json({ cancelled: true }, { status: 499 })
+    }
     logError("reports/generate:exception", error)
 
     // Refund credits on failure

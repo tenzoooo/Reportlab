@@ -317,6 +317,22 @@ export async function POST(req: NextRequest) {
     const { reportId } = parsed.data
 
     try {
+        const assertNotCancelled = async (stage: string) => {
+            const { data: current, error: statusError } = await supabase
+                .from("reports")
+                .select("status")
+                .eq("id", reportId)
+                .eq("user_id", user.id)
+                .maybeSingle()
+            if (statusError) {
+                logError("reports/regenerate-json:cancel-check-error", statusError, { stage })
+                return
+            }
+            if (current && current.status !== "processing") {
+                throw new Error("CANCELLED")
+            }
+        }
+
         const { data: report, error: reportError } = await supabase
             .from("reports")
             .select("id, title, status, file_url")
@@ -333,6 +349,7 @@ export async function POST(req: NextRequest) {
         }
 
         await supabase.from("reports").update({ status: "processing" }).eq("id", reportId)
+        await assertNotCancelled("after-processing-set")
 
         // Fetch latest analysis result
         const { data: analysisResult, error: analysisError } = await supabase
@@ -411,6 +428,8 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        await assertNotCancelled("before-docx")
+
         // Validate template structure (optional preview)
         try {
             buildDocTemplateData(difyWithTables)
@@ -424,6 +443,8 @@ export async function POST(req: NextRequest) {
             difyOutput: difyWithTables,
             figureImages,
         })
+
+        await assertNotCancelled("before-upload")
 
         const storagePath = `${user.id}/${reportId}/regenerated-${randomUUID()}.docx`
         const { error: uploadError } = await admin.storage
@@ -442,6 +463,11 @@ export async function POST(req: NextRequest) {
         logInfo("reports/regenerate-json:success", { reportId, fileUrl: storagePath })
         return NextResponse.json({ success: true, fileUrl: storagePath })
     } catch (error) {
+        if (error instanceof Error && error.message === "CANCELLED") {
+            logInfo("reports/regenerate-json:cancelled", { reportId })
+            await supabase.from("reports").update({ status: "draft" }).eq("id", reportId)
+            return NextResponse.json({ cancelled: true }, { status: 499 })
+        }
         logError("reports/regenerate-json:exception", error)
         await supabase.from("reports").update({ status: "error" }).eq("id", reportId)
         return NextResponse.json(

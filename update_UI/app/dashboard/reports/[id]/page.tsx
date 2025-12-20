@@ -1,15 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { ArrowLeft, Download, Trash2, FileText, ImageIcon, FileSpreadsheet, CheckCircle, Loader2, AlertCircle, RotateCcw } from "lucide-react"
+import { ArrowLeft, Download, Trash2, FileText, ImageIcon, FileSpreadsheet, CheckCircle, Loader2, AlertCircle, RotateCcw, Square } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { createClient } from "@/lib/supabase/client"
 import { getFileUrl } from "@/lib/storage/get-file-url"
+import { ReportProcessingSteps, type ProcessingStep as ProcessingStatusStep } from "@/components/report-processing-steps"
 
 type ReportStatus = "draft" | "processing" | "completed" | "error"
 
@@ -28,6 +29,10 @@ export default function ReportDetailPage() {
   const [error, setError] = useState<string>("")
   const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [processingOverlayOpen, setProcessingOverlayOpen] = useState(false)
+  const [processingSteps, setProcessingSteps] = useState<ProcessingStatusStep[]>([])
+
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -120,12 +125,105 @@ export default function ReportDetailPage() {
     setMounted(true)
   }, [])
 
+  const baseProcessingSteps = useMemo<ProcessingStatusStep[]>(
+    () => [
+      {
+        key: "analyze",
+        label: "再解析・抽出",
+        description: "PDF/Wordを再解析し、実験方法と構造を抽出しています。",
+        status: "pending",
+      },
+      {
+        key: "image",
+        label: "画像解析と割り当て",
+        description: "アップロードされた図表を解析し、実験にひも付けています。",
+        status: "pending",
+      },
+      {
+        key: "generate",
+        label: "DOCX生成",
+        description: "テンプレートに流し込み、レポートを生成しています。",
+        status: "pending",
+      },
+    ],
+    []
+  )
+
+  const resetProcessingSteps = () => {
+    setProcessingSteps(baseProcessingSteps.map((step, idx) => ({ ...step, status: idx === 0 ? "active" : "pending" })))
+    setProcessingOverlayOpen(true)
+  }
+
+  const completeProcessingSteps = () => {
+    setProcessingSteps((prev) => prev.map((step) => ({ ...step, status: "done" })))
+  }
+
+  const failProcessingSteps = () => {
+    setProcessingSteps((prev) => prev.map((step) => (step.status === "done" ? step : { ...step, status: "error" })))
+    setProcessingOverlayOpen(true)
+  }
+
+  const stopProcessingOverlay = () => {
+    setProcessingOverlayOpen(false)
+    setIsRegenerating(false)
+    setProgress(0)
+  }
+
+  const cancelServerProcessing = async () => {
+    try {
+      const supabase = createClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) {
+        window.location.href = "/login"
+        return
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
+      const endpoint = `${baseUrl}/api/reports/cancel`
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ reportId }),
+      })
+
+      if (!res.ok) {
+        const msg = await res.text()
+        throw new Error(msg || `キャンセルに失敗しました (${res.status})`)
+      }
+
+      stopProcessingOverlay()
+      setStatus("draft")
+      alert("処理をキャンセルしました。")
+    } catch (cancelErr) {
+      alert(cancelErr instanceof Error ? cancelErr.message : String(cancelErr))
+    }
+  }
+
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+    void cancelServerProcessing()
+  }
+
   const handleRegenerateAI = async () => {
     try {
       if (!confirm("AIで再生成しますか？\n（クレジットを消費する可能性があります）")) return
+
+      if (abortControllerRef.current) abortControllerRef.current.abort()
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+
       setIsRegenerating(true)
       setFileUrl(null)
       setProgress(0)
+      resetProcessingSteps()
       const supabase = createClient()
       const {
         data: { session },
@@ -145,26 +243,40 @@ export default function ReportDetailPage() {
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ reportId }),
+        signal: controller.signal,
       })
       if (!res.ok) {
         const msg = await res.text()
+        failProcessingSteps()
         throw new Error(msg || `再生成に失敗しました (${res.status})`)
       }
       setStatus("processing")
       setProgress(0)
+      completeProcessingSteps()
       alert("AIによる再生成を開始しました。")
     } catch (regErr) {
+      if (regErr instanceof Error && regErr.name === 'AbortError') {
+        console.log('Regeneration aborted')
+        return
+      }
+      failProcessingSteps()
       alert(regErr instanceof Error ? regErr.message : String(regErr))
     } finally {
       setIsRegenerating(false)
+      abortControllerRef.current = null
     }
   }
 
   const handleRegenerateJSON = async () => {
     try {
+      if (abortControllerRef.current) abortControllerRef.current.abort()
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+
       setIsRegenerating(true)
       setFileUrl(null)
       setProgress(0)
+      resetProcessingSteps()
       const supabase = createClient()
       const {
         data: { session },
@@ -183,23 +295,49 @@ export default function ReportDetailPage() {
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ reportId }),
+        signal: controller.signal,
       })
       if (!res.ok) {
         const msg = await res.text()
+        failProcessingSteps()
         throw new Error(msg || `再生成に失敗しました (${res.status})`)
       }
       setStatus("processing")
       setProgress(0)
+      completeProcessingSteps()
       alert("JSONからの再生成を開始しました。")
     } catch (regErr) {
+      if (regErr instanceof Error && regErr.name === 'AbortError') {
+        console.log('Regeneration aborted')
+        return
+      }
+      failProcessingSteps()
       alert(regErr instanceof Error ? regErr.message : String(regErr))
     } finally {
       setIsRegenerating(false)
+      abortControllerRef.current = null
     }
   }
 
+  const processingStepsForDisplay = processingSteps.length ? processingSteps : baseProcessingSteps
+
   return (
     <div className="page-container">
+      <ReportProcessingSteps
+        open={processingOverlayOpen}
+        onOpenChange={setProcessingOverlayOpen}
+        steps={processingStepsForDisplay}
+        footerNote="再生成中はこの画面を開いたままにしてください。完了すると最新状態で読み込まれます。"
+        onCancel={cancelServerProcessing}
+        cancelLabel="キャンセル"
+      />
+      {status === "processing" && !processingOverlayOpen && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <Button variant="default" className="shadow-lg" onClick={() => setProcessingOverlayOpen(true)}>
+            処理状況を表示
+          </Button>
+        </div>
+      )}
       <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}>
         <Link href="/dashboard/reports" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
           <ArrowLeft className="h-4 w-4" /> レポート一覧に戻る
@@ -327,6 +465,20 @@ export default function ReportDetailPage() {
                 AIで再生成
               </Button>
             </div>
+
+            {(isRegenerating || status === "processing") && (
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={handleStop}
+                >
+                  <Square className="h-4 w-4" />
+                  キャンセル
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
