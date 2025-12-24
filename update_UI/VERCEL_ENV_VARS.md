@@ -53,6 +53,18 @@ AI機能（OpenAI）に必要です。
 - **キー**: `OPENAI_API_KEY`
 - **値**: OpenAIのAPIキー（`sk-...`）
 
+### 5.5 レポート生成（Python Report Agent）
+Next.js からレポート生成エージェント（FastAPI）へ接続するために使用します。
+- **キー**: `REPORT_AGENT_URL`
+- **値**: Report Agent のベースURL（例: `http://127.0.0.1:8000` / `https://your-report-agent.example.com`）
+
+### 5.6 レポート生成（モック）
+まずUIだけ動かしたい場合、Python側に繋がずにテンプレDOCXを返すモードです。
+- **キー**: `REPORT_GENERATION_MODE`
+- **値**: `mock`（モック有効）
+- （任意）**キー**: `REPORT_MOCK_TEMPLATE_PATH`
+- （任意）**値**: `templates/chapter_fixed.docx` など（未設定なら `templates/chapter_fixed.docx`）
+
 ### 6. フィーチャーフラグ（任意）
 実験画像の割り当てに「実験方法テキスト」をコンテキストとして使う次期機能のためのトグルです。デフォルトは無効です。
 - **キー**: `ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT`

@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+from graph.state import AgentState
+from graph.utils import infer_report_chapter
+from graph.nodes.asset_order import insert_block_in_upload_order
+from models.contracts import TableBlock, TableContent
+
+
+def table_assign(state: AgentState) -> AgentState:
+    threshold = 0.6
+    updated_assets = {tbl.table_id: tbl for tbl in state.assets_tables}
+
+    tables_sorted = sorted(enumerate(state.assets_tables), key=lambda t: (t[1].upload_index or 0, t[0]))
+    for _, tbl in tables_sorted:
+        analysis = tbl.analysis
+        if not analysis:
+            continue
+        candidates = analysis.belongs_to or []
+        best = max(candidates, key=lambda c: c.score, default=None)
+        if best is None or best.score < threshold:
+            updated_assets[tbl.table_id] = tbl.model_copy(update={"assigned_to": None})
+            continue
+
+        exp_key = best.exp_key
+
+        content = TableContent(
+            label="",
+            caption=analysis.caption,
+            rows=tbl.rows,
+            quant_comment=analysis.quant_comment,
+            asset_upload_index=tbl.upload_index,
+        )
+        block = TableBlock(table=content)
+
+        assigned = False
+        for exp in state.experiments:
+            if exp.source_idx == exp_key or exp.idx == exp_key:
+                insert_block_in_upload_order(exp.blocks, block)
+                assigned = True
+                break
+
+        updated_assets[tbl.table_id] = tbl.model_copy(update={"assigned_to": exp_key if assigned else None})
+
+    state.assets_tables = [updated_assets.get(tbl.table_id, tbl) for tbl in state.assets_tables]
+
+    for exp in state.experiments:
+        exp.figures = [b.figure for b in exp.blocks if getattr(b, "type", None) == "figure"]
+        exp.tables = [b.table for b in exp.blocks if getattr(b, "type", None) == "table"]
+
+    return state

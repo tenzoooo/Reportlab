@@ -1,4 +1,3 @@
-import { CaptionGenerator } from "@/components/caption-generator/CaptionGenerator"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function CaptionGenerationPage() {
@@ -12,7 +11,17 @@ export default function CaptionGenerationPage() {
                 </p>
             </div>
 
-            <CaptionGenerator />
+            <Card>
+                <CardHeader>
+                    <CardTitle>準備中</CardTitle>
+                    <CardDescription>キャプション自動生成機能は再構築のため一時停止しています。</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                        新しいレポート生成フローの設計が固まり次第、この画面も作り直します。
+                    </p>
+                </CardContent>
+            </Card>
         </div>
     )
 }

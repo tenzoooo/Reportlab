@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from "@/components/ui/sheet"
+import { ExperimentalResultsStreamCard } from "@/components/experimental-results-stream"
 import { toast } from "sonner"
-import { CaptionGenerator } from "@/components/caption-generator/CaptionGenerator"
 
 type AnalysisData = {
     experiments: Experiment[]
@@ -112,13 +112,28 @@ export default function ReportEditorPage() {
     useEffect(() => {
         if (images.length > 0) {
             if (analysis?.image_order && analysis.image_order.length > 0) {
-                const orderMap = new Map(analysis.image_order.map((name, index) => [name, index]))
-                const sorted = [...images].sort((a, b) => {
-                    const indexA = orderMap.get(a.file_name) ?? Number.MAX_SAFE_INTEGER
-                    const indexB = orderMap.get(b.file_name) ?? Number.MAX_SAFE_INTEGER
-                    return indexA - indexB
+                const orderIndicesByName = new Map<string, number[]>()
+                analysis.image_order.forEach((name, index) => {
+                    const list = orderIndicesByName.get(name) || []
+                    list.push(index)
+                    orderIndicesByName.set(name, list)
                 })
-                setOrderedImages(sorted)
+
+                const decorated = images.map((img) => {
+                    const list = orderIndicesByName.get(img.file_name)
+                    const orderIndex = list && list.length > 0 ? list.shift()! : Number.MAX_SAFE_INTEGER
+                    const parsedUploadedAt = Date.parse(img.uploaded_at)
+                    const uploadedAtMs = Number.isFinite(parsedUploadedAt) ? parsedUploadedAt : 0
+                    return { img, orderIndex, uploadedAtMs }
+                })
+
+                decorated.sort((a, b) => {
+                    if (a.orderIndex !== b.orderIndex) return a.orderIndex - b.orderIndex
+                    if (a.uploadedAtMs !== b.uploadedAtMs) return a.uploadedAtMs - b.uploadedAtMs
+                    return a.img.file_url.localeCompare(b.img.file_url)
+                })
+
+                setOrderedImages(decorated.map((d) => d.img))
             } else {
                 setOrderedImages(images)
             }
@@ -303,18 +318,20 @@ export default function ReportEditorPage() {
                                 キャプション生成
                             </Button>
                         </SheetTrigger>
-                        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
-                            <SheetHeader>
-                                <SheetTitle>キャプション自動生成</SheetTitle>
-                                <SheetDescription>
-                                    実験書と画像からキャプションを生成します。
-                                </SheetDescription>
-                            </SheetHeader>
-                            <div className="mt-6">
-                                <CaptionGenerator />
-                            </div>
-                        </SheetContent>
-                    </Sheet>
+	                        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+	                            <SheetHeader>
+	                                <SheetTitle>キャプション自動生成</SheetTitle>
+	                                <SheetDescription>
+	                                    実験書と画像からキャプションを生成します。
+	                                </SheetDescription>
+	                            </SheetHeader>
+	                            <div className="mt-6">
+	                                <div className="rounded-md border p-4 text-sm text-muted-foreground">
+	                                    キャプション自動生成機能は再構築のため一時停止しています。
+	                                </div>
+	                            </div>
+	                        </SheetContent>
+	                    </Sheet>
                     <Button variant="outline" onClick={() => handleSave()} disabled={saving || generating}>
                         {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                         保存
@@ -347,6 +364,8 @@ export default function ReportEditorPage() {
                     </CardContent>
                 </Card>
 
+                <ExperimentalResultsStreamCard reportId={reportId} />
+
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -366,7 +385,7 @@ export default function ReportEditorPage() {
                                     const slot = figureSlots[index]
                                     return (
                                         <Reorder.Item
-                                            key={image.file_name}
+                                            key={`${image.file_name}::${image.uploaded_at}::${image.file_url}`}
                                             value={image}
                                             className="flex items-start gap-4 rounded-lg border bg-card p-3 shadow-sm cursor-grab active:cursor-grabbing"
                                         >

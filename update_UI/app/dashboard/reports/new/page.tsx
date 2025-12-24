@@ -16,7 +16,6 @@ import {
   ArrowRight,
   FileCheck,
   Loader2,
-  ImagePlus,
   Image as ImageIcon,
   ArrowUp,
   ArrowDown,
@@ -26,7 +25,6 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Progress } from "@/components/ui/progress"
 import { createClient } from "@/lib/supabase/client"
-import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ReportProcessingSteps, type ProcessingStep as ProcessingStatusStep } from "@/components/report-processing-steps"
 
@@ -34,6 +32,24 @@ import { ReportProcessingSteps, type ProcessingStep as ProcessingStatusStep } fr
 type ProcessingStep = {
   label: string
   duration: number
+}
+
+const STEP_LABEL: Record<string, string> = {
+  ingest: "準備",
+  pdf_parse: "PDF解析",
+  pdf_sections: "章見出し検出",
+  discussion_extract: "考察抽出",
+  method_extract: "実験抽出",
+  unit_init: "実験ユニット生成",
+  image_analyze: "画像解析",
+  image_assign: "画像割当",
+  table_parse: "表解析",
+  table_assign: "表割当",
+  discussion: "考察生成",
+  summary: "まとめ生成",
+  references: "参考文献",
+  validate: "検証",
+  render_docx: "DOCX生成",
 }
 
 const PROCESSING_STEPS: ProcessingStep[] = [
@@ -80,6 +96,7 @@ const getFileExtension = (fileName: string): string | undefined => {
 }
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "bmp", "webp", "heic", "heif", "tiff", "tif", "svg"])
+const TABLE_FILE_EXTENSIONS = new Set(["csv", "json"])
 
 const isPdfFile = (file: File) => file.type === "application/pdf" || getFileExtension(file.name) === "pdf"
 
@@ -87,6 +104,11 @@ const isImageFile = (file: File) => {
   if (file.type && file.type.startsWith("image/")) return true
   const ext = getFileExtension(file.name)
   return Boolean(ext && IMAGE_EXTENSIONS.has(ext))
+}
+
+const isTableFile = (file: File) => {
+  const ext = getFileExtension(file.name)
+  return Boolean(ext && TABLE_FILE_EXTENSIONS.has(ext))
 }
 
 const parseHtmlTable = (html: string): string[][] => {
@@ -168,6 +190,7 @@ const CompletionBadge = ({ label }: { label: string }) => (
 type ProcessingState = {
   reportId: string
   startedAt: number
+  destination?: "edit"
 }
 
 const persistProcessingState = (state: ProcessingState) => {
@@ -187,6 +210,9 @@ const restoreProcessingState = (): ProcessingState | null => {
   try {
     const parsed = JSON.parse(raw) as ProcessingState
     if (parsed?.reportId && typeof parsed.startedAt === "number") {
+      if (parsed.destination && parsed.destination !== "edit") {
+        parsed.destination = "edit"
+      }
       return parsed
     }
   } catch (err) {
@@ -201,6 +227,7 @@ export default function NewReportPage() {
   const [experimentPdf, setExperimentPdf] = useState<File | null>(null)
   const [reportTitle, setReportTitle] = useState("")
   const [figureImages, setFigureImages] = useState<File[]>([])
+  const [tableFiles, setTableFiles] = useState<File[]>([])
   const [pastedTables, setPastedTables] = useState<{ id: string; rows: string[][] }[]>([])
   const [existingPdf, setExistingPdf] = useState<{ name: string; path: string } | null>(null)
   const [existingImages, setExistingImages] = useState<{ name: string }[]>([])
@@ -215,12 +242,16 @@ export default function NewReportPage() {
   const [error, setError] = useState<string>("")
   const [processingStart, setProcessingStart] = useState<number | null>(null)
   const [processingReportId, setProcessingReportId] = useState<string | null>(null)
+  const [processingDestination, setProcessingDestination] = useState<"edit">("edit")
+  const [agentProgress, setAgentProgress] = useState<any | null>(null)
+  const [agentProgressError, setAgentProgressError] = useState<string>("")
+  const [showAgentDetails, setShowAgentDetails] = useState(false)
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
-  const [workflowType, setWorkflowType] = useState<"conventional" | "optimized" | "past_report">("conventional")
-  const [pastReportFile, setPastReportFile] = useState<File | null>(null)
-  const hasUploadedTables = pastedTables.length > 0 || existingTables.length > 0
+  const [creationMode, setCreationMode] = useState<"workflow" | "hitl">("workflow")
+  const hasUploadedTables = pastedTables.length > 0 || tableFiles.length > 0 || existingTables.length > 0
   const hasFigureUploads = figureImages.length > 0 || existingImages.length > 0
+  const hasPdfSelected = Boolean(experimentPdf || existingPdf)
 
   const processingDetailSteps = useMemo<ProcessingStatusStep[]>(() => {
     const deriveStatus = (targetIndex: number): ProcessingStatusStep["status"] => {
@@ -255,14 +286,23 @@ export default function NewReportPage() {
     }
 
     steps.push({
-      key: "generate",
-      label: "DOCX生成",
-      description: "テンプレートにデータを流し込み、レポートを生成しています。",
+      key: creationMode === "hitl" ? "prepare" : "generate",
+      label: creationMode === "hitl" ? "編集用データを作成" : "DOCX生成",
+      description:
+        creationMode === "hitl"
+          ? "抽出結果を保存し、編集画面で確認・修正してから生成できる状態にしています。"
+          : "テンプレートにデータを流し込み、レポートを生成しています。",
       status: deriveStatus(hasFigureUploads ? 3 : 2),
     })
 
     return steps
-  }, [currentStep, hasFigureUploads, isProcessing])
+  }, [creationMode, currentStep, hasFigureUploads, isProcessing])
+
+  const confirmStopProcessing = () => {
+    const ok = window.confirm("レポート作成の処理を停止しますか？\n（途中までの生成結果は破棄される可能性があります）")
+    if (!ok) return
+    stopProcessing()
+  }
 
   const stopProcessing = () => {
     const reportId = processingReportId || resumeReportId
@@ -293,6 +333,9 @@ export default function NewReportPage() {
         setProcessingStart(null)
         setProgress(0)
         setCurrentStep(0)
+        setAgentProgress(null)
+        setAgentProgressError("")
+        setShowAgentDetails(false)
       }
     }
     void cancel()
@@ -303,6 +346,8 @@ export default function NewReportPage() {
   const [lastAddedImageIndex, setLastAddedImageIndex] = useState<number | null>(null)
   const [lastAddedImageLabel, setLastAddedImageLabel] = useState<string | null>(null)
   const imageHighlightTimer = useRef<number | null>(null)
+  const [lastAddedFilesLabel, setLastAddedFilesLabel] = useState<string | null>(null)
+  const filesHighlightTimer = useRef<number | null>(null)
 
   const searchParams = useSearchParams()
   const resumeReportId = searchParams.get("reportId")
@@ -318,6 +363,7 @@ export default function NewReportPage() {
     }
     setProcessingReportId(restored.reportId)
     setProcessingStart(restored.startedAt)
+    setProcessingDestination(restored.destination ?? "edit")
     setIsProcessing(true)
     setCurrentStep(0)
     setProgress(0)
@@ -412,6 +458,103 @@ export default function NewReportPage() {
   }, [isProcessing])
 
   useEffect(() => {
+    if (!isProcessing || !processingReportId) return
+
+    let canceled = false
+    let timer: number | null = null
+
+    const tick = async () => {
+      try {
+        const res = await fetch(`/api/reports/${processingReportId}/agent-progress`, { cache: "no-store" })
+        if (!res.ok) return
+        const json = await res.json().catch(() => null)
+        if (!json || canceled) return
+        if (json.available && json.progress) {
+          setAgentProgress(json.progress)
+          setAgentProgressError("")
+        }
+      } catch (e) {
+        if (canceled) return
+        setAgentProgressError(e instanceof Error ? e.message : String(e))
+      } finally {
+        if (!canceled) timer = window.setTimeout(tick, 2000)
+      }
+    }
+
+    void tick()
+    return () => {
+      canceled = true
+      if (timer) window.clearTimeout(timer)
+    }
+  }, [isProcessing, processingReportId])
+
+  const agentDetails = useMemo(() => {
+    if (!agentProgress) return null
+    const updatedAt = agentProgress.updated_at ? new Date(agentProgress.updated_at).toLocaleString() : ""
+    const last = agentProgress.last_step ? `${STEP_LABEL[agentProgress.last_step] || agentProgress.last_step}` : "—"
+    const stats = agentProgress.stats || {}
+    const methodText = agentProgress.previews?.method_text || ""
+    const prompts = agentProgress.previews?.prompts || []
+    const methodTree = agentProgress.previews?.method_tree || []
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="space-y-0.5">
+            <div className="text-foreground">最終ステップ: {last}</div>
+            <div className="text-muted-foreground">更新: {updatedAt || "—"}</div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setShowAgentDetails((v) => !v)}>
+            {showAgentDetails ? "詳細を閉じる" : "詳細を見る"}
+          </Button>
+        </div>
+
+        {agentProgressError ? <div className="text-destructive">進捗取得エラー: {agentProgressError}</div> : null}
+
+        <div className="flex flex-wrap gap-2 text-xs">
+          {typeof stats?.experiments_count === "number" ? <span>実験: {stats.experiments_count}</span> : null}
+          {typeof stats?.images_count === "number" ? <span>画像: {stats.images_count}</span> : null}
+          {typeof stats?.tables_count === "number" ? <span>表: {stats.tables_count}</span> : null}
+          {typeof stats?.prompts_count === "number" ? <span>考察: {stats.prompts_count}</span> : null}
+        </div>
+
+        {showAgentDetails ? (
+          <div className="space-y-2">
+            {methodTree?.length ? (
+              <div>
+                <div className="font-semibold text-foreground mb-1">抽出した実験候補（先頭）</div>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  {methodTree.map((m: string) => (
+                    <li key={m}>{m}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {prompts?.length ? (
+              <div>
+                <div className="font-semibold text-foreground mb-1">抽出した考察課題（先頭）</div>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  {prompts.map((p: string) => (
+                    <li key={p}>{p}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {methodText ? (
+              <div>
+                <div className="font-semibold text-foreground mb-1">実験方法（抜粋）</div>
+                <pre className="whitespace-pre-wrap rounded-md border bg-background p-2 text-xs text-foreground max-h-40 overflow-auto">
+                  {methodText}
+                </pre>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    )
+  }, [agentProgress, agentProgressError, showAgentDetails])
+
+  useEffect(() => {
     if (!processingStart || !processingReportId) return
 
     let timer: number
@@ -434,7 +577,7 @@ export default function NewReportPage() {
 
       if (elapsed >= PROCESSING_TOTAL_DURATION) {
         clearProcessingState()
-        router.push(`/dashboard/reports/${processingReportId}/edit`)
+        router.push(`/dashboard/reports/${processingReportId}/${processingDestination}`)
         return
       }
 
@@ -445,7 +588,7 @@ export default function NewReportPage() {
     return () => {
       window.clearTimeout(timer)
     }
-  }, [processingStart, processingReportId, router])
+  }, [processingDestination, processingStart, processingReportId, router])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -456,37 +599,86 @@ export default function NewReportPage() {
     setIsDragging(false)
   }
 
+  const canUploadPaidAssets = subscriptionPlan === "premium" || subscriptionPlan === "standard"
+
+  const addTableFiles = (files: File[]) => {
+    const normalized = files.filter((f) => isTableFile(f))
+    if (normalized.length > 0) {
+      setTableFiles((prev) => [...prev, ...normalized])
+    }
+  }
+
+  const removeTableFile = (index: number) => {
+    setTableFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const clearAddedFilesLabelLater = () => {
+    if (filesHighlightTimer.current) window.clearTimeout(filesHighlightTimer.current)
+    filesHighlightTimer.current = window.setTimeout(() => setLastAddedFilesLabel(null), 2200)
+  }
+
+  const handleUnifiedFiles = (files: File[]) => {
+    if (!files.length) return
+
+    let addedPdf = false
+    let addedImages = 0
+    let addedTables = 0
+
+    for (const file of files) {
+      if (isPdfFile(file)) {
+        if (!experimentPdf) {
+          setExperimentPdf(file)
+          setExistingPdf(null)
+          if (!reportTitle) {
+            setReportTitle(file.name.replace(/\.pdf$/i, ""))
+          }
+          addedPdf = true
+        }
+        continue
+      }
+
+      if (isImageFile(file)) {
+        if (!canUploadPaidAssets) continue
+        addImageFiles([file])
+        addedImages += 1
+        continue
+      }
+
+      if (isTableFile(file)) {
+        if (!canUploadPaidAssets) continue
+        addTableFiles([file])
+        addedTables += 1
+        continue
+      }
+    }
+
+    const labels: string[] = []
+    if (addedPdf) labels.push("PDF")
+    if (addedImages) labels.push(`画像${addedImages}`)
+    if (addedTables) labels.push(`表${addedTables}`)
+    if (labels.length) {
+      setLastAddedFilesLabel(`${labels.join(" / ")} を追加しました`)
+      clearAddedFilesLabelLater()
+    }
+  }
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
     const droppedFiles = Array.from(e.dataTransfer.files)
-    const pdfFile = droppedFiles.find((file) => isPdfFile(file))
-    if (pdfFile) {
-      setExperimentPdf(pdfFile)
-      setExistingPdf(null)
-      if (!reportTitle) {
-        setReportTitle(pdfFile.name.replace(".pdf", ""))
-      }
-    }
+    handleUnifiedFiles(droppedFiles)
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files)
-      const pdfFile = files.find((file) => isPdfFile(file))
-      if (pdfFile) {
-        setExperimentPdf(pdfFile)
-        setExistingPdf(null)
-        if (!reportTitle) {
-          setReportTitle(pdfFile.name.replace(/\.pdf$/i, ""))
-        }
-      }
+      handleUnifiedFiles(Array.from(e.target.files))
     }
     e.target.value = ""
   }
 
   const removeFile = () => {
     setExperimentPdf(null)
+    setExistingPdf(null)
   }
 
   const addImageFiles = (files: File[]) => {
@@ -740,6 +932,47 @@ export default function NewReportPage() {
         }
       }
 
+      // 3.4.1) 表ファイル（CSV/JSON）をアップロード（任意）
+      if (tableFiles.length > 0) {
+        for (let i = 0; i < tableFiles.length; i += 1) {
+          const file = tableFiles[i]
+          const ext = getFileExtension(file.name) || "csv"
+          const tableStoragePath = generateSafeStoragePath(session.user.id, reportId, file.name, ext, "table-json")
+          debugUpload("handleSubmit:table-file-upload:start", { index: i, tableStoragePath })
+
+          const contentType =
+            ext === "csv" ? "text/csv" : ext === "json" ? "application/json" : file.type || "application/octet-stream"
+
+          // eslint-disable-next-line no-await-in-loop
+          const { error: uploadError } = await supabase.storage.from("experiment-files").upload(tableStoragePath, file, {
+            contentType,
+            upsert: true,
+          })
+          if (uploadError) {
+            debugUpload("handleSubmit:table-file-upload:error", uploadError)
+            throw new Error(uploadError.message)
+          }
+
+          const uploadedAt = new Date(Date.now() + i + 2000).toISOString()
+          // eslint-disable-next-line no-await-in-loop
+          const { error: insertError } = await supabase.from("experiment_data").insert([
+            {
+              report_id: reportId,
+              file_name: file.name,
+              file_type: "excel",
+              file_url: tableStoragePath,
+              uploaded_at: uploadedAt,
+            },
+          ])
+          if (insertError) {
+            debugUpload("handleSubmit:table-file-insert:error", insertError)
+            throw new Error(insertError.message)
+          }
+
+          debugUpload("handleSubmit:table-file-upload:success", { reportId, tableStoragePath })
+        }
+      }
+
       // 3.5) 図の画像を追加でアップロード
       if (figureImages.length > 0) {
         for (let i = 0; i < figureImages.length; i += 1) {
@@ -784,87 +1017,15 @@ export default function NewReportPage() {
         }
       }
 
-      // 3.6) 過去レポート（参照用）をアップロード
-      if (workflowType === "past_report" && pastReportFile) {
-        const ext = getFileExtension(pastReportFile.name) || "docx"
-        const storagePath = generateSafeStoragePath(
-          session.user.id,
-          reportId,
-          pastReportFile.name,
-          ext,
-          "experiment-data"
-        )
-        debugUpload("handleSubmit:past-report-upload:start", { storagePath })
-
-        const { error: uploadError } = await supabase.storage
-          .from("experiment-files")
-          .upload(storagePath, pastReportFile, {
-            contentType: pastReportFile.type || "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            upsert: true,
-          })
-
-        if (uploadError) {
-          debugUpload("handleSubmit:past-report-upload:error", uploadError)
-          throw new Error(uploadError.message)
-        }
-
-        // DBにも登録 (file_type="word"として扱うか、新しいタイプにするか。ここではwordとして登録し、ファイル名で判別させるか、メタデータを持たせる)
-        // 今回は file_type="word" で登録し、API側で "reference_report" として認識させるためのフラグが必要だが、
-        // experiment_data テーブルにはフラグがない。
-        // 暫定的に file_name にプレフィックスをつけるか、あるいはAPI側で file_name を見て判断する。
-        // ここでは file_name をそのまま登録し、API側で "past_report" ワークフローなら DOCX を探すロジックにする。
-        // ただし、実験書も DOCX の可能性があるので、区別が必要。
-        // file_type を "reference_docx" のようにしたいが、DB制約があるかもしれない。
-        // 既存の file_type: word, excel, image, code, pdf (pdf is treated as word usually or just file)
-        // 安全策として file_type="word" で登録する。API側で "reference_report" パラメータとしてパスを渡すわけではないので、
-        // DBから取得する際に区別する必要がある。
-        // 解決策: file_name に特別なマーカーを入れるわけにもいかないので、
-        // API側で「一番新しいDOCX」を過去レポートとみなす、あるいは
-        // experiment_data に `is_reference` カラムがないなら、
-        // クライアント側でアップロード時に `metadata` をストレージに付与する手もあるが、DB検索には使えない。
-
-        // 妥協案: APIには `reportId` しか渡していない。
-        // したがって、DB上のレコードで区別する必要がある。
-        // experiment_data テーブルの定義を確認できないが、file_type の制約が緩ければ "reference" としたい。
-        // もし制約が厳しいなら "word" にして、ファイル名で区別するしかないが、ユーザーファイル名は自由。
-
-        // 今回は、API側で「workflowType=past_report の場合、アップロードされたファイルの中で .docx のものを参照レポートとして扱う」とする。
-        // 実験書が PDF なら区別できる。実験書も DOCX だと区別不能になるリスクがある。
-        // リスク回避のため、ファイル名を一時的に変更して登録する？ -> ユーザーが見た時に変になる。
-
-        // ベストプラクティス: experiment_data に `category` カラムがあればよいが。
-        // ここでは `file_type: "word"` で登録し、API側で「実験書(PDF/Word)」と「過去レポート(DOCX)」をどう区別するか...
-        // 実験書は `experimentPdf` 変数にある。過去レポートは `pastReportFile`。
-        // 実験書がPDFなら拡張子で区別可能。
-        // もし実験書もDOCXなら... 
-        // 暫定対応: 過去レポートの file_type を "code" (その他扱い) にしてしまう手もあるが、wordとして扱いたい。
-        // 今回は「実験書はPDF推奨」とし、DOCX同士の競合は稀とする。
-        // あるいは、API側で `past_report_file_id` を受け取るように変更する？
-        // しかしAPIは `reportId` のみ。
-
-        // 修正: APIに `pastReportFilename` を渡すことで、サーバー側で特定できるようにする。
-
-        const { error: insertError } = await supabase.from("experiment_data").insert([
-          {
-            report_id: reportId,
-            file_name: pastReportFile.name,
-            file_type: "word",
-            file_url: storagePath,
-            uploaded_at: new Date().toISOString(),
-          },
-        ])
-
-        if (insertError) {
-          throw new Error(insertError.message)
-        }
-      }
-
       // 4) Dify を使うバックエンドの生成APIを呼び出し（Authorization: Bearer <token>）
       setCurrentStep(3)
       const token = session.access_token
       const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
-      const endpoint = `${baseUrl}/api/reports/extract`
-      debugUpload("handleSubmit:generate-api:start", { endpoint, workflowType })
+      const destination: ProcessingState["destination"] = "edit"
+      setProcessingDestination("edit")
+
+      const endpoint = `${baseUrl}${creationMode === "hitl" ? "/api/reports/prepare" : "/api/reports/extract"}`
+      debugUpload("handleSubmit:generate-api:start", { endpoint })
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -873,8 +1034,11 @@ export default function NewReportPage() {
         },
         body: JSON.stringify({
           reportId,
-          workflowType,
-          referenceReportName: pastReportFile?.name
+          ...(creationMode === "hitl"
+            ? {}
+            : {
+                // workflowType は固定（サーバー側で既定を採用）
+              }),
         }),
       })
       if (!res.ok) {
@@ -884,24 +1048,13 @@ export default function NewReportPage() {
       }
       debugUpload("handleSubmit:generate-api:success", { reportId })
 
-      // If we uploaded a past report, we should probably pass its name to the API so it knows which one it is.
-      // But the current API signature in the fetch above only sends reportId and workflowType.
-      // We should update the body above to include `referenceReportName: pastReportFile?.name`.
-      // Let's do that in a separate replacement or assume the API will find it.
-      // For now, let's assume the API will look for a DOCX file that is NOT the experiment file.
-      // Or better, update the fetch body in the previous chunk.
-      // Wait, I can't edit the previous chunk here.
-      // I will assume the API is smart enough or I will update the fetch body in the next step if needed.
-      // Actually, I can just update the fetch body in the FIRST chunk of this tool call.
-      // I will update the first chunk to include referenceReportName.
-
       const startedAt = Date.now()
       setProcessingReportId(reportId)
       setProcessingStart(startedAt)
       setIsProcessing(true)
       setCurrentStep(0)
       setProgress(0)
-      persistProcessingState({ reportId, startedAt })
+      persistProcessingState({ reportId, startedAt, destination })
       return
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
@@ -969,22 +1122,25 @@ export default function NewReportPage() {
       >
         <Card className="border-2">
           <CardContent className="p-8">
-            {isProcessing ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <ReportProcessingSteps
-                  open={processingDialogOpen}
-                  onOpenChange={setProcessingDialogOpen}
-                  steps={processingDetailSteps}
-                  footerNote="ブラウザを閉じても生成は続きます。完了後エディタへ移動します。"
-                  onCancel={stopProcessing}
-                  cancelLabel="キャンセル"
-                />
-                <div className="text-center space-y-4">
+	            {isProcessing ? (
+	              <motion.div
+	                initial={{ opacity: 0 }}
+	                animate={{ opacity: 1 }}
+	                transition={{ duration: 0.3 }}
+	                className="space-y-6"
+	              >
+	                <ReportProcessingSteps
+	                  open={processingDialogOpen}
+	                  onOpenChange={setProcessingDialogOpen}
+	                  title={agentProgress ? "AIがレポートを作成中です" : "AIが処理中です"}
+	                  headerStatusLabel={agentProgress ? "進行中" : "処理中"}
+	                  steps={processingDetailSteps}
+	                  details={agentDetails}
+	                  footerNote="ブラウザを閉じても生成は続きます。完了後エディタへ移動します。"
+	                  onCancel={confirmStopProcessing}
+	                  cancelLabel="キャンセル"
+	                />
+	                <div className="text-center space-y-4">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
@@ -993,8 +1149,18 @@ export default function NewReportPage() {
                     <Loader2 className="w-16 h-16 text-primary" />
                   </motion.div>
                   <h2 className="text-2xl font-bold text-foreground">レポートを生成中...</h2>
-                  <p className="text-muted-foreground">AIが実験データを解析しています</p>
-                </div>
+	                  <p className="text-muted-foreground">AIが実験データを解析しています</p>
+	                  {!processingDialogOpen ? (
+	                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+	                      <Button variant="outline" size="sm" onClick={() => setProcessingDialogOpen(true)}>
+	                        処理状況を表示
+	                      </Button>
+	                      <Button variant="destructive" size="sm" onClick={confirmStopProcessing}>
+	                        強制停止
+	                      </Button>
+	                    </div>
+	                  ) : null}
+	                </div>
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between text-sm">
@@ -1044,84 +1210,97 @@ export default function NewReportPage() {
                 {/* Workflow Selection moved to bottom */}
 
                 <div className="space-y-2">
-                  <Label htmlFor="pdf-upload" className="text-base font-semibold text-card-foreground">実験書PDF</Label>
+                  <Label htmlFor="files-upload" className="text-base font-semibold text-card-foreground">
+                    ファイルを追加（アップローダーは1つ）
+                  </Label>
                   <input
-                    id="pdf-upload"
+                    id="files-upload"
                     type="file"
+                    multiple
                     onChange={handleFileSelect}
                     className="sr-only"
-                    accept=".pdf,application/pdf"
+                    accept=".pdf,application/pdf,image/*,.csv,.json,text/csv,application/json"
                   />
                   <p className="text-sm text-muted-foreground mb-3">
-                    実験書のPDFファイルをアップロードしてください。AIが内容を解析してレポートを自動生成します。
+                    実験書PDFは必須です。画像・表（CSV/JSON）・過去レポート（DOCX）は任意で追加できます。
                   </p>
 
-                  {!experimentPdf ? (
-                    <div
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      className={`border-2 border-dashed rounded-lg transition-all duration-300 text-center py-6 px-4 mx-1 my-0 bg-card ${isDragging
-                        ? "border-primary bg-primary/10 scale-[1.02]"
-                        : "border-border bg-muted/30 hover:bg-muted/50"
-                        }`}
-                    >
-                      <motion.div
-                        initial={{ scale: 1 }}
-                        animate={{ scale: isDragging ? 1.1 : 1 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Upload className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                      </motion.div>
-                      <p className="text-lg text-card-foreground mb-2 font-semibold">実験書PDFをドラッグ&ドロップ</p>
-                      <p className="text-sm text-muted-foreground mb-3">または</p>
-                      <label htmlFor="pdf-upload">
-                        <Button variant="outline" className="cursor-pointer bg-transparent hover:bg-primary/10" asChild>
-                          <span>
-                            <FileText className="mr-2 w-4 h-4" />
-                            PDFファイルを選択
-                          </span>
-                        </Button>
-                      </label>
-                      <p className="text-xs text-muted-foreground mt-3">対応形式: PDF</p>
-                      <p className="text-xs text-muted-foreground">最大サイズ: 50MB</p>
-                    </div>
-                  ) : (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className="flex items-center justify-between p-6 bg-card border-2 border-primary/50 rounded-lg"
-                      style={{
-                        boxShadow: "0 0 20px rgba(94, 234, 212, 0.2)",
-                      }}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="p-3 bg-primary/10 rounded-lg">
-                          <FileCheck className="w-8 h-8 text-primary" />
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-lg transition-all duration-300 text-center py-6 px-4 mx-1 my-0 bg-card ${
+                      isDragging ? "border-primary bg-primary/10 scale-[1.02]" : "border-border bg-muted/30 hover:bg-muted/50"
+                    }`}
+                  >
+                    <motion.div initial={{ scale: 1 }} animate={{ scale: isDragging ? 1.05 : 1 }} transition={{ duration: 0.2 }}>
+                      <Upload className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                    </motion.div>
+                    <p className="text-lg text-card-foreground mb-2 font-semibold">ここにまとめてドラッグ&ドロップ</p>
+                    <p className="text-sm text-muted-foreground mb-3">または</p>
+                    <label htmlFor="files-upload">
+                      <Button variant="outline" className="cursor-pointer bg-transparent hover:bg-primary/10" asChild>
+                        <span>
+                          <FileText className="mr-2 w-4 h-4" />
+                          ファイルを選択
+                        </span>
+                      </Button>
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-3">対応: PDF / 画像 / CSV / JSON</p>
+                    {!canUploadPaidAssets ? (
+                      <p className="text-xs text-muted-foreground">※ 画像/表は有料プラン限定です（PDFは利用可能）</p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-3 pt-3">
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-card-foreground">
+                            実験書PDF <span className="text-destructive">*</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground break-all">
+                            {experimentPdf?.name || existingPdf?.name || "未選択"}
+                          </p>
                         </div>
-                        <div>
-                          <p className="text-base font-semibold text-foreground">{experimentPdf.name}</p>
-                          <p className="text-sm text-muted-foreground">{formatFileSize(experimentPdf.size)}</p>
+                        {experimentPdf || existingPdf ? (
+                          <Button variant="ghost" size="sm" onClick={removeFile} className="text-destructive hover:bg-destructive/10">
+                            外す
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-card-foreground">追加ファイル（任意）</p>
+                          <p className="text-xs text-muted-foreground">
+                            画像: {figureImages.length}
+                            {existingImages.length ? `（既存 ${existingImages.length}）` : ""} / 表: {tableFiles.length}
+                            {existingTables.length ? `（既存 ${existingTables.length}）` : ""}
+                          </p>
+                          {lastAddedFilesLabel ? <CompletionBadge label={lastAddedFilesLabel} /> : null}
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={removeFile}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <X className="w-5 h-5" />
-                      </Button>
-                    </motion.div>
-                  )}
 
-                  {!experimentPdf && existingPdf && (
-                    <div className="p-4 bg-muted/50 border rounded-lg">
-                      <p className="text-sm font-semibold text-foreground">前回のPDFを利用中</p>
-                      <p className="text-xs text-muted-foreground break-all">{existingPdf.name}</p>
+                      {tableFiles.length > 0 ? (
+                        <div className="mt-3 space-y-1">
+                          <p className="text-xs font-semibold text-muted-foreground">追加した表ファイル</p>
+                          <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-0.5">
+                            {tableFiles.map((f, idx) => (
+                              <li key={`${f.name}-${idx}`} className="flex items-center justify-between gap-2">
+                                <span className="break-all">{f.name}</span>
+                                <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeTableFile(idx)}>
+                                  削除
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 <div className="space-y-3 relative">
@@ -1138,7 +1317,7 @@ export default function NewReportPage() {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    コピーした表を貼り付けると参照用データとして保存されます。複数貼り付けると順番に追加されます。
+                    コピーした表を貼り付けると参照用データとして保存されます。CSV/JSONファイルは上のアップローダーから追加できます。
                   </p>
 
                   {subscriptionPlan === "premium" || subscriptionPlan === "standard" ? (
@@ -1221,7 +1400,7 @@ export default function NewReportPage() {
 
                 <div className="space-y-2 relative">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="image-upload" className="text-base font-semibold text-card-foreground">
+                    <Label className="text-base font-semibold text-card-foreground">
                       実験結果の画像（任意）
                     </Label>
                     <div className="flex items-center gap-2">
@@ -1237,47 +1416,16 @@ export default function NewReportPage() {
 
                   {subscriptionPlan === "premium" || subscriptionPlan === "standard" ? (
                     <>
-                      <input id="image-upload" type="file" multiple accept="image/*" onChange={handleImageSelect} className="sr-only" />
                       <p className="text-sm text-muted-foreground">
-                        図キャプションの直前に表示したい実験結果の画像をアップロードしてください。アップロードした順番でレポートに挿入されます（後から並べ替え可能）。
+                        画像は上のアップローダーで追加できます（複数可）。追加した順番でレポートに挿入されます（後から並べ替え可能）。
                       </p>
-                      <div className="flex flex-col gap-3">
-                        <div
-                          id="image-paste-box"
-                          className="flex flex-col gap-2 border rounded-lg p-3 bg-muted/40"
-                          onPaste={handleImagePasteBoxPaste}
-                          tabIndex={0}
-                          role="textbox"
-                          aria-label="画像の貼り付け"
-                        >
-                          <p className="text-xs font-semibold text-card-foreground">ここに Ctrl/Cmd+V で画像を貼り付け</p>
-                          <p className="text-xs text-muted-foreground">
-                            スクリーンショットやグラフ画像をコピーして、このボックスを選択した状態で貼り付けてください。ページ上のどこで貼り付けても画像として追加されます。
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <div
-                            onDragOver={handleImageDragOver}
-                            onDragLeave={handleImageDragLeave}
-                            onDrop={handleImageDrop}
-                            className={`flex-1 border-2 border-dashed rounded-lg transition-all duration-300 py-5 px-4 bg-card ${isImageDragging ? "border-primary bg-primary/10 scale-[1.01]" : "border-border bg-muted/30 hover:bg-muted/50"
-                              }`}
-                          >
-                            <div className="flex flex-col items-center text-center space-y-2">
-                              <ImagePlus className="w-10 h-10 text-muted-foreground" />
-                              <p className="font-semibold text-card-foreground">画像をドラッグ&ドロップ</p>
-                              <p className="text-xs text-muted-foreground">JPG / PNG / HEIC などの画像ファイルに対応</p>
-                              <label htmlFor="image-upload">
-                                <Button variant="outline" size="sm" className="cursor-pointer mt-2 bg-transparent hover:bg-primary/10" asChild>
-                                  <span>画像を選択</span>
-                                </Button>
-                              </label>
-                            </div>
-                          </div>
-                          {lastAddedImageLabel && (
-                            <CompletionBadge label={lastAddedImageLabel} />
-                          )}
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="files-upload">
+                          <Button variant="outline" size="sm" className="cursor-pointer bg-transparent hover:bg-primary/10" asChild>
+                            <span>画像を追加</span>
+                          </Button>
+                        </label>
+                        {lastAddedImageLabel ? <CompletionBadge label={lastAddedImageLabel} /> : null}
                       </div>
 
                       {figureImages.length > 0 && (
@@ -1371,7 +1519,7 @@ export default function NewReportPage() {
                   )}
                 </div>
 
-                {experimentPdf && (
+                {hasPdfSelected && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1391,136 +1539,50 @@ export default function NewReportPage() {
                   </motion.div>
                 )}
 
-                {experimentPdf && (
+                {hasPdfSelected && (
                   <div className="space-y-4 pt-4 border-t border-border">
-                    <Label className="text-base font-semibold">生成ワークフローを選択</Label>
+                    <Label className="text-base font-semibold">作成形式</Label>
                     <RadioGroup
-                      value={workflowType}
-                      onValueChange={(val) => setWorkflowType(val as "conventional" | "optimized" | "past_report")}
-                      className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                      value={creationMode}
+                      onValueChange={(val) => setCreationMode(val as "workflow" | "hitl")}
+                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
                     >
-                      {/* Conventional */}
                       <div className="h-full">
                         <Label
-                          htmlFor="wf-conventional"
+                          htmlFor="create-workflow"
                           className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-full"
                         >
                           <div className="flex items-center gap-2 mb-2">
-                            <RadioGroupItem
-                              value="conventional"
-                              id="wf-conventional"
-                              className="peer"
-                            />
-                            <span className="text-lg font-bold">通常モード</span>
+                            <RadioGroupItem value="workflow" id="create-workflow" className="peer" />
+                            <span className="text-lg font-bold">一括生成</span>
                           </div>
                           <span className="text-xs text-muted-foreground text-left">
-                            標準的なレポート生成フロー。安定して動作します。
+                            すぐにDOCXまで生成します（従来のフロー）。
                           </span>
                         </Label>
                       </div>
 
-                      {/* Optimized */}
-                      <div className="h-full relative">
+                      <div className="h-full">
                         <Label
-                          htmlFor="wf-optimized"
-                          className={`flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 h-full ${subscriptionPlan === "premium" || subscriptionPlan === "standard"
-                            ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                            : "opacity-60 cursor-not-allowed"
-                            }`}
+                          htmlFor="create-hitl"
+                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-full"
                         >
                           <div className="flex items-center gap-2 mb-2">
-                            <RadioGroupItem
-                              value="optimized"
-                              id="wf-optimized"
-                              className="peer"
-                              disabled={subscriptionPlan !== "premium" && subscriptionPlan !== "standard"}
-                            />
-                            <span className="text-lg font-bold">最適化モード (Beta)</span>
+                            <RadioGroupItem value="hitl" id="create-hitl" className="peer" />
+                            <span className="text-lg font-bold">編集して作成 (HITL)</span>
                           </div>
                           <span className="text-xs text-muted-foreground text-left">
-                            より詳細な分析と高品質な文章生成を行います。
+                            まず抽出結果を保存し、編集画面で確認・修正してから生成します。
                           </span>
-                          {subscriptionPlan !== "premium" && subscriptionPlan !== "standard" && (
-                            <div className="absolute top-2 right-2 flex items-center text-amber-500 text-xs font-semibold bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
-                              <Lock className="w-3 h-3 mr-1" />
-                              Paid Plan
-                            </div>
-                          )}
-                        </Label>
-                      </div>
-
-                      {/* Past Report */}
-                      <div className="h-full relative">
-                        <Label
-                          htmlFor="wf-past-report"
-                          className={`flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 h-full ${subscriptionPlan === "premium" || subscriptionPlan === "standard"
-                            ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                            : "opacity-60 cursor-not-allowed"
-                            }`}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <RadioGroupItem
-                              value="past_report"
-                              id="wf-past-report"
-                              className="peer"
-                              disabled={subscriptionPlan !== "premium" && subscriptionPlan !== "standard"}
-                            />
-                            <span className="text-lg font-bold">過去レポ再現</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground text-left">
-                            過去のレポートをアップロードし、その構成と文体を再現します。
-                          </span>
-                          {subscriptionPlan !== "premium" && subscriptionPlan !== "standard" && (
-                            <div className="absolute top-2 right-2 flex items-center text-amber-500 text-xs font-semibold bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
-                              <Lock className="w-3 h-3 mr-1" />
-                              Paid Plan
-                            </div>
-                          )}
                         </Label>
                       </div>
                     </RadioGroup>
-
-                    {workflowType === "past_report" && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className="pt-4 space-y-2"
-                      >
-                        <Label htmlFor="past-report-upload" className="text-sm font-semibold">
-                          参照する過去レポート (DOCX)
-                        </Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="past-report-upload"
-                            type="file"
-                            accept=".docx"
-                            onChange={(e) => {
-                              if (e.target.files?.[0]) {
-                                setPastReportFile(e.target.files[0])
-                              }
-                            }}
-                            className="cursor-pointer"
-                          />
-                          {pastReportFile && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setPastReportFile(null)}
-                              className="text-destructive"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          ※このレポートの「章立て」と「図表の配置」をテンプレートとして使用します。
-                        </p>
-                      </motion.div>
-                    )}
                   </div>
                 )}
 
-                {experimentPdf && (
+                {/* 生成ワークフロー選択（通常/最適化/過去レポ再現）は廃止 */}
+
+                {hasPdfSelected && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}

@@ -1,0 +1,777 @@
+import { createServiceClient } from "@/lib/supabase/server"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+import { Agent } from "undici"
+
+export class ReportAlreadyProcessingError extends Error {
+  constructor(reportId: string) {
+    super(`This report is already processing (reportId=${reportId}).`)
+    this.name = "ReportAlreadyProcessingError"
+  }
+}
+
+class ReportAgentHttpError extends Error {
+  url: string
+  status: number
+  body: string
+
+  constructor(params: { url: string; status: number; body: string }) {
+    const msg = params.body ? `${params.body}` : ""
+    super(`Report agent error (${params.status})${msg ? `: ${msg}` : ""}`)
+    this.name = "ReportAgentHttpError"
+    this.url = params.url
+    this.status = params.status
+    this.body = params.body
+  }
+}
+
+type ExperimentDataRow = {
+  file_name: string | null
+  file_type: string | null
+  file_url: string | null
+  uploaded_at?: string | null
+}
+
+const EXPERIMENT_BUCKET = "experiment-files"
+
+const REPORT_AGENT_HTTP_AGENT = new Agent({
+  connectTimeout: 30_000,
+  headersTimeout: 30 * 60_000,
+  bodyTimeout: 30 * 60_000,
+})
+
+const isMockMode = () => {
+  return process.env.REPORT_GENERATION_MODE === "mock" || process.env.REPORT_AGENT_URL === "mock"
+}
+
+const getAgentBaseUrl = () => {
+  if (isMockMode()) return "mock://local"
+  const explicit = process.env.REPORT_AGENT_URL
+  if (explicit) return explicit
+
+  const isHosted = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
+  if (isHosted) {
+    throw new Error("REPORT_AGENT_URL is not set. Set it to the Report Agent (FastAPI) base URL.")
+  }
+
+  return "http://127.0.0.1:8000"
+}
+
+const normalizeStoragePath = (path: string) => path.replace(/^\/+/, "")
+
+const guessMimeType = (filename: string) => {
+  const lower = filename.toLowerCase()
+  if (lower.endsWith(".png")) return "image/png"
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg"
+  if (lower.endsWith(".webp")) return "image/webp"
+  if (lower.endsWith(".gif")) return "image/gif"
+  if (lower.endsWith(".bmp")) return "image/bmp"
+  if (lower.endsWith(".tif") || lower.endsWith(".tiff")) return "image/tiff"
+  if (lower.endsWith(".heic")) return "image/heic"
+  if (lower.endsWith(".pdf")) return "application/pdf"
+  if (lower.endsWith(".docx")) {
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  }
+  if (lower.endsWith(".json")) return "application/json"
+  if (lower.endsWith(".csv")) return "text/csv"
+  return "application/octet-stream"
+}
+
+const escapeCsvCell = (value: string) => {
+  const needsQuotes = /[",\n\r]/.test(value)
+  const escaped = value.replace(/"/g, '""')
+  return needsQuotes ? `"${escaped}"` : escaped
+}
+
+export const rowsToCsv = (rows: string[][]) => {
+  return rows
+    .map((row) => row.map((cell) => escapeCsvCell((cell ?? "").toString())).join(","))
+    .join("\n")
+}
+
+const downloadStorageBytes = async (path: string) => {
+  const admin = createServiceClient()
+  const { data, error } = await admin.storage.from(EXPERIMENT_BUCKET).download(normalizeStoragePath(path))
+  if (error || !data) throw new Error(error?.message || "Failed to download file from storage")
+  const arrayBuffer = await data.arrayBuffer()
+  return Buffer.from(arrayBuffer)
+}
+
+const analysisStorageKey = (userId: string, reportId: string) => {
+  return `${userId}/${reportId}/analysis/analysis.json`
+}
+
+const agentProgressStorageKey = (userId: string, reportId: string) => {
+  return `${userId}/${reportId}/agent/progress.json`
+}
+
+const safePreview = (value: unknown, maxLen: number) => {
+  const s = typeof value === "string" ? value : ""
+  if (!s) return ""
+  if (s.length <= maxLen) return s
+  return s.slice(0, maxLen) + "…"
+}
+
+const buildAgentProgressPayload = (intermediate: any, jobId: string) => {
+  const status = typeof intermediate?.status === "string" ? intermediate.status : ""
+  const snapshots = Array.isArray(intermediate?.snapshots) ? intermediate.snapshots : []
+  const lastStep = snapshots.length > 0 ? snapshots[snapshots.length - 1]?.step : ""
+
+  const pdf = intermediate?.pdf || {}
+  const experiments = Array.isArray(intermediate?.experiments) ? intermediate.experiments : []
+  const methodTree = Array.isArray(intermediate?.method_tree) ? intermediate.method_tree : []
+  const assetsImages = Array.isArray(intermediate?.assets_images) ? intermediate.assets_images : []
+  const assetsTables = Array.isArray(intermediate?.assets_tables) ? intermediate.assets_tables : []
+  const prompts = Array.isArray(pdf?.consideration_prompts) ? pdf.consideration_prompts : []
+
+  return {
+    version: 1,
+    job_id: jobId,
+    status,
+    updated_at: new Date().toISOString(),
+    last_step: typeof lastStep === "string" ? lastStep : "",
+    snapshots: snapshots
+      .map((s: any) => ({
+        step: typeof s?.step === "string" ? s.step : "",
+        storage_key: typeof s?.storage_key === "string" ? s.storage_key : "",
+      }))
+      .filter((s: any) => s.step),
+    stats: {
+      pdf_pages: typeof pdf?.pages === "number" ? pdf.pages : null,
+      method_tree_count: methodTree.length,
+      experiments_count: experiments.length,
+      images_count: assetsImages.length,
+      tables_count: assetsTables.length,
+      prompts_count: prompts.length,
+    },
+    previews: {
+      method_text: safePreview(pdf?.method_text, 1500),
+      discussion_text: safePreview(pdf?.discussion_text, 1500),
+      prompts: prompts.slice(0, 5).map((p: any) => safePreview(p, 200)).filter(Boolean),
+      method_tree: methodTree
+        .slice(0, 5)
+        .map((m: any) => {
+          const expKey = typeof m?.exp_key === "string" ? m.exp_key : ""
+          const title = typeof m?.title === "string" ? m.title : ""
+          return expKey && title ? `${expKey} ${title}` : expKey || title
+        })
+        .filter(Boolean),
+    },
+  }
+}
+
+const uploadAgentProgress = async (params: { userId: string; reportId: string; payload: unknown }) => {
+  const admin = createServiceClient()
+  const { userId, reportId, payload } = params
+  const key = agentProgressStorageKey(userId, reportId)
+  await admin.storage.from(EXPERIMENT_BUCKET).upload(key, JSON.stringify(payload, null, 2), {
+    contentType: "application/json",
+    upsert: true,
+  })
+  return key
+}
+
+const uploadDocxToStorage = async (userId: string, reportId: string, bytes: Uint8Array) => {
+  const admin = createServiceClient()
+  const key = `${userId}/${reportId}/artifact/report_${Date.now()}.docx`
+  const { error } = await admin.storage.from(EXPERIMENT_BUCKET).upload(key, bytes, {
+    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    upsert: true,
+  })
+  if (error) throw new Error(error.message)
+  return key
+}
+
+const loadMockDocxBytes = async () => {
+  const explicit = process.env.REPORT_MOCK_TEMPLATE_PATH
+  const candidate = explicit
+    ? path.resolve(process.cwd(), explicit)
+    : path.resolve(process.cwd(), "templates", "chapter_fixed.docx")
+  return await readFile(candidate)
+}
+
+const agentFetch = async (path: string, init: RequestInit) => {
+  if (isMockMode()) {
+    throw new Error("Mock mode enabled (REPORT_GENERATION_MODE=mock), skipping report agent fetch")
+  }
+  const url = `${getAgentBaseUrl()}${path}`
+  const controller = new AbortController()
+  const defaultTimeoutMs =
+    process.env.VERCEL === "1" || process.env.NODE_ENV === "production" ? 55_000 : 30 * 60_000
+  const timeoutMs = Number(process.env.REPORT_AGENT_TIMEOUT_MS || defaultTimeoutMs)
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal, dispatcher: REPORT_AGENT_HTTP_AGENT } as any)
+    if (!res.ok) {
+      const msg = await res.text().catch(() => "")
+      throw new ReportAgentHttpError({ url, status: res.status, body: msg || "" })
+    }
+    return res
+  } catch (err) {
+    if (err instanceof ReportAgentHttpError) throw err
+    const errMessage = err instanceof Error ? err.message : String(err)
+    const cause = err instanceof Error && "cause" in err ? (err as any).cause : undefined
+    const causeMessage = cause instanceof Error ? cause.message : cause ? String(cause) : ""
+    throw new Error(
+      `Failed to reach report agent: ${url}${causeMessage ? ` (${causeMessage})` : ""}${errMessage ? ` [${errMessage}]` : ""}`
+    )
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+const createJob = async (pdfBytes: Uint8Array, filename: string) => {
+  const form = new FormData()
+  form.append("pdf", new Blob([Buffer.from(pdfBytes)], { type: "application/pdf" }), filename || "manual.pdf")
+  const res = await agentFetch("/jobs", { method: "POST", body: form })
+  const json = (await res.json()) as { job_id: string }
+  if (!json.job_id) throw new Error("Report agent returned empty job_id")
+  return json.job_id
+}
+
+const addImage = async (jobId: string, imageBytes: Uint8Array, filename: string) => {
+  const form = new FormData()
+  form.append("image", new Blob([Buffer.from(imageBytes)], { type: guessMimeType(filename) }), filename || "image.png")
+  await agentFetch(`/jobs/${jobId}/images`, { method: "POST", body: form })
+}
+
+const addTable = async (jobId: string, rawCsv: string, filename?: string) => {
+  await agentFetch(`/jobs/${jobId}/tables`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ raw_csv: rawCsv, filename }),
+  })
+}
+
+const runJob = async (jobId: string, mode: "full" | "prepare" = "full") => {
+  const qs = mode === "prepare" ? "?mode=prepare" : ""
+  const res = await agentFetch(`/jobs/${jobId}/run${qs}`, { method: "POST" })
+  return (await res.json()) as {
+    status: string
+    artifact_docx_key?: string | null
+    errors?: Array<{ code: string; message: string; target?: string | null }>
+    warnings?: Array<{ code: string; message: string; target?: string | null }>
+  }
+}
+
+const getIntermediate = async (jobId: string) => {
+  const res = await agentFetch(`/jobs/${jobId}/intermediate`, { method: "GET" })
+  return (await res.json()) as any
+}
+
+const downloadArtifact = async (jobId: string) => {
+  const res = await agentFetch(`/jobs/${jobId}/artifact`, { method: "GET" })
+  const arrayBuffer = await res.arrayBuffer()
+  return Buffer.from(arrayBuffer)
+}
+
+const acquireProcessingLock = async (params: { reportId: string; userId: string }) => {
+  const admin = createServiceClient()
+  const { reportId, userId } = params
+
+  const { data, error } = await admin
+    .from("reports")
+    .update({ status: "processing", updated_at: new Date().toISOString() })
+    .eq("id", reportId)
+    .eq("user_id", userId)
+    .neq("status", "processing")
+    .select("id")
+
+  if (error) throw new Error(error.message)
+  if (!data || data.length === 0) throw new ReportAlreadyProcessingError(reportId)
+}
+
+export async function runReportAgentFromSupabaseReport(params: { reportId: string; userId: string }) {
+  const admin = createServiceClient()
+  const { reportId, userId } = params
+
+  const { data: report, error: reportError } = await admin
+    .from("reports")
+    .select("id, user_id")
+    .eq("id", reportId)
+    .maybeSingle()
+  if (reportError) throw new Error(reportError.message)
+  if (!report) throw new Error("レポートが見つかりません")
+  if (report.user_id !== userId) throw new Error("権限がありません")
+
+  await acquireProcessingLock({ reportId, userId })
+
+  if (isMockMode()) {
+    const bytes = await loadMockDocxBytes()
+    const artifactKey = await uploadDocxToStorage(userId, reportId, bytes)
+    await admin
+      .from("reports")
+      .update({ status: "completed", file_url: artifactKey, updated_at: new Date().toISOString() })
+      .eq("id", reportId)
+      .eq("user_id", userId)
+    return { jobId: "mock", artifactKey }
+  }
+
+  const { data: files, error: filesError } = await admin
+    .from("experiment_data")
+    .select("file_name, file_type, file_url, uploaded_at")
+    .eq("report_id", reportId)
+  if (filesError) throw new Error(filesError.message)
+
+  const normalizedFiles = (files || []) as ExperimentDataRow[]
+  const pdfFile = normalizedFiles.find((f) => (f.file_url || "").toLowerCase().endsWith(".pdf"))
+  if (!pdfFile?.file_url) throw new Error("実験書PDFが見つかりません（PDFのアップロードが必要です）")
+
+  const pdfBytes = await downloadStorageBytes(pdfFile.file_url)
+  const jobId = await createJob(pdfBytes, pdfFile.file_name || "manual.pdf")
+
+  // Persist agent progress while the job is running, so the UI can show "how it was built".
+  let stopProgress = false
+  let progressInFlight = false
+  const progressIntervalMs = 2500
+  const progressTimer = setInterval(async () => {
+    if (stopProgress || progressInFlight) return
+    progressInFlight = true
+    try {
+      const intermediate = await getIntermediate(jobId)
+      const payload = buildAgentProgressPayload(intermediate, jobId)
+      await uploadAgentProgress({ userId, reportId, payload })
+    } catch {
+      // Best-effort; never fail generation because of progress logging.
+    } finally {
+      progressInFlight = false
+    }
+  }, progressIntervalMs)
+  try {
+    const intermediate = await getIntermediate(jobId)
+    const payload = buildAgentProgressPayload(intermediate, jobId)
+    await uploadAgentProgress({ userId, reportId, payload })
+  } catch {
+    // ignore
+  }
+
+  const imageFiles = normalizedFiles
+    .filter((f) => f.file_type === "image" && f.file_url)
+    .sort((a, b) => {
+      const ta = a.uploaded_at ? Date.parse(a.uploaded_at) : 0
+      const tb = b.uploaded_at ? Date.parse(b.uploaded_at) : 0
+      return ta - tb
+    })
+  for (const img of imageFiles) {
+    const bytes = await downloadStorageBytes(img.file_url as string)
+    await addImage(jobId, bytes, img.file_name || "image.png")
+  }
+
+  const tableFiles = normalizedFiles.filter((f) => f.file_type === "excel" && f.file_url)
+  for (const tbl of tableFiles) {
+    const fileUrl = tbl.file_url as string
+    const lower = fileUrl.toLowerCase()
+    if (lower.endsWith(".json")) {
+      const bytes = await downloadStorageBytes(fileUrl)
+      const parsed = JSON.parse(bytes.toString("utf-8")) as { rows?: unknown }
+      const rows = Array.isArray(parsed.rows) ? (parsed.rows as string[][]) : []
+      if (rows.length > 0) {
+        await addTable(jobId, rowsToCsv(rows), tbl.file_name || "table.json")
+      }
+      continue
+    }
+    if (lower.endsWith(".csv")) {
+      const bytes = await downloadStorageBytes(fileUrl)
+      await addTable(jobId, bytes.toString("utf-8"), tbl.file_name || "table.csv")
+      continue
+    }
+  }
+
+  let run: Awaited<ReturnType<typeof runJob>>
+  try {
+    run = await runJob(jobId, "full")
+  } finally {
+    stopProgress = true
+    clearInterval(progressTimer)
+  }
+
+  // Final progress snapshot (best-effort).
+  try {
+    const intermediate = await getIntermediate(jobId)
+    const payload = buildAgentProgressPayload(intermediate, jobId)
+    await uploadAgentProgress({ userId, reportId, payload })
+  } catch {
+    // ignore
+  }
+
+  if (!run || !run.status) throw new Error("Report agent returned invalid run response")
+  if (!run.artifact_docx_key) {
+    const firstError = run.errors?.[0]?.message
+    throw new Error(
+      `docxが生成されませんでした（status=${run.status}${firstError ? ` / ${firstError}` : ""}）。agentの中間JSONは ${getAgentBaseUrl()}/jobs/${jobId}/intermediate で確認できます。`
+    )
+  }
+
+  // Save TemplateContext into Supabase for the editor UI (best-effort).
+  try {
+    const intermediate = await getIntermediate(jobId)
+    const templateContext = intermediate?.template_context
+    const assetsImages = Array.isArray(intermediate?.assets_images) ? intermediate.assets_images : []
+    const minimalAssetsImages = assetsImages
+      .map((img: any) => ({
+        image_id: typeof img?.image_id === "string" ? img.image_id : "",
+        filename: typeof img?.filename === "string" ? img.filename : "",
+        upload_index: typeof img?.upload_index === "number" ? img.upload_index : 0,
+      }))
+      .filter((img: any) => img.image_id && img.filename)
+      .sort((a: any, b: any) => (a.upload_index || 0) - (b.upload_index || 0))
+
+    if (templateContext && typeof templateContext === "object") {
+      const analysis = {
+        ...templateContext,
+        __assets_images: minimalAssetsImages,
+        image_order: minimalAssetsImages.map((i: any) => i.filename),
+      }
+      const key = analysisStorageKey(userId, reportId)
+      await admin.storage.from(EXPERIMENT_BUCKET).upload(key, JSON.stringify(analysis, null, 2), {
+        contentType: "application/json",
+        upsert: true,
+      })
+    }
+  } catch {
+    // Non-fatal: the docx is still generated and uploaded.
+  }
+
+  const artifactBytes = await downloadArtifact(jobId)
+  const artifactKey = await uploadDocxToStorage(userId, reportId, artifactBytes)
+
+  await admin
+    .from("reports")
+    .update({ status: "completed", file_url: artifactKey, updated_at: new Date().toISOString() })
+    .eq("id", reportId)
+    .eq("user_id", userId)
+
+  return { jobId, artifactKey }
+}
+
+export async function prepareReportAgentFromSupabaseReport(params: { reportId: string; userId: string }) {
+  const admin = createServiceClient()
+  const { reportId, userId } = params
+
+  const { data: report, error: reportError } = await admin
+    .from("reports")
+    .select("id, user_id")
+    .eq("id", reportId)
+    .maybeSingle()
+  if (reportError) throw new Error(reportError.message)
+  if (!report) throw new Error("レポートが見つかりません")
+  if (report.user_id !== userId) throw new Error("権限がありません")
+
+  await acquireProcessingLock({ reportId, userId })
+
+  if (isMockMode()) {
+    // Mock: create a minimal analysis JSON so the editor/chat can start.
+    const key = analysisStorageKey(userId, reportId)
+    const analysis = { experiments: [], __hitl: { mode: "prepare", prepared_at: new Date().toISOString() } }
+    await admin.storage.from(EXPERIMENT_BUCKET).upload(key, JSON.stringify(analysis, null, 2), {
+      contentType: "application/json",
+      upsert: true,
+    })
+    await admin
+      .from("reports")
+      .update({ status: "draft", updated_at: new Date().toISOString() })
+      .eq("id", reportId)
+      .eq("user_id", userId)
+    return { jobId: "mock" }
+  }
+
+  const { data: files, error: filesError } = await admin
+    .from("experiment_data")
+    .select("file_name, file_type, file_url, uploaded_at")
+    .eq("report_id", reportId)
+  if (filesError) throw new Error(filesError.message)
+
+  const normalizedFiles = (files || []) as ExperimentDataRow[]
+  const pdfFile = normalizedFiles.find((f) => (f.file_url || "").toLowerCase().endsWith(".pdf"))
+  if (!pdfFile?.file_url) throw new Error("実験書PDFが見つかりません（PDFのアップロードが必要です）")
+
+  const pdfBytes = await downloadStorageBytes(pdfFile.file_url)
+  const jobId = await createJob(pdfBytes, pdfFile.file_name || "manual.pdf")
+
+  // Persist agent progress while the job is running, so the UI can show "how it was built".
+  let stopProgress = false
+  let progressInFlight = false
+  const progressIntervalMs = 2500
+  const progressTimer = setInterval(async () => {
+    if (stopProgress || progressInFlight) return
+    progressInFlight = true
+    try {
+      const intermediate = await getIntermediate(jobId)
+      const payload = buildAgentProgressPayload(intermediate, jobId)
+      await uploadAgentProgress({ userId, reportId, payload })
+    } catch {
+      // Best-effort; never fail because of progress logging.
+    } finally {
+      progressInFlight = false
+    }
+  }, progressIntervalMs)
+  try {
+    const intermediate = await getIntermediate(jobId)
+    const payload = buildAgentProgressPayload(intermediate, jobId)
+    await uploadAgentProgress({ userId, reportId, payload })
+  } catch {
+    // ignore
+  }
+
+  const imageFiles = normalizedFiles
+    .filter((f) => f.file_type === "image" && f.file_url)
+    .sort((a, b) => {
+      const ta = a.uploaded_at ? Date.parse(a.uploaded_at) : 0
+      const tb = b.uploaded_at ? Date.parse(b.uploaded_at) : 0
+      return ta - tb
+    })
+  for (const img of imageFiles) {
+    // eslint-disable-next-line no-await-in-loop
+    const bytes = await downloadStorageBytes(img.file_url as string)
+    // eslint-disable-next-line no-await-in-loop
+    await addImage(jobId, bytes, img.file_name || "image.png")
+  }
+
+  const tableFiles = normalizedFiles.filter((f) => f.file_type === "excel" && f.file_url)
+  for (const tbl of tableFiles) {
+    const fileUrl = tbl.file_url as string
+    const lower = fileUrl.toLowerCase()
+    if (lower.endsWith(".json")) {
+      // eslint-disable-next-line no-await-in-loop
+      const bytes = await downloadStorageBytes(fileUrl)
+      const parsed = JSON.parse(bytes.toString("utf-8")) as { rows?: unknown }
+      const rows = Array.isArray(parsed.rows) ? (parsed.rows as string[][]) : []
+      if (rows.length > 0) {
+        // eslint-disable-next-line no-await-in-loop
+        await addTable(jobId, rowsToCsv(rows), tbl.file_name || "table.json")
+      }
+      continue
+    }
+    if (lower.endsWith(".csv")) {
+      // eslint-disable-next-line no-await-in-loop
+      const bytes = await downloadStorageBytes(fileUrl)
+      // eslint-disable-next-line no-await-in-loop
+      await addTable(jobId, bytes.toString("utf-8"), tbl.file_name || "table.csv")
+      continue
+    }
+  }
+
+  let run: Awaited<ReturnType<typeof runJob>>
+  try {
+    run = await runJob(jobId, "prepare")
+  } finally {
+    stopProgress = true
+    clearInterval(progressTimer)
+  }
+
+  // Final progress snapshot (best-effort).
+  try {
+    const intermediate = await getIntermediate(jobId)
+    const payload = buildAgentProgressPayload(intermediate, jobId)
+    await uploadAgentProgress({ userId, reportId, payload })
+  } catch {
+    // ignore
+  }
+
+  if (!run || !run.status) throw new Error("Report agent returned invalid run response")
+
+  // Save TemplateContext into Supabase for the editor/chat UI.
+  const intermediate = await getIntermediate(jobId)
+  const templateContext = intermediate?.template_context
+  const assetsImages = Array.isArray(intermediate?.assets_images) ? intermediate.assets_images : []
+  const minimalAssetsImages = assetsImages
+    .map((img: any) => ({
+      image_id: typeof img?.image_id === "string" ? img.image_id : "",
+      filename: typeof img?.filename === "string" ? img.filename : "",
+      upload_index: typeof img?.upload_index === "number" ? img.upload_index : 0,
+    }))
+    .filter((img: any) => img.image_id && img.filename)
+    .sort((a: any, b: any) => (a.upload_index || 0) - (b.upload_index || 0))
+
+  if (!templateContext || typeof templateContext !== "object") {
+    const firstError = run.errors?.[0]?.message
+    throw new Error(
+      `分析結果が生成されませんでした（status=${run.status}${firstError ? ` / ${firstError}` : ""}）。agentの中間JSONは ${getAgentBaseUrl()}/jobs/${jobId}/intermediate で確認できます。`
+    )
+  }
+
+  const analysis = {
+    ...templateContext,
+    __assets_images: minimalAssetsImages,
+    image_order: minimalAssetsImages.map((i: any) => i.filename),
+    __hitl: { mode: "prepare", prepared_at: new Date().toISOString(), step: 0 },
+  }
+  const key = analysisStorageKey(userId, reportId)
+  await admin.storage.from(EXPERIMENT_BUCKET).upload(key, JSON.stringify(analysis, null, 2), {
+    contentType: "application/json",
+    upsert: true,
+  })
+
+  // Return to draft so the user can edit/iterate, and generate later from JSON.
+  await admin
+    .from("reports")
+    .update({ status: "draft", updated_at: new Date().toISOString() })
+    .eq("id", reportId)
+    .eq("user_id", userId)
+
+  return { jobId }
+}
+
+const applyEditsToBlocks = (analysis: any) => {
+  const experiments = Array.isArray(analysis?.experiments) ? analysis.experiments : []
+  for (const exp of experiments) {
+    const figures = Array.isArray(exp?.figures) ? exp.figures : []
+    const tables = Array.isArray(exp?.tables) ? exp.tables : []
+    const blocks = Array.isArray(exp?.blocks) ? exp.blocks : []
+
+    const figCaptionByLabel = new Map<string, string>()
+    for (const fig of figures) {
+      if (!fig || typeof fig !== "object") continue
+      const label = typeof fig.label === "string" ? fig.label : ""
+      const caption = typeof fig.caption === "string" ? fig.caption : ""
+      if (label) figCaptionByLabel.set(label, caption)
+    }
+
+    const tableCaptionByLabel = new Map<string, string>()
+    for (const tbl of tables) {
+      if (!tbl || typeof tbl !== "object") continue
+      const label = typeof tbl.label === "string" ? tbl.label : ""
+      const caption = typeof tbl.caption === "string" ? tbl.caption : ""
+      if (label) tableCaptionByLabel.set(label, caption)
+    }
+
+    for (const block of blocks) {
+      if (!block || typeof block !== "object") continue
+      if (block.type === "figure" && block.figure && typeof block.figure === "object") {
+        const label = typeof block.figure.label === "string" ? block.figure.label : ""
+        const caption = figCaptionByLabel.get(label)
+        if (typeof caption === "string") block.figure.caption = caption
+      }
+      if (block.type === "table" && block.table && typeof block.table === "object") {
+        const label = typeof block.table.label === "string" ? block.table.label : ""
+        const caption = tableCaptionByLabel.get(label)
+        if (typeof caption === "string") block.table.caption = caption
+      }
+    }
+  }
+}
+
+const applyImageOrderToBlocks = (analysis: any) => {
+  const order = Array.isArray(analysis?.image_order) ? analysis.image_order : []
+  const assets = Array.isArray(analysis?.__assets_images) ? analysis.__assets_images : []
+  if (order.length === 0 || assets.length === 0) return
+
+  const idsByFilename = new Map<string, string[]>()
+  for (const a of assets) {
+    if (!a || typeof a !== "object") continue
+    const imageId = typeof a.image_id === "string" ? a.image_id : ""
+    const filename = typeof a.filename === "string" ? a.filename : ""
+    if (!imageId || !filename) continue
+    const list = idsByFilename.get(filename) || []
+    list.push(imageId)
+    idsByFilename.set(filename, list)
+  }
+
+  const figureBlocks: any[] = []
+  const experiments = Array.isArray(analysis?.experiments) ? analysis.experiments : []
+  for (const exp of experiments) {
+    const blocks = Array.isArray(exp?.blocks) ? exp.blocks : []
+    for (const b of blocks) {
+      if (b && typeof b === "object" && b.type === "figure" && b.figure) figureBlocks.push(b)
+    }
+  }
+
+  const n = Math.min(order.length, figureBlocks.length)
+  for (let i = 0; i < n; i += 1) {
+    const filename = order[i]
+    const list = idsByFilename.get(filename) || []
+    const imageId = list.shift()
+    idsByFilename.set(filename, list)
+    if (!imageId) continue
+    const block = figureBlocks[i]
+    if (block?.figure && typeof block.figure === "object") {
+      block.figure.figure_image_id = imageId
+    }
+  }
+}
+
+export async function renderReportFromSupabaseAnalysis(params: { reportId: string; userId: string }) {
+  const admin = createServiceClient()
+  const { reportId, userId } = params
+
+  const { data: report, error: reportError } = await admin
+    .from("reports")
+    .select("id, user_id")
+    .eq("id", reportId)
+    .maybeSingle()
+  if (reportError) throw new Error(reportError.message)
+  if (!report) throw new Error("レポートが見つかりません")
+  if (report.user_id !== userId) throw new Error("権限がありません")
+
+  await acquireProcessingLock({ reportId, userId })
+
+  // Load saved analysis JSON (TemplateContext + extras).
+  const key = analysisStorageKey(userId, reportId)
+  const { data, error } = await admin.storage.from(EXPERIMENT_BUCKET).download(normalizeStoragePath(key))
+  if (error || !data) throw new Error("分析JSONが見つかりません。先に一度レポート生成を実行してください。")
+  const analysis = JSON.parse(await data.text())
+
+  // Apply UI edits (figures/tables captions) into blocks (used by docxtpl template).
+  applyEditsToBlocks(analysis)
+  // Apply global image order (drag & drop) into figure blocks.
+  applyImageOrderToBlocks(analysis)
+
+  // Build image bytes by image_id (UploadFile.filename == image_id).
+  const assetsImages = Array.isArray(analysis?.__assets_images) ? analysis.__assets_images : []
+  const filenameByImageId = new Map<string, string>()
+  for (const a of assetsImages) {
+    const imageId = typeof a?.image_id === "string" ? a.image_id : ""
+    const filename = typeof a?.filename === "string" ? a.filename : ""
+    if (imageId && filename) filenameByImageId.set(imageId, filename)
+  }
+
+  const { data: files, error: filesError } = await admin
+    .from("experiment_data")
+    .select("file_name, file_type, file_url, uploaded_at")
+    .eq("report_id", reportId)
+  if (filesError) throw new Error(filesError.message)
+
+  const normalizedFiles = (files || []) as ExperimentDataRow[]
+  const imageFiles = normalizedFiles.filter((f) => f.file_type === "image" && f.file_url && f.file_name)
+  const storagePathByFilename = new Map<string, string>()
+  for (const img of imageFiles) {
+    storagePathByFilename.set(img.file_name as string, img.file_url as string)
+  }
+
+  const neededImageIds = new Set<string>()
+  const experiments = Array.isArray(analysis?.experiments) ? analysis.experiments : []
+  for (const exp of experiments) {
+    const blocks = Array.isArray(exp?.blocks) ? exp.blocks : []
+    for (const block of blocks) {
+      if (block?.type === "figure") {
+        const imageId = block?.figure?.figure_image_id
+        if (typeof imageId === "string" && imageId) neededImageIds.add(imageId)
+      }
+    }
+  }
+
+  const form = new FormData()
+  form.append("context_json", JSON.stringify(analysis))
+
+  for (const imageId of neededImageIds) {
+    const filename = filenameByImageId.get(imageId) || ""
+    const storagePath = filename ? storagePathByFilename.get(filename) : undefined
+    if (!storagePath) continue
+    // eslint-disable-next-line no-await-in-loop
+    const bytes = await downloadStorageBytes(storagePath)
+    form.append("images", new Blob([Buffer.from(bytes)], { type: guessMimeType(filename) }), imageId)
+  }
+
+  const res = await agentFetch("/render", { method: "POST", body: form })
+  const arrayBuffer = await res.arrayBuffer()
+  const artifactBytes = Buffer.from(arrayBuffer)
+
+  const artifactKey = await uploadDocxToStorage(userId, reportId, artifactBytes)
+  await admin
+    .from("reports")
+    .update({ status: "completed", file_url: artifactKey, updated_at: new Date().toISOString() })
+    .eq("id", reportId)
+    .eq("user_id", userId)
+
+  return { artifactKey }
+}

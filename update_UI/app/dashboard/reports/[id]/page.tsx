@@ -14,6 +14,83 @@ import { ReportProcessingSteps, type ProcessingStep as ProcessingStatusStep } fr
 
 type ReportStatus = "draft" | "processing" | "completed" | "error"
 
+type AgentProgress = {
+  version?: number
+  job_id?: string
+  status?: string
+  updated_at?: string
+  last_step?: string
+  snapshots?: Array<{ step?: string; storage_key?: string }>
+  stats?: {
+    pdf_pages?: number | null
+    method_tree_count?: number
+    experiments_count?: number
+    images_count?: number
+    tables_count?: number
+    prompts_count?: number
+  }
+  previews?: {
+    method_text?: string
+    discussion_text?: string
+    prompts?: string[]
+    method_tree?: string[]
+  }
+}
+
+const AGENT_STEP_ORDER = [
+  "ingest",
+  "pdf_parse",
+  "pdf_sections",
+  "discussion_extract",
+  "method_extract",
+  "unit_init",
+  "image_analyze",
+  "image_assign",
+  "table_parse",
+  "table_assign",
+  "discussion",
+  "summary",
+  "references",
+  "validate",
+  "render_docx",
+] as const
+
+const STEP_LABEL: Record<string, string> = {
+  ingest: "入力の取り込み",
+  pdf_parse: "PDFテキスト抽出",
+  pdf_sections: "章の検出と切り出し",
+  discussion_extract: "考察課題の抽出",
+  method_extract: "実験方法の構造化",
+  unit_init: "レポート骨子の作成",
+  image_analyze: "画像の解析",
+  image_assign: "画像の割り当て",
+  table_parse: "表の解析",
+  table_assign: "表の割り当て",
+  discussion: "考察本文の生成",
+  summary: "要約の生成",
+  references: "参考文献の生成",
+  validate: "整合性チェック",
+  render_docx: "DOCX生成",
+}
+
+const stepStatusFromProgress = (progress: AgentProgress | null) => {
+  const done = new Set(
+    (progress?.snapshots || [])
+      .map((s) => s?.step)
+      .filter((s): s is string => typeof s === "string" && s.length > 0)
+  )
+  const last = typeof progress?.last_step === "string" ? progress.last_step : ""
+  const lastIndex = AGENT_STEP_ORDER.findIndex((s) => s === last)
+  return (step: string) => {
+    if (done.has(step)) return "done" as const
+    if (last && lastIndex !== -1) {
+      const idx = AGENT_STEP_ORDER.findIndex((s) => s === step)
+      if (idx === lastIndex + 1) return "active" as const
+    }
+    return "pending" as const
+  }
+}
+
 export default function ReportDetailPage() {
   const params = useParams()
   const reportId = params.id as string
@@ -31,6 +108,9 @@ export default function ReportDetailPage() {
   const [mounted, setMounted] = useState(false)
   const [processingOverlayOpen, setProcessingOverlayOpen] = useState(false)
   const [processingSteps, setProcessingSteps] = useState<ProcessingStatusStep[]>([])
+  const [agentProgress, setAgentProgress] = useState<AgentProgress | null>(null)
+  const [agentProgressError, setAgentProgressError] = useState<string>("")
+  const [showAgentDetails, setShowAgentDetails] = useState(false)
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -125,6 +205,52 @@ export default function ReportDetailPage() {
     setMounted(true)
   }, [])
 
+  useEffect(() => {
+    let cancel = false
+    let interval: ReturnType<typeof setInterval> | null = null
+
+    const loadProgress = async () => {
+      try {
+        if (status !== "processing") return
+        const supabase = createClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (!session) return
+
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
+        const endpoint = `${baseUrl}/api/reports/${reportId}/agent-progress`
+        const res = await fetch(endpoint, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        if (!res.ok) return
+        const json = (await res.json()) as { available?: boolean; progress?: AgentProgress }
+        if (cancel) return
+        if (json.available && json.progress) {
+          setAgentProgress(json.progress)
+          setAgentProgressError("")
+        }
+      } catch (e) {
+        if (!cancel) setAgentProgressError(e instanceof Error ? e.message : String(e))
+      }
+    }
+
+    if (status === "processing") {
+      void loadProgress()
+      interval = setInterval(loadProgress, 2500)
+    } else {
+      setAgentProgress(null)
+      setAgentProgressError("")
+      setShowAgentDetails(false)
+    }
+
+    return () => {
+      cancel = true
+      if (interval) clearInterval(interval)
+    }
+  }, [reportId, status])
+
   const baseProcessingSteps = useMemo<ProcessingStatusStep[]>(
     () => [
       {
@@ -148,6 +274,59 @@ export default function ReportDetailPage() {
     ],
     []
   )
+
+  const agentSteps = useMemo<ProcessingStatusStep[] | null>(() => {
+    if (!agentProgress) return null
+    const statusOf = stepStatusFromProgress(agentProgress)
+    return [
+      {
+        key: "pdf",
+        label: "PDFの理解",
+        description: `PDFを読み取り、章を検出して必要箇所を切り出します（ページ数: ${agentProgress.stats?.pdf_pages ?? "?"}）。`,
+        status: ["ingest", "pdf_parse", "pdf_sections"].every((s) => statusOf(s) === "done")
+          ? "done"
+          : ["ingest", "pdf_parse", "pdf_sections"].some((s) => statusOf(s) === "active")
+              ? "active"
+              : "pending",
+      },
+      {
+        key: "extract",
+        label: "課題・方法の抽出",
+        description: `実験方法の構造化（${agentProgress.stats?.method_tree_count ?? 0}件）と、考察の設問抽出（${agentProgress.stats?.prompts_count ?? 0}件）を行います。`,
+        status: ["discussion_extract", "method_extract", "unit_init"].every((s) => statusOf(s) === "done")
+          ? "done"
+          : ["discussion_extract", "method_extract", "unit_init"].some((s) => statusOf(s) === "active")
+              ? "active"
+              : "pending",
+      },
+      {
+        key: "assets",
+        label: "図表の解析と割り当て",
+        description: `画像(${agentProgress.stats?.images_count ?? 0})/表(${agentProgress.stats?.tables_count ?? 0})を解析し、どの実験に対応するか割り当てます。`,
+        status: ["image_analyze", "image_assign", "table_parse", "table_assign"].every((s) => statusOf(s) === "done")
+          ? "done"
+          : ["image_analyze", "image_assign", "table_parse", "table_assign"].some((s) => statusOf(s) === "active")
+              ? "active"
+              : "pending",
+      },
+      {
+        key: "compose",
+        label: "文章の生成と整合性チェック",
+        description: "考察/要約/参考文献を生成し、形式や整合性をチェックします。",
+        status: ["discussion", "summary", "references", "validate"].every((s) => statusOf(s) === "done")
+          ? "done"
+          : ["discussion", "summary", "references", "validate"].some((s) => statusOf(s) === "active")
+              ? "active"
+              : "pending",
+      },
+      {
+        key: "render",
+        label: "DOCX生成",
+        description: "テンプレートに流し込み、DOCXを生成します。",
+        status: statusOf("render_docx"),
+      },
+    ]
+  }, [agentProgress])
 
   const resetProcessingSteps = () => {
     setProcessingSteps(baseProcessingSteps.map((step, idx) => ({ ...step, status: idx === 0 ? "active" : "pending" })))
@@ -320,13 +499,84 @@ export default function ReportDetailPage() {
   }
 
   const processingStepsForDisplay = processingSteps.length ? processingSteps : baseProcessingSteps
+  const stepsForDialog = agentSteps || processingStepsForDisplay
+
+  const agentDetails = useMemo(() => {
+    if (!agentProgress) return null
+    const updatedAt = agentProgress.updated_at ? new Date(agentProgress.updated_at).toLocaleString() : ""
+    const last = agentProgress.last_step ? `${STEP_LABEL[agentProgress.last_step] || agentProgress.last_step}` : "—"
+    const methodTree = agentProgress.previews?.method_tree || []
+    const prompts = agentProgress.previews?.prompts || []
+    const methodText = agentProgress.previews?.method_text || ""
+    const discussionText = agentProgress.previews?.discussion_text || ""
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="space-y-0.5">
+            <div className="text-foreground">最終ステップ: {last}</div>
+            <div className="text-muted-foreground">更新: {updatedAt || "—"}</div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setShowAgentDetails((v) => !v)}>
+            {showAgentDetails ? "詳細を閉じる" : "詳細を見る"}
+          </Button>
+        </div>
+
+        {agentProgressError ? <div className="text-destructive">進捗取得エラー: {agentProgressError}</div> : null}
+
+        {showAgentDetails ? (
+          <div className="space-y-2">
+            {methodTree.length ? (
+              <div>
+                <div className="font-semibold text-foreground mb-1">抽出した実験候補（先頭）</div>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  {methodTree.map((m) => (
+                    <li key={m}>{m}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {prompts.length ? (
+              <div>
+                <div className="font-semibold text-foreground mb-1">抽出した考察課題（先頭）</div>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  {prompts.map((p) => (
+                    <li key={p}>{p}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {methodText ? (
+              <div>
+                <div className="font-semibold text-foreground mb-1">実験方法（抜粋）</div>
+                <pre className="whitespace-pre-wrap rounded-md border bg-background p-2 text-xs text-foreground max-h-40 overflow-auto">
+                  {methodText}
+                </pre>
+              </div>
+            ) : null}
+            {discussionText ? (
+              <div>
+                <div className="font-semibold text-foreground mb-1">考察（抜粋）</div>
+                <pre className="whitespace-pre-wrap rounded-md border bg-background p-2 text-xs text-foreground max-h-40 overflow-auto">
+                  {discussionText}
+                </pre>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    )
+  }, [agentProgress, agentProgressError, showAgentDetails])
 
   return (
     <div className="page-container">
       <ReportProcessingSteps
         open={processingOverlayOpen}
         onOpenChange={setProcessingOverlayOpen}
-        steps={processingStepsForDisplay}
+        title={agentProgress ? "AIがレポートを作成中です" : "AIが処理中です"}
+        headerStatusLabel={agentProgress ? "進行中" : "処理中"}
+        steps={stepsForDialog}
+        details={agentDetails}
         footerNote="再生成中はこの画面を開いたままにしてください。完了すると最新状態で読み込まれます。"
         onCancel={cancelServerProcessing}
         cancelLabel="キャンセル"
@@ -375,6 +625,20 @@ export default function ReportDetailPage() {
             {status === "completed" && (
               <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: "spring" }}>
                 <p className="text-muted-foreground">レポートの生成が完了しました。ダウンロードできます。</p>
+              </motion.div>
+            )}
+
+            {status === "draft" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+                <p className="text-muted-foreground">抽出結果を確認・修正してから、DOCXを生成できます。</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button asChild variant="outline" className="gap-2">
+                    <Link href={`/dashboard/reports/${reportId}/edit`}>
+                      <FileText className="h-4 w-4" />
+                      詳細編集
+                    </Link>
+                  </Button>
+                </div>
               </motion.div>
             )}
 

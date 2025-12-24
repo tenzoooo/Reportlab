@@ -32,7 +32,12 @@ export default function FeedbackPage() {
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
   const [submitted, setSubmitted] = useState(false)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string
+    email: string
+    category: FeedbackCategory
+    message: string
+  }>({
     name: "",
     email: "",
     category: CATEGORY_OPTIONS[0].value,

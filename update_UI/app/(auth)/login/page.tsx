@@ -37,7 +37,7 @@ export default function LoginPage() {
         setLoading(false)
         return
       }
-      router.push("/dashboard")
+      router.push("/dashboard/reports/new")
     } catch (err) {
       setError("ログイン中にエラーが発生しました")
     } finally {

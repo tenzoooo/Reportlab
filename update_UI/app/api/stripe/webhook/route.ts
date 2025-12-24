@@ -4,6 +4,15 @@ import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
+const premiumPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM
+const creditsPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD
+
+const getCreditsForPrice = (id: string) => {
+  if (premiumPriceId && id === premiumPriceId) return 400 // Premium: 400/month
+  if (creditsPriceId && id === creditsPriceId) return 400 // Credit Only: 400/month (adjust if needed)
+  return 0
+}
+
 export async function POST(req: Request) {
   const body = await req.text()
   const signature = (await headers()).get("Stripe-Signature") as string
@@ -143,9 +152,6 @@ export async function POST(req: Request) {
 
         // Determine plan name
         const priceId = subscription.items.data[0].price.id
-        const premiumPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM
-        const creditsPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD
-
         console.log("[WEBHOOK] Received Price ID:", priceId)
         console.log("[WEBHOOK] Expected Premium ID:", premiumPriceId)
         console.log("[WEBHOOK] Expected Credits ID:", creditsPriceId)
@@ -185,13 +191,6 @@ export async function POST(req: Request) {
           console.error("[WEBHOOK] Subscription upsert failed:", upsertError)
         } else {
           console.log("[WEBHOOK] Subscription upsert success")
-        }
-
-        // Add credits depending on price_id
-        const getCreditsForPrice = (id: string) => {
-          if (id === premiumPriceId) return 400 // Premium: 400/month
-          if (id === creditsPriceId) return 400 // Credit Only: 400/month (adjust if needed)
-          return 0
         }
 
         const creditsToAdd = getCreditsForPrice(priceId)

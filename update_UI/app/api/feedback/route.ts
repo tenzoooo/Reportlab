@@ -3,7 +3,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js"
 
 import { logError, logRequest } from "@/lib/server/logger"
 import { createClient } from "@/lib/supabase/server"
-import type { Database } from "@/legacy/lib/supabase/types"
+import type { Database } from "@/lib/supabase/types"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"

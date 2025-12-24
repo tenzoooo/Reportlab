@@ -1,0 +1,548 @@
+# Codex向け：指示書・要件定義書・設計書（LangGraph × docxtpl / chapter_fixed_docxtpl_ready.docx）
+
+本書は、Codexが「そのまま実装を開始できる」粒度で、AIエージェント開発の**指示書**・**要件定義書**・**設計書**を統合したMarkdownである。
+前提テンプレートは **docxtpl対応済みの `chapter_fixed_docxtpl_ready.docx`** を使用する。
+
+---
+
+# 1. 指示書（Codex Implementation Instructions）
+
+## 1.1 目的
+
+LangGraphのワークフローで以下を実現する。
+
+1. 実験書PDF（テキスト抽出可能）から、**実験方法の階層構造**を抽出する
+2. 抽出結果をもとに、テンプレ投入用の **experiments[]（実験結果ユニット）** を生成する
+3. ユーザー入力の
+
+   * グラフ画像（複数）
+   * CSV表（1表ずつコピペ、複数）
+     を解析し、**キャプション/定量コメント/所属ユニット判定**を行い、experimentsに割り当てる
+4. 考察要求（命令形）を「だ・である調」に変換し、考察章を生成する
+5. まとめ章と参考文献を生成する
+6. docxtplでテンプレに流し込み、最終docxを生成する
+7. 途中経過を中間JSONとして保存・返却できる（失敗時も `status=partial`）
+
+---
+
+## 1.2 追加確定要件（ユーザー指定）
+
+### description_brief の生成規則
+
+各実験ユニットの `description_brief` は必ず次の順で構成する。
+
+1. **実験方法の要約**（PDFの実験方法を要約）
+2. **実験結果の簡易説明**（画像/表の割当結果を要約して追記）
+
+* 結果入力がない場合は捏造せず、「結果入力が無いため一般論として述べる」等の注記を入れる。
+* 結果の追記は「上書き」ではなく「追記」である（方法要約を壊さない）。
+
+### キャプション制約
+
+* 画像キャプション `caption` は **15文字以内**（日本語の文字数カウントはUnicodeコードポイント数、空白は除外）
+* 15文字超過は **Validatorでエラー扱い** とし、再試行対象にする
+* 再試行上限到達時は、決定論で **先頭15文字に切り詰め**、`validation_report.warnings` に記録する（黙って切らない）
+
+---
+
+## 1.3 実装タスク順（迷いを排除）
+
+Codexは必ずこの順で実装する。
+
+1. **環境変数ローダ**（互換性を含める）
+2. **データモデル（Pydantic）** と **中間JSONスキーマ** を確定
+3. **LangGraphの最小経路**（PDFのみでdocxレンダリング成功）
+4. **docxtplレンダラ**（filters/InlineImage/Subdoc）
+5. **画像解析ノード**（caption/quant_comment/所属候補）
+6. **画像→experiments割当ノード**（所属確定/blocks追加/description_brief追記）
+7. **CSV表ノード**（構造化/所属候補/blocks追加）
+8. **考察ノード**（命令形→だ・である調、根拠紐付け）
+9. **まとめ・参考文献ノード**
+10. **Validator（再試行制御）**
+11. **API（ジョブ管理）**
+12. **E2Eテスト**（PDF+画像+表で完走）
+
+---
+
+## 1.4 リポジトリ構成（推奨）
+
+```
+app/
+  main.py
+  api/
+    routes_jobs.py
+  core/
+    config.py              # env vars
+    storage.py             # storage interface + impl
+    errors.py
+    retry.py
+    logging.py
+  graph/
+    state.py               # Pydantic State
+    build_graph.py         # LangGraph compile
+    nodes/
+      ingest.py
+      pdf_parse.py
+      method_extract.py
+      unit_init.py
+      image_analyze.py
+      image_assign.py
+      table_parse.py
+      table_assign.py
+      discussion.py
+      summary.py
+      references.py
+      validate.py
+      render_docx.py
+      snapshot.py
+  llm/
+    client.py              # OpenAI wrapper
+    schemas/               # JSON Schema for strict outputs
+    prompts/               # prompt templates
+  templating/
+    filters.py
+    renderer.py            # docxtpl wrapper (InlineImage/Subdoc)
+  models/
+    contracts.py           # Experiment/Block models
+templates/
+  chapter_fixed_docxtpl_ready.docx
+tests/
+  ...
+```
+
+---
+
+## 1.5 絶対に守る設計ルール
+
+* **すべてのLLM出力はJSON**（スキーマで強制、パース失敗は再試行）
+* **caption 15文字以内**（超過は再試行、最終的に切り詰める場合はwarning）
+* **所属判定はスコア付き候補を保持**（確信度が低い場合は `unassigned` で止める）
+* **中間JSONはステップ完了ごとに保存**（障害解析と途中経過返却のため）
+* **再試行は差分**（画像1枚/表1つ/考察のみ。全体やり直しは最終手段）
+* **description_briefは「方法→結果」順で必ず2部構成**（結果がない場合は注記）
+
+---
+
+# 2. 要件定義書（Requirements）
+
+## 2.1 対象と範囲
+
+* 対象：同学科の学生が複数実験で使う汎用レポート生成
+* PDF：実験ごとに変わる（ただしテキスト抽出可能）
+* 入力：PDF、画像、CSV（1表ずつ）
+* 出力：Word（.docx）、中間JSON（保存必須）
+
+---
+
+## 2.2 機能要件
+
+### R1 ジョブ管理
+
+* PDFアップロードでジョブ作成
+* 画像/表を後から追加可能
+* 実行開始、進捗取得、途中経過JSON取得、成果物docx取得が可能
+
+### R2 PDF解析
+
+* 実験方法の階層構造を抽出（見出し番号・節名・本文）
+* 考察要求（命令形）を抽出
+
+### R3 experiments生成
+
+* PDF由来番号を用いた `experiments[]` 骨格を生成
+* `description_brief` は **方法要約＋結果簡易説明** の2部構成
+* 結果入力不足時は捏造しない
+
+### R4 画像解析（必須）
+
+画像ごとに次を生成する。
+
+* `caption`（15文字以内）
+* `quant_comment`（定量優先。不可なら不可と明記して定性）
+* `belongs_to`（所属候補expキー上位3件＋score＋理由）
+* `result_summary`（その画像が示す結果の簡易説明：description_brief追記用）
+
+その後、画像を適切な `experiment.blocks` に `type="figure"` として追加する。
+
+### R5 CSV表解析（必須）
+
+表ごとに次を生成する。
+
+* 構造化（ヘッダ/行、数値判定）
+* `caption`（可能なら15文字以内を推奨。ただし表は制約対象外でもよい。制約にするなら別途）
+* `quant_comment`
+* `belongs_to`（任意。推定困難なら空でもよい）
+  その後、`type="table"` として `experiment.blocks` に追加する。
+
+### R6 考察生成（必須）
+
+* 命令形の要求を叙述に変換（だ・である調）
+* experiments（結果要約）を参照し、根拠ユニットを紐付ける
+* 結果不足時は一般論＋注記
+
+### R7 まとめ・参考文献（必須）
+
+* まとめ：experiments/considerationから2〜5段落で生成（だ・である調）
+* 参考文献：最低1件「実験書PDF（配布資料）」を含める
+
+### R8 バリデーションと再試行（必須）
+
+* 必須キー欠落、caption超過、採番重複、未所属画像/表などを検出
+* 再試行対象（画像/表/考察）を特定し、上限内で差分再試行
+
+---
+
+## 2.3 非機能要件
+
+* 処理時間：重くてもよい
+* 途中経過：必ず返せる（partial）
+* 監査性：中間JSON保存（必要ならLLM入出力ログも保存）
+* 運用：Vercel/Supabase等の環境で動作可能（環境変数で切替）
+
+---
+
+# 3. 設計書（Design）
+
+## 3.1 全体アーキテクチャ
+
+* API（FastAPI推奨）
+* LangGraph（状態機械＋条件分岐＋差分再試行）
+* LLM層（OpenAI）
+* docxtplレンダリング（InlineImage/Subdoc/filters）
+* Storage（抽象化：Local/Supabase/S3）
+
+---
+
+## 3.2 環境変数設計（旧バックエンド互換を含める）
+
+### 3.2.1 OpenAI
+
+* `OPENAI_API_KEY`：必須
+* `OPENAI_MODEL`：使用モデル（必須推奨）
+
+  * 設計方針：
+
+    * `TEXT_MODEL = OPENAI_MODEL`
+    * `VISION_MODEL = OPENAI_VISION_MODEL` があれば優先、なければ `OPENAI_MODEL` を使用
+    * ※将来拡張用に `OPENAI_VISION_MODEL` を新設してもよい（未設定なら互換動作）
+
+### 3.2.2 Python（ローカル/デバッグ）
+
+* `PYTHON_BIN`：任意（サブプロセスを使う場合に利用）
+* `PYTHON_DEBUG`：`1` のとき traceback を中間JSONに含める（PIIに注意）
+
+### 3.2.3 実行モード（互換）
+
+* `USE_REMOTE_PYTHON`：`true` のときリモート実行（現行では未使用なら無視でよいが、読み取って警告ログを出す）
+* `DOCX_DEBUG`：`1` のとき docx生成ログを詳細に
+* `ENABLE_DIFY_DEBUG_LOG`：`true` のとき解析デバッグログ（現行ではDify不要だが、互換でログレベルに反映可能）
+
+### 3.2.4 URL / Vercel
+
+* `NEXT_PUBLIC_BASE_URL`：内部API呼び出しのベースURL（主にフロント用途。バックエンド側は自己URLの整形に使用可）
+* `NEXT_PUBLIC_BACKEND_URL`：フロントがバックエンドを叩くURL（バックは参照不要だが、同居構成ならヘルスチェックURL生成等に使える）
+* `VERCEL` / `VERCEL_URL`：Vercel自動（参照のみ）
+* `VERCEL_PROTECTION_BYPASS_TOKEN` 等：必要時のみ（本システムは値を出力しない）
+
+### 3.2.5 Supabase（ストレージ/DB）
+
+* `NEXT_PUBLIC_SUPABASE_URL`：必須（Supabaseを使う場合）
+* `NEXT_PUBLIC_SUPABASE_ANON_KEY`：フロントで使用（バックでは原則不要）
+* `SUPABASE_SERVICE_ROLE_KEY`：サーバ側必須（Supabase使用時）
+
+### 3.2.6 Feature flags
+
+* `ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT`
+
+  * `true` のとき、画像所属判定に **実験方法テキスト（method_tree要約）** をコンテキストとして渡す
+  * 未設定/その他は無効（画像判定は小節名と結果要約中心）
+
+> 重要：本ドキュメントに **値は書かない**。`.env.local` / Vercel Environment Variables に設定する。
+
+---
+
+## 3.3 テンプレ契約（docxtpl context）
+
+### 3.3.1 必須変数
+
+* `chapter`, `chapter_plus_1`, `chapter_plus_2`
+* `experiments[]`
+* `consideration.units[]`
+* `summary`
+* `consideration.references[]`（参考文献フィルタ用）
+
+### 3.3.2 Experiment/Block（最小）
+
+```json
+{
+  "experiments": [
+    {
+      "idx": "4.2.1",
+      "subidx": "",
+      "name": "反転増幅回路",
+      "description_brief": "（方法要約）…。（結果簡易説明）…。", 
+      "quant_comment": "",
+      "blocks": [
+        {
+          "type": "figure",
+          "figure": {
+            "figure_image": "<InlineImage>",
+            "label": "図 4-1",
+            "caption": "周波数特性",
+            "quant_comment": "…"
+          }
+        },
+        {
+          "type": "table",
+          "table": {
+            "label": "表 4-1",
+            "caption": "測定結果",
+            "body": "<Subdoc>",
+            "quant_comment": "…"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 3.3.3 filters（必須）
+
+* `nl2br(str)->RichText`
+* `consideration_units(units)->str`
+* `reference_lines(consideration)->str`（`[1]文献名　著者名` の複数行）
+
+---
+
+## 3.4 LangGraph設計
+
+## 3.4.1 State（Pydantic推奨）
+
+主要フィールド：
+
+* `status: created|running|partial|done|failed`
+* `job_meta`: job_id, timestamps, retry budgets, model settings
+* `pdf`: text, headings, extracted_questions
+* `method_tree`
+* `experiments[]`
+* `assets.images[]` / `assets.tables[]`
+* `consideration` / `summary`
+* `validation_report`: errors/warnings/retry_targets
+* `snapshots[]`: step, key, ts
+
+---
+
+## 3.4.2 ノード定義
+
+### N1 INGEST
+
+* 入力：PDF、（任意で既存画像・表）
+* 処理：ストレージ保存、job_meta生成
+* 出力：`source_keys` 記録
+
+### N2 PDF_PARSE
+
+* 処理：PDF→テキスト抽出（見出し番号も可能なら抽出）
+* 出力：
+
+  * `pdf.text`
+  * `pdf.headings`
+  * `pdf.consideration_prompts`（命令形抽出）
+
+### N3 METHOD_EXTRACT（LLM）
+
+* 入力：pdf.text（実験方法章候補）
+* 出力：`method_tree`（階層構造）
+
+### N4 UNIT_INIT
+
+* 入力：method_tree
+* 出力：`experiments[]` 骨格（idx/subidx/name）
+* description_brief は「方法要約」をここで作ってもよい（結果追記は後段）
+
+### N5 TABLE_PARSE（表ごと）
+
+* 入力：raw_csv（1表）
+* 出力：table_struct、caption案、quant_comment案、belongs_to候補（任意）
+
+### N6 IMAGE_ANALYZE（画像ごと：Vision）
+
+* 入力：画像、experimentsの小節名一覧
+* 追加入力（feature flag）：
+
+  * `ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT=true` の場合
+
+    * method_treeの要約（各小節の方法要点）も渡す
+* 出力：
+
+  * `caption`（15文字以内）
+  * `quant_comment`
+  * `belongs_to[]`（exp_key, score, rationale）
+  * `result_summary`（結果簡易説明）
+
+### N7 ASSET_ASSIGN（画像/表→experiments）
+
+* 入力：解析結果（belongs_to）
+* 処理：
+
+  * 所属確定（閾値・未確定はunassigned）
+  * `experiments[].blocks[]` へ追加（順序は入力順固定を推奨）
+  * 図/表の採番を確定し `label` を埋める
+  * `description_brief` に結果簡易説明を追記（規則後述）
+
+### N8 DISCUSSION（LLM）
+
+* 入力：pdf.consideration_prompts、experimentsの要約（結果）
+* 出力：consideration.units（だ・である調、根拠紐付け）
+
+### N9 SUMMARY（LLM）
+
+* 入力：experiments + consideration
+* 出力：summary（複数行文字列）
+
+### N10 REFERENCES（ルール＋任意LLM）
+
+* 入力：pdfメタ（実験書名）＋任意追加
+* 出力：consideration.references（最低1件保証）
+
+### N11 VALIDATE
+
+* caption長さ、必須キー、採番重複、未所属、文体、テンプレ適合
+* `retry_targets` を生成（差分再試行用）
+
+### N12 RENDER_DOCX
+
+* docxtplレンダリング
+* InlineImage/Subdoc/filters適用
+* 成果物保存
+
+### N13 SNAPSHOT
+
+* 各主要ノード後に中間JSON保存（必須）
+
+---
+
+## 3.4.3 再試行（条件分岐）
+
+* VALIDATE後に分岐
+
+  * caption超過：該当画像のみ IMAGE_ANALYZE 再試行（上限2）
+  * 所属未確定：method contextフラグがfalseならtrueで再試行（設定が許せば）。それでも無理ならunassignedで止める
+  * docxレンダリング失敗：RENDER 1回だけ再試行。ダメならpartial
+
+---
+
+## 3.5 description_brief の生成詳細（必須ルール）
+
+### 3.5.1 構成テンプレ（固定）
+
+`description_brief = method_summary + "\n" + result_brief`
+
+* method_summary：PDF実験方法の要約（2〜4文を推奨）
+* result_brief：
+
+  * 割り当て済みの画像/表がある場合：
+
+    * 図/表の代表的な傾向を1〜3文で簡潔に
+    * 可能ならquant_commentから数値を1つ入れる（ただし捏造禁止）
+  * 割り当てが無い場合：
+
+    * 「結果入力が無いため、ここでは一般的な傾向を述べる。」等の注記＋一般論（1〜2文）
+
+### 3.5.2 追記の方法（上書き禁止）
+
+* UNIT_INITで method_summary を作成
+* ASSET_ASSIGNで result_brief を生成し追記
+* LLMの出力 `result_summary` はそのまま貼らず、**15〜80文字程度に整形**（Validatorで長すぎる場合はwarning）
+
+---
+
+## 3.6 caption 15文字制約（必須）
+
+### 3.6.1 LLMプロンプトでの強制
+
+* 画像解析プロンプトに以下を必須要件として明記する：
+
+  * 「captionは15文字以内」
+  * 「超える場合は別案を出し直す」
+
+### 3.6.2 Validatorでの最終保証
+
+* `len(caption.replace(" ", "")) <= 15` を満たさない場合：
+
+  1. 再試行余裕あり：該当画像のみ再実行
+  2. 再試行枯渇：先頭15文字に切詰め、warningに記録（元captionも保存）
+
+---
+
+## 3.7 ストレージ設計（Supabase含む）
+
+* `STORAGE_BACKEND` を導入して `local|supabase|s3` を切替可能にする（Codexが実装しやすい）
+* Supabase採用時：
+
+  * `NEXT_PUBLIC_SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` でサーバ側のアップロード/ダウンロードを行う
+* 保存キー例：
+
+  * `jobs/{job_id}/source/manual.pdf`
+  * `jobs/{job_id}/source/images/{image_id}.png`
+  * `jobs/{job_id}/source/tables/{table_id}.csv`
+  * `jobs/{job_id}/snapshots/{ts}_{step}.json`
+  * `jobs/{job_id}/artifact/report.docx`
+
+---
+
+## 3.8 API仕様（最小）
+
+* `POST /jobs`：PDFアップロード→job_id
+* `POST /jobs/{id}/images`：画像追加
+* `POST /jobs/{id}/tables`：CSV文字列追加（1表）
+* `POST /jobs/{id}/run`：実行開始
+* `GET /jobs/{id}`：状態/進捗/validation要約
+* `GET /jobs/{id}/intermediate`：最新中間JSON
+* `GET /jobs/{id}/artifact`：docx取得
+
+---
+
+## 3.9 テスト計画（最低限）
+
+* caption制約テスト（15文字超過→再試行/切詰め）
+* description_brief構成テスト（方法→結果の順が崩れない）
+* blocks順序テスト（入力順保持）
+* 採番テスト（図/表の章内重複なし）
+* PDFのみでレンダリング可能（blocks空でもdocx出力）
+
+---
+
+# 4. Codexに渡すべき追加の「具体タスク指示」（そのまま貼れる）
+
+## Task 1：環境変数の互換ローダを実装
+
+* `OPENAI_API_KEY` と `OPENAI_MODEL` を必須として扱う（未設定なら起動時エラー）
+* `ENABLE_IMAGE_GROUPING_WITH_METHOD_CONTEXT` をboolとして解釈（"true"のみtrue）
+* `DOCX_DEBUG`, `PYTHON_DEBUG` を "1" で有効
+* `NEXT_PUBLIC_SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` がある場合はSupabase Storageを利用できるようにする
+
+## Task 2：ImageAnalyzerのJSON Schemaを厳密にする
+
+必須フィールド：
+
+* `caption`（<=15）
+* `quant_comment`
+* `belongs_to`（上位3件、scoreは0〜1）
+* `result_summary`（description_brief追記用）
+
+失敗時の再試行条件：
+
+* caption超過
+* belongs_toが空
+* JSONパース失敗
+
+## Task 3：description_brief生成の合成処理を実装
+
+* UNIT_INITで `method_summary` を作る
+* 画像/表の割当後に `result_brief` を作って追記し、最終 `description_brief` を完成させる
+
+---
+
+この内容をそのままCodexに渡せば、あなたの追加要件（description_briefの2部構成、caption 15文字制約、旧環境変数の考慮）を満たした形で実装に入れる。

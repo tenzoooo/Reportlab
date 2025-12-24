@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@supabase/supabase-js"
 import { getStripeClient } from "@/lib/stripe/client"
 import { logError, logRequest } from "@/lib/server/logger"
-import type { Database } from "@/legacy/lib/supabase/types"
+import type { Database } from "@/lib/supabase/types"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"

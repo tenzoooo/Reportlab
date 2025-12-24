@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle, Clock3, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type React from "react"
 
 export type ProcessingStepStatus = "pending" | "active" | "done" | "error"
 
@@ -18,7 +19,9 @@ type Props = {
   open: boolean
   onOpenChange?: (open: boolean) => void
   title?: string
+  headerStatusLabel?: string
   steps: ProcessingStep[]
+  details?: React.ReactNode
   footerNote?: string
   onCancel?: () => void
   cancelLabel?: string
@@ -56,7 +59,9 @@ export function ReportProcessingSteps({
   open,
   onOpenChange,
   title = "AIが処理中です",
+  headerStatusLabel = "処理中",
   steps,
+  details,
   footerNote,
   onCancel,
   cancelLabel = "処理を停止",
@@ -72,7 +77,7 @@ export function ReportProcessingSteps({
           <DialogTitle className="flex items-center justify-between">
             <span>{title}</span>
             <Badge variant="outline" className="text-xs">
-              処理中
+              {headerStatusLabel}
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -110,6 +115,8 @@ export function ReportProcessingSteps({
               </div>
             ))}
           </div>
+
+          {details ? <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">{details}</div> : null}
 
           <div className="flex items-center justify-between gap-3">
             {footerNote ? <p className="text-xs text-muted-foreground">{footerNote}</p> : <span />}

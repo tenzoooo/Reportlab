@@ -79,6 +79,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "three": "latest",
+    "undici": "^7.16.0",
     "vaul": "^0.9.9",
     "zod": "3.25.76"
   },
@@ -88,6 +89,7 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.182.0",
     "dotenv": "^17.2.3",
     "next-sitemap": "^4.2.3",
     "node-fetch": "^3.3.2",

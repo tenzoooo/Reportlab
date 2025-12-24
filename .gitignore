@@ -11,6 +11,7 @@ coverage/
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+*.tsbuildinfo
 
 # Editor
 .DS_Store
@@ -20,6 +21,18 @@ pnpm-debug.log*
 # Env
 .env
 .env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+.venv*/
+
+# Agent runtime artifacts
+.agent_data/
 
 # Supabase
 update_UI/supabase/.temp/

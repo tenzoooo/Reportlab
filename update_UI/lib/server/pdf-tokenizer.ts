@@ -21,7 +21,8 @@ export type TokenCountResult = {
  * Extracts plain text from a PDF buffer on the server.
  */
 export const extractPdfText = async (buffer: Buffer): Promise<PdfTextResult> => {
-  const { default: parsePdf } = await import("pdf-parse/node")
+  const mod = await import("pdf-parse/node")
+  const parsePdf = (mod as unknown as { default?: (b: Buffer) => Promise<any> }).default ?? (mod as unknown as any)
   const { text, numpages } = await parsePdf(buffer)
   return {
     text: text ?? "",
