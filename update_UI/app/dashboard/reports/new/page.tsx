@@ -25,7 +25,6 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Progress } from "@/components/ui/progress"
 import { createClient } from "@/lib/supabase/client"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ReportProcessingSteps, type ProcessingStep as ProcessingStatusStep } from "@/components/report-processing-steps"
 
 
@@ -96,7 +95,8 @@ const getFileExtension = (fileName: string): string | undefined => {
 }
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "bmp", "webp", "heic", "heif", "tiff", "tif", "svg"])
-const TABLE_FILE_EXTENSIONS = new Set(["csv", "json"])
+const TABLE_FILE_EXTENSIONS = new Set(["csv", "json", "xlsx", "xlsm"])
+const EXCEL_TABLE_EXTENSIONS = new Set(["xlsx", "xlsm"])
 
 const isPdfFile = (file: File) => file.type === "application/pdf" || getFileExtension(file.name) === "pdf"
 
@@ -109,6 +109,62 @@ const isImageFile = (file: File) => {
 const isTableFile = (file: File) => {
   const ext = getFileExtension(file.name)
   return Boolean(ext && TABLE_FILE_EXTENSIONS.has(ext))
+}
+
+type ExcelImagePreview = {
+  id: string
+  sourceKey: string
+  sourceName: string
+  fileName: string
+  mimeType: string
+  url: string
+  size: number
+}
+
+type ExcelZipMeta = {
+  media_count: number
+  embeddings_image_count: number
+  charts_count: number
+  drawings_count: number
+}
+
+const excelSourceKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}`
+const tableFileKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}`
+
+const isExcelTableFile = (file: File) => {
+  const ext = getFileExtension(file.name)
+  return Boolean(ext && EXCEL_TABLE_EXTENSIONS.has(ext))
+}
+
+const guessImageMimeType = (filename: string) => {
+  const lower = filename.toLowerCase()
+  if (lower.endsWith(".png")) return "image/png"
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg"
+  if (lower.endsWith(".webp")) return "image/webp"
+  if (lower.endsWith(".gif")) return "image/gif"
+  if (lower.endsWith(".bmp")) return "image/bmp"
+  if (lower.endsWith(".tif") || lower.endsWith(".tiff")) return "image/tiff"
+  if (lower.endsWith(".svg")) return "image/svg+xml"
+  return "application/octet-stream"
+}
+
+const isBrowserRenderablePreview = (preview: Pick<ExcelImagePreview, "fileName" | "mimeType">) => {
+  if (preview.mimeType.startsWith("image/svg")) return true
+  if (!preview.mimeType.startsWith("image/")) return false
+  const ext = getFileExtension(preview.fileName || "")
+  if (!ext) return false
+  // Commonly supported in modern browsers. (heic/heif/tiff are often not.)
+  return ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"].includes(ext)
+}
+
+const normalizeZipPath = (zipPath: string) => zipPath.replace(/\\/g, "/").replace(/^\/+/, "")
+
+const isLikelyImagePath = (zipPath: string) => {
+  const normalized = normalizeZipPath(zipPath).toLowerCase()
+  const ext = (normalized.match(/\.([a-z0-9]+)$/)?.[1] || "").toLowerCase()
+  if (!ext) return false
+  // Include EMF/WMF because Excel often stores pasted objects as those.
+  return ["png", "jpg", "jpeg", "gif", "bmp", "webp", "tif", "tiff", "svg", "emf", "wmf"].includes(ext)
 }
 
 const parseHtmlTable = (html: string): string[][] => {
@@ -228,6 +284,14 @@ export default function NewReportPage() {
   const [reportTitle, setReportTitle] = useState("")
   const [figureImages, setFigureImages] = useState<File[]>([])
   const [tableFiles, setTableFiles] = useState<File[]>([])
+  const [excelImagePreviews, setExcelImagePreviews] = useState<ExcelImagePreview[]>([])
+  const [excelZipMetaBySourceKey, setExcelZipMetaBySourceKey] = useState<Record<string, ExcelZipMeta>>({})
+  const [excelExtracting, setExcelExtracting] = useState<Record<string, boolean>>({})
+  const [excelExtractErrors, setExcelExtractErrors] = useState<Record<string, string>>({})
+  const processedExcelPreviewKeysRef = useRef<Set<string>>(new Set())
+  const excelImagePreviewsRef = useRef<ExcelImagePreview[]>([])
+  const tableFilesRef = useRef<File[]>([])
+  const tableFileKeysRef = useRef<Set<string>>(new Set())
   const [pastedTables, setPastedTables] = useState<{ id: string; rows: string[][] }[]>([])
   const [existingPdf, setExistingPdf] = useState<{ name: string; path: string } | null>(null)
   const [existingImages, setExistingImages] = useState<{ name: string }[]>([])
@@ -248,9 +312,53 @@ export default function NewReportPage() {
   const [showAgentDetails, setShowAgentDetails] = useState(false)
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null)
-  const [creationMode, setCreationMode] = useState<"workflow" | "hitl">("workflow")
   const hasUploadedTables = pastedTables.length > 0 || tableFiles.length > 0 || existingTables.length > 0
   const hasFigureUploads = figureImages.length > 0 || existingImages.length > 0
+  const excelTableFiles = useMemo(() => {
+    const seen = new Set<string>()
+    const unique: File[] = []
+    for (const f of tableFiles) {
+      if (!isExcelTableFile(f)) continue
+      const key = excelSourceKey(f)
+      if (seen.has(key)) continue
+      seen.add(key)
+      unique.push(f)
+    }
+    return unique
+  }, [tableFiles])
+  const excelPreviewsBySourceKey = useMemo(() => {
+    const map = new Map<string, ExcelImagePreview[]>()
+    for (const preview of excelImagePreviews) {
+      const list = map.get(preview.sourceKey) || []
+      list.push(preview)
+      map.set(preview.sourceKey, list)
+    }
+    for (const [, list] of map) {
+      list.sort((a, b) => a.fileName.localeCompare(b.fileName))
+    }
+    return map
+  }, [excelImagePreviews])
+
+  useEffect(() => {
+    excelImagePreviewsRef.current = excelImagePreviews
+  }, [excelImagePreviews])
+
+  useEffect(() => {
+    tableFilesRef.current = tableFiles
+    tableFileKeysRef.current = new Set(tableFiles.map((f) => tableFileKey(f)))
+  }, [tableFiles])
+
+  useEffect(() => {
+    return () => {
+      excelImagePreviewsRef.current.forEach((p) => {
+        try {
+          URL.revokeObjectURL(p.url)
+        } catch {
+          // ignore
+        }
+      })
+    }
+  }, [])
   const hasPdfSelected = Boolean(experimentPdf || existingPdf)
 
   const processingDetailSteps = useMemo<ProcessingStatusStep[]>(() => {
@@ -286,17 +394,15 @@ export default function NewReportPage() {
     }
 
     steps.push({
-      key: creationMode === "hitl" ? "prepare" : "generate",
-      label: creationMode === "hitl" ? "編集用データを作成" : "DOCX生成",
+      key: "prepare",
+      label: "編集用データを作成",
       description:
-        creationMode === "hitl"
-          ? "抽出結果を保存し、編集画面で確認・修正してから生成できる状態にしています。"
-          : "テンプレートにデータを流し込み、レポートを生成しています。",
+        "抽出結果を保存し、編集画面で確認・修正してから生成できる状態にしています。",
       status: deriveStatus(hasFigureUploads ? 3 : 2),
     })
 
     return steps
-  }, [creationMode, currentStep, hasFigureUploads, isProcessing])
+  }, [currentStep, hasFigureUploads, isProcessing])
 
   const confirmStopProcessing = () => {
     const ok = window.confirm("レポート作成の処理を停止しますか？\n（途中までの生成結果は破棄される可能性があります）")
@@ -601,15 +707,210 @@ export default function NewReportPage() {
 
   const canUploadPaidAssets = subscriptionPlan === "premium" || subscriptionPlan === "standard"
 
+  const removeExcelImagePreviewsBySourceKey = (sourceKey: string) => {
+    processedExcelPreviewKeysRef.current.delete(sourceKey)
+    setExcelExtracting((prev) => {
+      if (!prev[sourceKey]) return prev
+      const next = { ...prev }
+      delete next[sourceKey]
+      return next
+    })
+    setExcelExtractErrors((prev) => {
+      if (!prev[sourceKey]) return prev
+      const next = { ...prev }
+      delete next[sourceKey]
+      return next
+    })
+    setExcelImagePreviews((prev) => {
+      const removed = prev.filter((p) => p.sourceKey === sourceKey)
+      removed.forEach((p) => {
+        try {
+          URL.revokeObjectURL(p.url)
+        } catch {
+          // ignore
+        }
+      })
+      return prev.filter((p) => p.sourceKey !== sourceKey)
+    })
+  }
+
+  const extractExcelImagePreviews = async (file: File) => {
+    const sourceKey = excelSourceKey(file)
+    setExcelExtracting((prev) => ({ ...prev, [sourceKey]: true }))
+    setExcelExtractErrors((prev) => {
+      if (!prev[sourceKey]) return prev
+      const next = { ...prev }
+      delete next[sourceKey]
+      return next
+    })
+
+    try {
+      const mod = await import("pizzip")
+      const PizZip = mod.default
+      const arrayBuffer = await file.arrayBuffer()
+      const zip = new PizZip(new Uint8Array(arrayBuffer) as any)
+      const zipFiles = (zip as any)?.files || {}
+
+      const zipPaths = Object.keys(zipFiles).map((p) => normalizeZipPath(p))
+      const meta: ExcelZipMeta = {
+        media_count: zipPaths.filter((p) => p.toLowerCase().startsWith("xl/media/")).length,
+        embeddings_image_count: zipPaths.filter((p) => p.toLowerCase().startsWith("xl/embeddings/") && isLikelyImagePath(p)).length,
+        charts_count: zipPaths.filter((p) => p.toLowerCase().startsWith("xl/charts/")).length,
+        drawings_count: zipPaths.filter((p) => p.toLowerCase().startsWith("xl/drawings/")).length,
+      }
+      setExcelZipMetaBySourceKey((prev) => ({ ...prev, [sourceKey]: meta }))
+
+      const entries = Object.entries(zipFiles)
+        .filter(([zipPath, entry]) => {
+          const normalized = normalizeZipPath(zipPath).toLowerCase()
+          if ((entry as any)?.dir) return false
+          if (normalized.startsWith("xl/media/")) return true
+          if (normalized.startsWith("xl/embeddings/") && isLikelyImagePath(normalized)) return true
+          return false
+        })
+        .sort(([a], [b]) => normalizeZipPath(a).localeCompare(normalizeZipPath(b)))
+
+      const maxPreviewsPerWorkbook = 24
+      const maxImageBytes = 10 * 1024 * 1024
+      const stem = file.name.replace(/\.(xlsx|xlsm)$/i, "") || "excel"
+
+      const previews: ExcelImagePreview[] = []
+      for (let i = 0; i < entries.length && previews.length < maxPreviewsPerWorkbook; i += 1) {
+        const [zipPath, entry] = entries[i]
+        const normalizedPath = normalizeZipPath(zipPath)
+        const base = normalizedPath.split("/").pop() || `image-${i + 1}`
+        const fileName = `${stem}-${base}`
+        const asUint8Array = (entry as any)?.asUint8Array
+        const asArrayBuffer = (entry as any)?.asArrayBuffer
+        const asBinary = (entry as any)?.asBinary
+
+        let bytes: Uint8Array | null = null
+        if (typeof asUint8Array === "function") {
+          const rawBytes = asUint8Array.call(entry) as Uint8Array
+          bytes = new Uint8Array(rawBytes)
+        } else if (typeof asArrayBuffer === "function") {
+          const rawBuffer = asArrayBuffer.call(entry) as ArrayBuffer
+          bytes = new Uint8Array(rawBuffer)
+        } else if (typeof asBinary === "function") {
+          const binary = asBinary.call(entry) as string
+          const buf = new Uint8Array(binary.length)
+          for (let j = 0; j < binary.length; j += 1) {
+            buf[j] = binary.charCodeAt(j) & 0xff
+          }
+          bytes = buf
+        }
+
+        if (!bytes) continue
+        if (!bytes || bytes.byteLength === 0) continue
+        if (bytes.byteLength > maxImageBytes) continue
+
+        const mimeType = guessImageMimeType(fileName)
+        const bytesForBlob = new Uint8Array(bytes.byteLength)
+        bytesForBlob.set(bytes)
+        const blob = new Blob([bytesForBlob], { type: mimeType })
+        const url = URL.createObjectURL(blob)
+
+        previews.push({
+          id: `${sourceKey}:${normalizedPath}`,
+          sourceKey,
+          sourceName: file.name,
+          fileName,
+          mimeType,
+          url,
+          size: bytes.byteLength,
+        })
+      }
+
+      if (entries.length === 0) {
+        setExcelExtractErrors((prev) => ({
+          ...prev,
+          [sourceKey]: meta.charts_count > 0
+            ? `画像が見つかりませんでした（このExcelにはグラフが ${meta.charts_count} 個ありますが、グラフは画像ファイルとして保存されないため抽出できません。「グラフを画像として保存」または「図として貼り付け」で埋め込み画像にしてください）`
+            : "画像が見つかりませんでした（この .xlsx に埋め込み画像がない/リンク画像/保護されたファイル/.xls の可能性があります）",
+        }))
+      } else if (previews.length === 0) {
+        setExcelExtractErrors((prev) => ({
+          ...prev,
+          [sourceKey]:
+            `画像ファイルは検出しましたが、プレビューを作成できませんでした（検出=${entries.length}）。サイズ制限/形式（emf/wmf等）で表示できない可能性があります。`,
+        }))
+      }
+
+      setExcelImagePreviews((prev) => {
+        const removed = prev.filter((p) => p.sourceKey === sourceKey)
+        removed.forEach((p) => {
+          try {
+            URL.revokeObjectURL(p.url)
+          } catch {
+            // ignore
+          }
+        })
+        return [...prev.filter((p) => p.sourceKey !== sourceKey), ...previews]
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setExcelExtractErrors((prev) => ({ ...prev, [sourceKey]: msg }))
+      processedExcelPreviewKeysRef.current.delete(sourceKey)
+      setExcelImagePreviews((prev) => {
+        const removed = prev.filter((p) => p.sourceKey === sourceKey)
+        removed.forEach((p) => {
+          try {
+            URL.revokeObjectURL(p.url)
+          } catch {
+            // ignore
+          }
+        })
+        return prev.filter((p) => p.sourceKey !== sourceKey)
+      })
+    } finally {
+      setExcelExtracting((prev) => ({ ...prev, [sourceKey]: false }))
+    }
+  }
+
+  const queueExcelImagePreviewExtraction = (files: File[]) => {
+    const excelFiles = files.filter((f) => isExcelTableFile(f))
+    if (excelFiles.length === 0) return
+    for (const file of excelFiles) {
+      const sourceKey = excelSourceKey(file)
+      if (processedExcelPreviewKeysRef.current.has(sourceKey)) continue
+      processedExcelPreviewKeysRef.current.add(sourceKey)
+      void extractExcelImagePreviews(file)
+    }
+  }
+
   const addTableFiles = (files: File[]) => {
     const normalized = files.filter((f) => isTableFile(f))
     if (normalized.length > 0) {
-      setTableFiles((prev) => [...prev, ...normalized])
+      const uniqueToAdd: File[] = []
+      for (const f of normalized) {
+        const key = tableFileKey(f)
+        if (tableFileKeysRef.current.has(key)) continue
+        tableFileKeysRef.current.add(key)
+        uniqueToAdd.push(f)
+      }
+      if (uniqueToAdd.length > 0) {
+        setTableFiles((prev) => [...prev, ...uniqueToAdd])
+        queueExcelImagePreviewExtraction(uniqueToAdd)
+      }
     }
   }
 
   const removeTableFile = (index: number) => {
-    setTableFiles((prev) => prev.filter((_, i) => i !== index))
+    setTableFiles((prev) => {
+      const removed = prev[index]
+      const next = prev.filter((_, i) => i !== index)
+      if (removed) {
+        tableFileKeysRef.current.delete(tableFileKey(removed))
+      }
+      if (removed && isExcelTableFile(removed)) {
+        const key = excelSourceKey(removed)
+        const stillExists = next.some((f) => isExcelTableFile(f) && excelSourceKey(f) === key)
+        if (!stillExists) {
+          removeExcelImagePreviewsBySourceKey(key)
+        }
+      }
+      return next
+    })
   }
 
   const clearAddedFilesLabelLater = () => {
@@ -645,7 +946,9 @@ export default function NewReportPage() {
       }
 
       if (isTableFile(file)) {
-        if (!canUploadPaidAssets) continue
+        // Excel画像の自動抽出はユーザーが結果を確認しやすいので、プラン判定前でも追加できるようにする。
+        // それ以外の表（CSV/JSON）は従来通り有料プランのみ。
+        if (!canUploadPaidAssets && !isExcelTableFile(file)) continue
         addTableFiles([file])
         addedTables += 1
         continue
@@ -1018,13 +1321,13 @@ export default function NewReportPage() {
       }
 
       // 4) Dify を使うバックエンドの生成APIを呼び出し（Authorization: Bearer <token>）
-      setCurrentStep(3)
+      setCurrentStep(hasFigureUploads ? 3 : 2)
       const token = session.access_token
       const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || ""
       const destination: ProcessingState["destination"] = "edit"
       setProcessingDestination("edit")
 
-      const endpoint = `${baseUrl}${creationMode === "hitl" ? "/api/reports/prepare" : "/api/reports/extract"}`
+      const endpoint = `${baseUrl}/api/reports/prepare`
       debugUpload("handleSubmit:generate-api:start", { endpoint })
       const res = await fetch(endpoint, {
         method: "POST",
@@ -1034,11 +1337,6 @@ export default function NewReportPage() {
         },
         body: JSON.stringify({
           reportId,
-          ...(creationMode === "hitl"
-            ? {}
-            : {
-                // workflowType は固定（サーバー側で既定を採用）
-              }),
         }),
       })
       if (!res.ok) {
@@ -1109,7 +1407,7 @@ export default function NewReportPage() {
         className="mb-8"
       >
         <h1 className="text-3xl font-bold text-foreground mb-2">新規レポート作成</h1>
-        <p className="text-muted-foreground">実験書PDFをアップロードして、自動でレポートを生成します</p>
+        <p className="text-muted-foreground">実験書PDFをアップロードして、編集用データを作成します</p>
         {error && (
           <p className="mt-2 text-sm text-red-600">{error}</p>
         )}
@@ -1219,10 +1517,10 @@ export default function NewReportPage() {
                     multiple
                     onChange={handleFileSelect}
                     className="sr-only"
-                    accept=".pdf,application/pdf,image/*,.csv,.json,text/csv,application/json"
+                    accept=".pdf,application/pdf,image/*,.csv,.json,.xlsx,.xlsm,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   />
                   <p className="text-sm text-muted-foreground mb-3">
-                    実験書PDFは必須です。画像・表（CSV/JSON）・過去レポート（DOCX）は任意で追加できます。
+                    実験書PDFは必須です。画像・表（CSV/JSON/XLSX）・過去レポート（DOCX）は任意で追加できます。
                   </p>
 
                   <div
@@ -1246,7 +1544,7 @@ export default function NewReportPage() {
                         </span>
                       </Button>
                     </label>
-                    <p className="text-xs text-muted-foreground mt-3">対応: PDF / 画像 / CSV / JSON</p>
+                    <p className="text-xs text-muted-foreground mt-3">対応: PDF / 画像 / CSV / JSON / XLSX</p>
                     {!canUploadPaidAssets ? (
                       <p className="text-xs text-muted-foreground">※ 画像/表は有料プラン限定です（PDFは利用可能）</p>
                     ) : null}
@@ -1279,6 +1577,7 @@ export default function NewReportPage() {
                             画像: {figureImages.length}
                             {existingImages.length ? `（既存 ${existingImages.length}）` : ""} / 表: {tableFiles.length}
                             {existingTables.length ? `（既存 ${existingTables.length}）` : ""}
+                            {excelTableFiles.length ? ` / Excel画像(プレビュー): ${excelImagePreviews.length}` : ""}
                           </p>
                           {lastAddedFilesLabel ? <CompletionBadge label={lastAddedFilesLabel} /> : null}
                         </div>
@@ -1317,7 +1616,7 @@ export default function NewReportPage() {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    コピーした表を貼り付けると参照用データとして保存されます。CSV/JSONファイルは上のアップローダーから追加できます。
+                    コピーした表を貼り付けると参照用データとして保存されます。CSV/JSON/XLSXファイルは上のアップローダーから追加できます。
                   </p>
 
                   {subscriptionPlan === "premium" || subscriptionPlan === "standard" ? (
@@ -1428,6 +1727,98 @@ export default function NewReportPage() {
                         {lastAddedImageLabel ? <CompletionBadge label={lastAddedImageLabel} /> : null}
                       </div>
 
+                      {excelTableFiles.length > 0 ? (
+                        <div className="mt-3 space-y-2 rounded-md border bg-muted/10 p-3">
+                          <p className="text-xs font-semibold text-muted-foreground">Excelから抽出される画像（プレビュー）</p>
+                          <p className="text-xs text-muted-foreground">
+                            アップロードしたExcel内の埋め込み画像は送信後に自動抽出されます。ここで事前に確認できます（クリックで拡大）。
+                          </p>
+                          <div className="space-y-3">
+                            {excelTableFiles.map((file, idx) => {
+                              const key = excelSourceKey(file)
+                              const previews = excelPreviewsBySourceKey.get(key) || []
+                              const isLoading = Boolean(excelExtracting[key])
+                              const errorText = excelExtractErrors[key]
+                              const meta = excelZipMetaBySourceKey[key]
+                              return (
+                                <div key={`${key}:${idx}`} className="rounded-md border bg-background p-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="space-y-1">
+                                      <p className="text-xs font-semibold text-foreground break-all">{file.name}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {isLoading ? (
+                                          <span className="inline-flex items-center gap-1">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            抽出中...
+                                          </span>
+                                        ) : (
+                                          `${previews.length} 枚`
+                                        )}
+                                      </p>
+                                      {meta ? (
+                                        <p className="text-[10px] text-muted-foreground">
+                                          検出: media={meta.media_count} / embeddings={meta.embeddings_image_count} / charts={meta.charts_count}
+                                        </p>
+                                      ) : null}
+                                      {errorText ? (
+                                        <p className="text-xs text-destructive break-all">抽出に失敗しました: {errorText}</p>
+                                      ) : null}
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={isLoading}
+                                      onClick={() => {
+                                        processedExcelPreviewKeysRef.current.delete(key)
+                                        void extractExcelImagePreviews(file)
+                                      }}
+                                    >
+                                      再抽出
+                                    </Button>
+                                  </div>
+
+                                  {previews.length > 0 ? (
+                                    <div className="mt-2 grid grid-cols-4 gap-2">
+                                      {previews.slice(0, 8).map((p) => (
+                                        <a
+                                          key={p.id}
+                                          href={p.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="block rounded border bg-muted/20 hover:bg-muted/30"
+                                        >
+                                          {isBrowserRenderablePreview(p) ? (
+                                            <img
+                                              src={p.url}
+                                              alt={p.fileName}
+                                              className="h-16 w-full object-contain p-1"
+                                              loading="lazy"
+                                            />
+                                          ) : (
+                                            <div className="h-16 w-full p-1 flex items-center justify-center">
+                                              <div className="w-full h-full rounded bg-muted/40 flex flex-col items-center justify-center">
+                                                <span className="text-[10px] font-semibold text-muted-foreground">
+                                                  {(getFileExtension(p.fileName) || "file").toUpperCase()}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground">クリックで開く</span>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </a>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                  {previews.length > 8 ? (
+                                    <p className="mt-2 text-xs text-muted-foreground">※ プレビューは最大 8 枚まで表示します</p>
+                                  ) : null}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+
                       {figureImages.length > 0 && (
                         <div className="space-y-3">
                           <p className="text-xs text-muted-foreground">
@@ -1506,16 +1897,110 @@ export default function NewReportPage() {
                       )}
                     </>
                   ) : (
-                    <div className="relative rounded-md border border-dashed p-6 bg-muted/30 flex flex-col items-center justify-center text-center space-y-3">
-                      <Lock className="w-8 h-8 text-muted-foreground" />
-                      <div>
-                        <p className="font-semibold text-foreground">この機能はPremiumプラン限定です</p>
-                        <p className="text-sm text-muted-foreground mt-1">実験結果の画像をアップロードして、レポート内に自動挿入できます。</p>
+                    <>
+                      <div className="relative rounded-md border border-dashed p-6 bg-muted/30 flex flex-col items-center justify-center text-center space-y-3">
+                        <Lock className="w-8 h-8 text-muted-foreground" />
+                        <div>
+                          <p className="font-semibold text-foreground">この機能はPremiumプラン限定です</p>
+                          <p className="text-sm text-muted-foreground mt-1">実験結果の画像をアップロードして、レポート内に自動挿入できます。</p>
+                        </div>
+                        <Button variant="default" size="sm" onClick={() => router.push("/dashboard/settings?tab=subscription")}>
+                          Premiumにアップグレード
+                        </Button>
                       </div>
-                      <Button variant="default" size="sm" onClick={() => router.push("/dashboard/settings?tab=subscription")}>
-                        Premiumにアップグレード
-                      </Button>
-                    </div>
+
+                      {excelTableFiles.length > 0 ? (
+                        <div className="mt-3 space-y-2 rounded-md border bg-muted/10 p-3">
+                          <p className="text-xs font-semibold text-muted-foreground">Excelから抽出される画像（プレビュー）</p>
+                          <p className="text-xs text-muted-foreground">
+                            手動の画像アップロードは有料プラン限定ですが、Excel内の画像プレビューはここで確認できます。
+                          </p>
+                          <div className="space-y-3">
+                            {excelTableFiles.map((file, idx) => {
+                              const key = excelSourceKey(file)
+                              const previews = excelPreviewsBySourceKey.get(key) || []
+                              const isLoading = Boolean(excelExtracting[key])
+                              const errorText = excelExtractErrors[key]
+                              const meta = excelZipMetaBySourceKey[key]
+                              return (
+                                <div key={`${key}:${idx}`} className="rounded-md border bg-background p-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="space-y-1">
+                                      <p className="text-xs font-semibold text-foreground break-all">{file.name}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {isLoading ? (
+                                          <span className="inline-flex items-center gap-1">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            抽出中...
+                                          </span>
+                                        ) : (
+                                          `${previews.length} 枚`
+                                        )}
+                                      </p>
+                                      {meta ? (
+                                        <p className="text-[10px] text-muted-foreground">
+                                          検出: media={meta.media_count} / embeddings={meta.embeddings_image_count} / charts={meta.charts_count}
+                                        </p>
+                                      ) : null}
+                                      {errorText ? (
+                                        <p className="text-xs text-destructive break-all">抽出に失敗しました: {errorText}</p>
+                                      ) : null}
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={isLoading}
+                                      onClick={() => {
+                                        processedExcelPreviewKeysRef.current.delete(key)
+                                        void extractExcelImagePreviews(file)
+                                      }}
+                                    >
+                                      再抽出
+                                    </Button>
+                                  </div>
+
+                                  {previews.length > 0 ? (
+                                    <div className="mt-2 grid grid-cols-4 gap-2">
+                                      {previews.slice(0, 8).map((p) => (
+                                        <a
+                                          key={p.id}
+                                          href={p.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="block rounded border bg-muted/20 hover:bg-muted/30"
+                                        >
+                                          {isBrowserRenderablePreview(p) ? (
+                                            <img
+                                              src={p.url}
+                                              alt={p.fileName}
+                                              className="h-16 w-full object-contain p-1"
+                                              loading="lazy"
+                                            />
+                                          ) : (
+                                            <div className="h-16 w-full p-1 flex items-center justify-center">
+                                              <div className="w-full h-full rounded bg-muted/40 flex flex-col items-center justify-center">
+                                                <span className="text-[10px] font-semibold text-muted-foreground">
+                                                  {(getFileExtension(p.fileName) || "file").toUpperCase()}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground">クリックで開く</span>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </a>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                  {previews.length > 8 ? (
+                                    <p className="mt-2 text-xs text-muted-foreground">※ プレビューは最大 8 枚まで表示します</p>
+                                  ) : null}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
                   )}
                 </div>
 
@@ -1537,47 +2022,6 @@ export default function NewReportPage() {
                       className="h-12 text-base"
                     />
                   </motion.div>
-                )}
-
-                {hasPdfSelected && (
-                  <div className="space-y-4 pt-4 border-t border-border">
-                    <Label className="text-base font-semibold">作成形式</Label>
-                    <RadioGroup
-                      value={creationMode}
-                      onValueChange={(val) => setCreationMode(val as "workflow" | "hitl")}
-                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                    >
-                      <div className="h-full">
-                        <Label
-                          htmlFor="create-workflow"
-                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-full"
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <RadioGroupItem value="workflow" id="create-workflow" className="peer" />
-                            <span className="text-lg font-bold">一括生成</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground text-left">
-                            すぐにDOCXまで生成します（従来のフロー）。
-                          </span>
-                        </Label>
-                      </div>
-
-                      <div className="h-full">
-                        <Label
-                          htmlFor="create-hitl"
-                          className="flex flex-col items-start justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer h-full"
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <RadioGroupItem value="hitl" id="create-hitl" className="peer" />
-                            <span className="text-lg font-bold">編集して作成 (HITL)</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground text-left">
-                            まず抽出結果を保存し、編集画面で確認・修正してから生成します。
-                          </span>
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
                 )}
 
                 {/* 生成ワークフロー選択（通常/最適化/過去レポ再現）は廃止 */}

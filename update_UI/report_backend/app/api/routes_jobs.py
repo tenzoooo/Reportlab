@@ -7,6 +7,7 @@ import time
 import uuid
 from typing import Optional
 
+import anyio
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
@@ -55,7 +56,12 @@ def _ext_from_filename(filename: str) -> str:
 
 
 def _langsmith_enabled() -> bool:
-    value = (os.environ.get("LANGSMITH_TRACING") or os.environ.get("LANGCHAIN_TRACING_V2") or "").strip().lower()
+    value = (
+        os.environ.get("LANGSMITH_TRACING")
+        or os.environ.get("LANGSMITH_TRACING_V2")
+        or os.environ.get("LANGCHAIN_TRACING_V2")
+        or ""
+    ).strip().lower()
     return value in {"1", "true", "yes", "y", "on"}
 
 
@@ -517,30 +523,32 @@ def build_router(*, storage: Storage, llm: LLMClient, template_path: str) -> API
                 },
             }
 
-            if _langsmith_enabled():
-                try:
-                    from langsmith import traceable
+            def _invoke_sync():
+                if _langsmith_enabled():
+                    try:
+                        from langsmith import traceable
 
-                    @traceable(
-                        name="report_agent_run",
-                        run_type="chain",
-                        metadata={"job_id": job_id},
-                        tags=["report-agent"],
-                    )
-                    def _invoke():
+                        @traceable(
+                            name=f"Report Agent Workflow ({resolved_mode})",
+                            run_type="chain",
+                            metadata={"job_id": job_id, "mode": resolved_mode, "pdf_filename": state.pdf.filename},
+                            tags=["workflow:report_agent", "report-agent", f"mode:{resolved_mode}"],
+                        )
+                        def _invoke():
+                            return graph.invoke(state, config=config)
+
+                        return _invoke()
+                    except Exception:
                         return graph.invoke(state, config=config)
+                return graph.invoke(state, config=config)
 
-                    result = _invoke()
-                except Exception:
-                    result = graph.invoke(state, config=config)
-            else:
-                result = graph.invoke(state, config=config)
+            # graph.invoke() is CPU/IO-heavy and sync. Offload it so the event-loop can still
+            # serve /intermediate polling and other requests while the job runs.
+            result = await anyio.to_thread.run_sync(_invoke_sync)
             result_state = AgentState.model_validate(result)
         except Exception as exc:
             state.status = JobStatus.partial
-            state.validation_report.errors.append(
-                ValidationIssue(code="run_failed", message=str(exc))
-            )
+            state.validation_report.errors.append(ValidationIssue(code="run_failed", message=str(exc)))
             state.job_meta.updated_at = now_iso()
             save_state(storage, state)
             return RunJobResponse(

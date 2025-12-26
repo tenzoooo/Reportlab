@@ -1,6 +1,8 @@
 import { createServiceClient } from "@/lib/supabase/server"
+import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
+import PizZip from "pizzip"
 import { Agent } from "undici"
 
 export class ReportAlreadyProcessingError extends Error {
@@ -74,7 +76,172 @@ const guessMimeType = (filename: string) => {
   }
   if (lower.endsWith(".json")) return "application/json"
   if (lower.endsWith(".csv")) return "text/csv"
+  if (lower.endsWith(".xlsx") || lower.endsWith(".xlsm")) {
+    return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  }
   return "application/octet-stream"
+}
+
+const XLSX_EXTENSIONS = new Set([".xlsx", ".xlsm", ".xltx", ".xltm"])
+
+const safeFilename = (name: string) => {
+  const cleaned = (name || "")
+    .replace(/[\/\\\0]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim()
+  return cleaned || "file"
+}
+
+const fileStem = (filename: string) => {
+  const base = path.basename(filename || "")
+  const ext = path.extname(base)
+  return ext ? base.slice(0, -ext.length) : base
+}
+
+type ExtractedZipImage = {
+  zipPath: string
+  bytes: Buffer
+}
+
+const normalizeZipPath = (zipPath: string) => zipPath.replace(/\\/g, "/").replace(/^\/+/, "")
+
+const isLikelyImagePath = (zipPath: string) => {
+  const normalized = normalizeZipPath(zipPath).toLowerCase()
+  const m = normalized.match(/\.([a-z0-9]+)$/)
+  const ext = (m?.[1] || "").toLowerCase()
+  if (!ext) return false
+  return ["png", "jpg", "jpeg", "gif", "bmp", "webp", "tif", "tiff", "svg", "emf", "wmf"].includes(ext)
+}
+
+const extractImagesFromXlsxBytes = (xlsxBytes: Buffer): ExtractedZipImage[] => {
+  try {
+    const zip = new PizZip(xlsxBytes)
+    const files = zip.files || {}
+    const out: ExtractedZipImage[] = []
+    for (const [zipPath, entry] of Object.entries(files)) {
+      const normalized = normalizeZipPath(zipPath).toLowerCase()
+      const isMedia = normalized.startsWith("xl/media/")
+      const isEmbeddingImage = normalized.startsWith("xl/embeddings/") && isLikelyImagePath(normalized)
+      if (!isMedia && !isEmbeddingImage) continue
+      if ((entry as any).dir) continue
+      const file = entry as any
+      const bytes: Buffer | null =
+        typeof file.asNodeBuffer === "function"
+          ? (file.asNodeBuffer() as Buffer)
+          : typeof file.asUint8Array === "function"
+            ? Buffer.from(file.asUint8Array() as Uint8Array)
+            : null
+      if (!bytes || bytes.length === 0) continue
+      out.push({ zipPath: normalizeZipPath(zipPath), bytes })
+    }
+    out.sort((a, b) => a.zipPath.localeCompare(b.zipPath))
+    return out
+  } catch {
+    return []
+  }
+}
+
+const excelExtractedImageStorageKey = (params: {
+  userId: string
+  reportId: string
+  excelStoragePath: string
+  imageBytes: Buffer
+  imageExt: string
+}) => {
+  const { userId, reportId, excelStoragePath, imageBytes, imageExt } = params
+  const excelSlug = path.basename(excelStoragePath, path.extname(excelStoragePath)) || "excel"
+  const hash = createHash("sha256").update(imageBytes).digest("hex").slice(0, 40)
+  const ext = (imageExt || "").toLowerCase().startsWith(".") ? imageExt.toLowerCase() : imageExt ? `.${imageExt}` : ".bin"
+  return `${userId}/${reportId}/experiment-data/excel-images/${excelSlug}/${hash}${ext}`
+}
+
+const ensureExcelImagesExtracted = async (params: {
+  admin: ReturnType<typeof createServiceClient>
+  reportId: string
+  userId: string
+  files: ExperimentDataRow[]
+}) => {
+  const { admin, reportId, userId, files } = params
+
+  const existingUrls = new Set(
+    files
+      .map((f) => (typeof f.file_url === "string" ? f.file_url : ""))
+      .filter((u) => u)
+  )
+
+  const excelFiles = files
+    .filter((f) => f.file_type === "excel" && f.file_url)
+    .map((f) => ({ ...f, file_url: f.file_url as string }))
+    .filter((f) => XLSX_EXTENSIONS.has(path.extname(f.file_url).toLowerCase()))
+
+  const maxImagesPerWorkbook = Number(process.env.EXCEL_IMAGE_EXTRACT_MAX_PER_WORKBOOK || 50)
+  const maxImageBytes = Number(process.env.EXCEL_IMAGE_EXTRACT_MAX_BYTES || 25 * 1024 * 1024)
+
+  let insertedAny = false
+  for (const excel of excelFiles) {
+    try {
+      const excelBytes = await downloadStorageBytes(excel.file_url)
+      const extracted = extractImagesFromXlsxBytes(excelBytes).slice(0, maxImagesPerWorkbook)
+      if (extracted.length === 0) continue
+
+      const excelNameStem = safeFilename(fileStem(excel.file_name || "excel"))
+      const usedNames = new Set<string>()
+      const baseMs = excel.uploaded_at ? Date.parse(excel.uploaded_at) : Date.now()
+      const baseTimestampMs = Number.isFinite(baseMs) ? baseMs : Date.now()
+
+      for (let i = 0; i < extracted.length; i += 1) {
+        const item = extracted[i]
+        if (item.bytes.length > maxImageBytes) continue
+
+        const zipBase = path.basename(item.zipPath) || `image-${i + 1}.bin`
+        const rawName = `${excelNameStem}-${zipBase}`
+        let fileName = safeFilename(rawName)
+        if (!path.extname(fileName)) fileName += path.extname(zipBase) || ".bin"
+        while (usedNames.has(fileName)) {
+          const ext = path.extname(fileName) || ".bin"
+          const stem = fileStem(fileName)
+          fileName = `${stem}-${usedNames.size + 1}${ext}`
+        }
+        usedNames.add(fileName)
+
+        const storageKey = excelExtractedImageStorageKey({
+          userId,
+          reportId,
+          excelStoragePath: excel.file_url,
+          imageBytes: item.bytes,
+          imageExt: path.extname(fileName) || path.extname(zipBase) || ".bin",
+        })
+
+        if (existingUrls.has(storageKey)) continue
+
+        const { error: uploadError } = await admin.storage.from(EXPERIMENT_BUCKET).upload(normalizeStoragePath(storageKey), item.bytes, {
+          contentType: guessMimeType(fileName),
+          upsert: true,
+        })
+        if (uploadError) continue
+
+        const uploadedAt = new Date(baseTimestampMs + 100 + i).toISOString()
+        const { error: insertError } = await admin.from("experiment_data").insert([
+          {
+            report_id: reportId,
+            file_name: fileName,
+            file_type: "image",
+            file_url: storageKey,
+            uploaded_at: uploadedAt,
+          },
+        ])
+
+        if (insertError) continue
+        existingUrls.add(storageKey)
+        insertedAny = true
+      }
+    } catch {
+      // Best-effort: Excel parsing/extraction should not block report generation.
+      continue
+    }
+  }
+
+  return { insertedAny }
 }
 
 const escapeCsvCell = (value: string) => {
@@ -313,9 +480,18 @@ export async function runReportAgentFromSupabaseReport(params: { reportId: strin
     .eq("report_id", reportId)
   if (filesError) throw new Error(filesError.message)
 
-  const normalizedFiles = (files || []) as ExperimentDataRow[]
+  let normalizedFiles = (files || []) as ExperimentDataRow[]
   const pdfFile = normalizedFiles.find((f) => (f.file_url || "").toLowerCase().endsWith(".pdf"))
   if (!pdfFile?.file_url) throw new Error("実験書PDFが見つかりません（PDFのアップロードが必要です）")
+
+  const { insertedAny: insertedExcelImages } = await ensureExcelImagesExtracted({ admin, reportId, userId, files: normalizedFiles })
+  if (insertedExcelImages) {
+    const { data: reloaded, error } = await admin
+      .from("experiment_data")
+      .select("file_name, file_type, file_url, uploaded_at")
+      .eq("report_id", reportId)
+    if (!error) normalizedFiles = (reloaded || []) as ExperimentDataRow[]
+  }
 
   const pdfBytes = await downloadStorageBytes(pdfFile.file_url)
   const jobId = await createJob(pdfBytes, pdfFile.file_name || "manual.pdf")
@@ -481,9 +657,18 @@ export async function prepareReportAgentFromSupabaseReport(params: { reportId: s
     .eq("report_id", reportId)
   if (filesError) throw new Error(filesError.message)
 
-  const normalizedFiles = (files || []) as ExperimentDataRow[]
+  let normalizedFiles = (files || []) as ExperimentDataRow[]
   const pdfFile = normalizedFiles.find((f) => (f.file_url || "").toLowerCase().endsWith(".pdf"))
   if (!pdfFile?.file_url) throw new Error("実験書PDFが見つかりません（PDFのアップロードが必要です）")
+
+  const { insertedAny: insertedExcelImages } = await ensureExcelImagesExtracted({ admin, reportId, userId, files: normalizedFiles })
+  if (insertedExcelImages) {
+    const { data: reloaded, error } = await admin
+      .from("experiment_data")
+      .select("file_name, file_type, file_url, uploaded_at")
+      .eq("report_id", reportId)
+    if (!error) normalizedFiles = (reloaded || []) as ExperimentDataRow[]
+  }
 
   const pdfBytes = await downloadStorageBytes(pdfFile.file_url)
   const jobId = await createJob(pdfBytes, pdfFile.file_name || "manual.pdf")

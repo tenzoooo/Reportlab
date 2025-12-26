@@ -134,7 +134,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar side="left" variant="sidebar" collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-2">
-            <Image src="/icon.png" alt="App Icon" width={96} height={96} className="flex-shrink-0" />
+            <Image src="/icon.png" alt="App Icon" width={96} height={96} className="flex-shrink-0" priority />
             <span className="text-sm font-bold text-gray-900 truncate group-data-[collapsible=icon]:hidden">
               Reportlab
             </span>

@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -80,6 +80,7 @@ export function ReportProcessingSteps({
               {headerStatusLabel}
             </Badge>
           </DialogTitle>
+          <DialogDescription className="sr-only">レポート作成の進捗を表示します。</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

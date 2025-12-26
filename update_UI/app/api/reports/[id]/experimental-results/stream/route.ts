@@ -88,7 +88,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     analysis = JSON.parse(await data.text())
   } catch (err) {
     logError("reports:experimental-results:stream:load-analysis", err)
-    return NextResponse.json({ error: "分析JSONが見つかりません。先に抽出（HITL/一括生成）を実行してください。" }, { status: 400 })
+    return NextResponse.json({ error: "分析JSONが見つかりません。先に抽出を実行してください。" }, { status: 400 })
   }
 
   const payload = buildPayloadFromAnalysis(analysis)
@@ -119,4 +119,3 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     return NextResponse.json({ error: "ストリーミングの開始に失敗しました" }, { status: 500 })
   }
 }
-

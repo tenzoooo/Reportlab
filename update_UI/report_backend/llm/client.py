@@ -39,7 +39,87 @@ def _is_truthy(value: str | None) -> bool:
 
 
 def _langsmith_enabled() -> bool:
-    return _is_truthy(os.environ.get("LANGSMITH_TRACING")) or _is_truthy(os.environ.get("LANGCHAIN_TRACING_V2"))
+    return (
+        _is_truthy(os.environ.get("LANGSMITH_TRACING"))
+        or _is_truthy(os.environ.get("LANGSMITH_TRACING_V2"))
+        or _is_truthy(os.environ.get("LANGCHAIN_TRACING_V2"))
+    )
+
+
+def _traceable_if_enabled(
+    *,
+    name: str,
+    run_type: str,
+    tags: list[str] | None = None,
+    process_inputs: Any | None = None,
+    process_outputs: Any | None = None,
+):
+    def decorator(fn):
+        if not _langsmith_enabled():
+            return fn
+        try:
+            from langsmith import traceable
+        except Exception:
+            return fn
+        return traceable(
+            name=name,
+            run_type=run_type,
+            tags=tags,
+            process_inputs=process_inputs,
+            process_outputs=process_outputs,
+        )(fn)
+
+    return decorator
+
+
+def _preview_text(value: str, *, max_len: int = 600) -> str:
+    s = (value or "").strip()
+    if not s:
+        return ""
+    if len(s) <= max_len:
+        return s
+    return s[:max_len] + "…"
+
+
+def _process_text_fields(fields: list[str]):
+    def _processor(inputs: dict[str, Any]) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for field in fields:
+            raw = inputs.get(field) or ""
+            out[field] = {"len": len(str(raw)), "preview": _preview_text(str(raw))}
+        return out
+
+    return _processor
+
+
+def _process_image_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
+    img_url = str(inputs.get("image_b64_url") or "")
+    method_context = str(inputs.get("method_context") or "")
+    experiments = inputs.get("experiments") or []
+
+    mime = ""
+    if img_url.startswith("data:") and ";base64," in img_url:
+        mime = img_url[5 : img_url.find(";base64,")]
+
+    return {
+        "image": {"mime": mime, "data_url_len": len(img_url)},
+        "experiments_count": len(experiments) if isinstance(experiments, list) else 0,
+        "method_context": {"len": len(method_context), "preview": _preview_text(method_context, max_len=300)},
+        "attempts": inputs.get("attempts"),
+    }
+
+
+def _process_equation_ocr_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
+    img_url = str(inputs.get("image_b64_url") or "")
+    hint = str(inputs.get("extracted_hint") or "")
+    mime = ""
+    if img_url.startswith("data:") and ";base64," in img_url:
+        mime = img_url[5 : img_url.find(";base64,")]
+    return {
+        "image": {"mime": mime, "data_url_len": len(img_url)},
+        "extracted_hint": {"len": len(hint), "preview": _preview_text(hint, max_len=200)},
+        "attempts": inputs.get("attempts"),
+    }
 
 
 class LLMClient:
@@ -93,6 +173,12 @@ class LLMClient:
 
         return retry(_call, attempts=attempts, retry_on=(LLMError,))
 
+    @_traceable_if_enabled(
+        name="LLM: 実験ユニット抽出（method_extract）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:method_extract"],
+        process_inputs=_process_text_fields(["method_text"]),
+    )
     def method_extract(self, method_text: str) -> MethodExtractResult:
         from llm.prompts.method_extract import METHOD_EXTRACT_SYSTEM, build_method_extract_user
 
@@ -106,6 +192,12 @@ class LLMClient:
             attempts=3,
         )
 
+    @_traceable_if_enabled(
+        name="Vision LLM: 画像解析（image_analyze）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:vision_llm", "task:image_analyze"],
+        process_inputs=_process_image_inputs,
+    )
     def analyze_image(
         self,
         *,
@@ -139,6 +231,12 @@ class LLMClient:
 
         return retry(_call, attempts=attempts, retry_on=(LLMError,))
 
+    @_traceable_if_enabled(
+        name="LLM: 表解析（table_analyze）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:table_analyze"],
+        process_inputs=_process_text_fields(["raw_csv"]),
+    )
     def analyze_table(self, raw_csv: str, *, experiments: list[dict[str, str]]) -> TableAnalysis:
         from llm.prompts.table_analyze import TABLE_ANALYZE_SYSTEM, build_table_analyze_user
 
@@ -152,6 +250,11 @@ class LLMClient:
             attempts=2,
         )
 
+    @_traceable_if_enabled(
+        name="LLM: 考察生成（discussion）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:discussion"],
+    )
     def generate_discussion(self, prompts: list[str], *, experiments: list[dict[str, str]] | None = None) -> DiscussionOutput:
         from llm.prompts.discussion import DISCUSSION_SYSTEM, build_discussion_user
 
@@ -165,6 +268,12 @@ class LLMClient:
             attempts=2,
         )
 
+    @_traceable_if_enabled(
+        name="LLM: 考察プロンプト抽出（discussion_extract）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:discussion_extract"],
+        process_inputs=_process_text_fields(["text"]),
+    )
     def extract_discussion_prompts(self, text: str) -> DiscussionExtractOutput:
         from llm.prompts.discussion_extract import DISCUSSION_EXTRACT_SYSTEM, build_discussion_extract_user
 
@@ -189,6 +298,12 @@ class LLMClient:
 
         return retry(_call, attempts=2, retry_on=(LLMError,))
 
+    @_traceable_if_enabled(
+        name="LLM: 章見出し検出（pdf_sections）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:pdf_sections"],
+        process_inputs=_process_text_fields(["text"]),
+    )
     def detect_pdf_sections(self, text: str) -> PdfSectionsOutput:
         from llm.prompts.pdf_sections import PDF_SECTIONS_SYSTEM, build_pdf_sections_user
 
@@ -202,6 +317,12 @@ class LLMClient:
             attempts=2,
         )
 
+    @_traceable_if_enabled(
+        name="LLM: まとめ生成（summary）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:summary"],
+        process_inputs=_process_text_fields(["pdf_text", "consideration_text"]),
+    )
     def generate_summary(self, *, pdf_text: str, experiments: list[dict[str, str]], consideration_text: str) -> SummaryOutput:
         from llm.prompts.summary import SUMMARY_SYSTEM, build_summary_user
 
@@ -215,6 +336,11 @@ class LLMClient:
             attempts=2,
         )
 
+    @_traceable_if_enabled(
+        name="LLM: 参考文献生成（references）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:references"],
+    )
     def generate_references(self, *, pdf_filename: str) -> ReferencesOutput:
         from llm.prompts.references import REFERENCES_SYSTEM, build_references_user
 
@@ -228,6 +354,12 @@ class LLMClient:
             attempts=1,
         )
 
+    @_traceable_if_enabled(
+        name="Vision LLM: 数式行OCR（equation_line_ocr）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:vision_llm", "task:equation_line_ocr"],
+        process_inputs=_process_equation_ocr_inputs,
+    )
     def ocr_equation_line(self, *, image_b64_url: str, extracted_hint: str, attempts: int = 2) -> EquationLineOCROutput:
         from llm.prompts.equation_line_ocr import EQUATION_LINE_OCR_SYSTEM, build_equation_line_ocr_user
 
