@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import logging
+import os
 from io import BytesIO
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 from docxtpl import DocxTemplate, InlineImage, RichText
+from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Mm
@@ -84,6 +87,65 @@ def _patch_template(doc: DocxTemplate, context: dict) -> None:
         for row in t.rows:
             for cell in row.cells:
                 patch_paragraphs(cell.paragraphs)
+
+
+def _prepare_template_docx_bytes(template_path: Path) -> bytes:
+    """
+    Pre-process the DOCX template *before* docxtpl parses it.
+
+    Why: docxtpl/Jinja parsing happens against the raw XML from the template file. If Jinja tags
+    are split across Word runs, docxtpl won't recognize them and will output the raw template text.
+    """
+
+    raw = template_path.read_bytes()
+    doc = Document(BytesIO(raw))
+    _normalize_jinja_tags(doc)
+
+    # Apply our template patching on the raw Document so docxtpl sees the fixed tags during parsing.
+    # (No need for `context` here; we only rewrite tag strings / insert missing loops.)
+    replacements = {
+        "{{ consideration.units | consideration_units | nl2br }}": "{{ consideration_units_rt }}",
+        "{{ consideration.units | consideration_units }}": "{{ consideration_units_rt }}",
+        "{{ consideration | reference_lines | nl2br }}": "{{ references_rt }}",
+        "{{ consideration | reference_lines }}": "{{ references_rt }}",
+    }
+
+    block_loop_found = False
+    inserted_block_loop = False
+
+    def patch_paragraphs(paragraphs):
+        nonlocal inserted_block_loop, block_loop_found
+        for p in paragraphs:
+            text = p.text
+            if not text:
+                continue
+
+            if "{% for block in exp.blocks" in text:
+                block_loop_found = True
+
+            if "{% if block.type" in text and not block_loop_found and not inserted_block_loop:
+                p.text = "{% for block in exp.blocks %}" + text
+                inserted_block_loop = True
+                block_loop_found = True
+                text = p.text
+
+            original = text
+            modified = original
+            for old, new in replacements.items():
+                if old in modified:
+                    modified = modified.replace(old, new)
+            if modified != original:
+                p.text = modified
+
+    patch_paragraphs(doc.paragraphs)
+    for t in doc.tables:
+        for row in t.rows:
+            for cell in row.cells:
+                patch_paragraphs(cell.paragraphs)
+
+    out = BytesIO()
+    doc.save(out)
+    return out.getvalue()
 
 
 def _normalize_jinja_tags(docx_obj) -> None:
@@ -326,7 +388,7 @@ def _looks_like_table_caption(text: str) -> bool:
     return False
 
 
-def _apply_table_pagination_rules(doc: DocxTemplate) -> None:
+def _apply_table_pagination_rules(docx_obj) -> None:
     """
     Best-effort Word pagination controls:
     - Keep table captions together with the following table.
@@ -336,10 +398,6 @@ def _apply_table_pagination_rules(doc: DocxTemplate) -> None:
     Notes:
     - Word cannot *guarantee* an entire table stays on one page if it is taller than a page.
     """
-    docx_obj = doc.get_docx()
-    if not docx_obj:
-        return
-
     # 1) Keep captions with the table:
     #    - Always keep the nearest non-empty paragraph with the following table.
     #    - Also keep 1 more preceding paragraph when it looks like a caption line.
@@ -403,31 +461,61 @@ def render_docx_bytes(
     if not template_file.exists():
         raise FileNotFoundError(f"Template not found: {template_file}")
 
-    doc = DocxTemplate(str(template_file))
-
-    # Pre-calculate rich text values and patch template tags.
-    context["consideration_units_rt"] = _create_consideration_units_rt(context.get("consideration", {}).get("units"))
-    context["references_rt"] = _create_references_rt(context.get("consideration", {}))
-    _patch_template(doc, context)
-
-    images_by_id: dict[str, ImageAsset] = {}
-
-    # We encode assets into the context when we call render (preferred).
-    assets_images = context.pop("__assets_images", None)
-    if isinstance(assets_images, dict):
-        images_by_id = {k: ImageAsset.model_validate(v) for k, v in assets_images.items()}
-
-    _inject_inline_images(doc, context, images_by_id, storage, image_bytes_by_id=image_bytes_by_id)
-    _inject_tables(doc, context)
-
-    env = _build_env()
+    prepared_bytes = _prepare_template_docx_bytes(template_file)
+    tmp_path: str | None = None
     try:
-        doc.render(context, jinja_env=env)
-    except TemplateSyntaxError as exc:
-        raise RuntimeError(f"Docx template parse failed: {exc}") from exc
+        with NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
+            tmp.write(prepared_bytes)
+            tmp.flush()
+            tmp_path = tmp.name
 
-    _apply_table_pagination_rules(doc)
+        if os.environ.get("DOCX_DEBUG") in {"1", "true", "True"}:
+            try:
+                storage.put_bytes(f"jobs/{job_id}/debug/template_prepared.docx", prepared_bytes)
+            except Exception:
+                pass
 
-    out = BytesIO()
-    doc.save(out)
-    return out.getvalue()
+        doc = DocxTemplate(tmp_path)
+
+        # Pre-calculate rich text values and patch template tags.
+        context["consideration_units_rt"] = _create_consideration_units_rt(context.get("consideration", {}).get("units"))
+        context["references_rt"] = _create_references_rt(context.get("consideration", {}))
+        _patch_template(doc, context)
+
+        images_by_id: dict[str, ImageAsset] = {}
+
+        # We encode assets into the context when we call render (preferred).
+        assets_images = context.pop("__assets_images", None)
+        if isinstance(assets_images, dict):
+            images_by_id = {k: ImageAsset.model_validate(v) for k, v in assets_images.items()}
+
+        _inject_inline_images(doc, context, images_by_id, storage, image_bytes_by_id=image_bytes_by_id)
+        _inject_tables(doc, context)
+
+        env = _build_env()
+        try:
+            doc.render(context, jinja_env=env)
+        except TemplateSyntaxError as exc:
+            raise RuntimeError(f"Docx template parse failed: {exc}") from exc
+
+        out = BytesIO()
+        doc.save(out)
+        rendered = out.getvalue()
+
+        # Post-process the rendered document (python-docx) for pagination rules.
+        # Applying python-docx mutations on DocxTemplate before save can cause docxtpl to
+        # fall back to saving the original template (leaving tags unrendered).
+        try:
+            post = Document(BytesIO(rendered))
+            _apply_table_pagination_rules(post)
+            out2 = BytesIO()
+            post.save(out2)
+            return out2.getvalue()
+        except Exception:
+            return rendered
+    finally:
+        if tmp_path:
+            try:
+                Path(tmp_path).unlink(missing_ok=True)
+            except Exception:
+                pass
