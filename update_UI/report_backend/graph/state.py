@@ -24,6 +24,7 @@ class JobStatus(str, Enum):
 class RetryBudgets(BaseModel):
     image_analyze: int = 2
     table_analyze: int = 1
+    table_parse: int = 1
     discussion: int = 1
     render: int = 1
 
