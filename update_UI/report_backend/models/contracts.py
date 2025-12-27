@@ -16,6 +16,10 @@ class ImageAnalysis(BaseModel):
     quant_comment: str = Field(..., description="Quantitative-first comment; if impossible, say so and be qualitative")
     belongs_to: list[BelongsToCandidate] = Field(default_factory=list, description="Top 3 candidates")
     result_summary: str = Field(..., description="Short result summary for description_brief")
+    ocr_text: str = Field(default="", description="Optional OCR text extracted from the image")
+    assigned_exp_key: str = Field(default="", description="Best exp_key after reranking/HITL (optional)")
+    assigned_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Confidence for assigned_exp_key (optional)")
+    assigned_rationale: str = Field(default="", description="Short rationale for assigned_exp_key (optional)")
 
 
 class TableAnalysis(BaseModel):
@@ -23,6 +27,10 @@ class TableAnalysis(BaseModel):
     quant_comment: str = Field(..., description="Quantitative-first comment")
     belongs_to: list[BelongsToCandidate] = Field(default_factory=list)
     result_summary: str = Field(..., description="Short result summary for description_brief")
+    table_summary: str = Field(default="", description="Optional computed stats/summary for reranking/debug")
+    assigned_exp_key: str = Field(default="", description="Best exp_key after reranking/HITL (optional)")
+    assigned_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Confidence for assigned_exp_key (optional)")
+    assigned_rationale: str = Field(default="", description="Short rationale for assigned_exp_key (optional)")
 
 
 class ImageAsset(BaseModel):

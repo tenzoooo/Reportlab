@@ -12,16 +12,24 @@ TABLE_ANALYZE_SYSTEM = """
 """
 
 
-def build_table_analyze_user(raw_csv: str, experiments: list[dict[str, str]]) -> str:
-    exp_lines = "\n".join([f"- {e['exp_key']}: {e['name']}" for e in experiments])
+def build_table_analyze_user(raw_csv: str, experiments: list[dict[str, str]], table_summary: str = "") -> str:
+    exp_lines = "\n".join(
+        [
+            f"- {e.get('exp_key', '')}: {e.get('name', '')}"
+            + (f" / 方法: {str(e.get('method_summary') or '').strip()}" if str(e.get("method_summary") or "").strip() else "")
+            for e in experiments
+        ]
+    )
+    summary = (table_summary or "").strip()
+    summary_block = f"\nsummary:\n<<<\n{summary}\n>>>\n" if summary else ""
     return f"""次のCSV表を解析し、所属候補があれば付けてJSONで返せ。
 
 experiments:
 {exp_lines}
 
+{summary_block}
 csv:
 <<<
 {raw_csv}
 >>>
 """
-

@@ -67,6 +67,60 @@ type TableSlot = {
     experimentName: string
 }
 
+const rebuildDerivedLists = (analysis: any) => {
+    const experiments = Array.isArray(analysis?.experiments) ? analysis.experiments : []
+    const chapter = typeof analysis?.chapter === "number" ? analysis.chapter : Number(analysis?.chapter) || 4
+    experiments.forEach((exp: any) => {
+        const blocks = Array.isArray(exp?.blocks) ? exp.blocks : []
+        const idx = typeof exp?.idx === "string" ? exp.idx : exp?.idx != null ? String(exp.idx) : ""
+        const subidx = typeof exp?.subidx === "string" ? exp.subidx : exp?.subidx != null ? String(exp.subidx) : ""
+        const parts = [String(chapter).trim(), idx.trim(), subidx.trim()].filter(Boolean)
+        const path = parts.join(".")
+        let figSeq = 1
+        let tblSeq = 1
+        blocks.forEach((b: any) => {
+            if (!b || typeof b !== "object") return
+            if (b.type === "figure" && b.figure && typeof b.figure === "object") {
+                b.figure.label = `図 ${path}.${figSeq}`
+                figSeq += 1
+            } else if (b.type === "table" && b.table && typeof b.table === "object") {
+                b.table.label = `表 ${path}.${tblSeq}`
+                tblSeq += 1
+            }
+        })
+        exp.figures = blocks.filter((b: any) => b?.type === "figure").map((b: any) => b.figure)
+        exp.tables = blocks.filter((b: any) => b?.type === "table").map((b: any) => b.table)
+    })
+    return analysis
+}
+
+const moveBlockByLabel = (
+    analysis: any,
+    params: { type: "figure" | "table"; fromExpIndex: number; label: string; toExpIndex: number }
+) => {
+    const { type, fromExpIndex, label, toExpIndex } = params
+    if (!analysis?.experiments || !Array.isArray(analysis.experiments)) return analysis
+    if (fromExpIndex === toExpIndex) return analysis
+    const experiments = analysis.experiments as any[]
+    const from = experiments[fromExpIndex]
+    const to = experiments[toExpIndex]
+    if (!from || !to) return analysis
+    if (!Array.isArray(from.blocks)) from.blocks = []
+    if (!Array.isArray(to.blocks)) to.blocks = []
+
+    const idx = from.blocks.findIndex((b: any) => {
+        if (!b || typeof b !== "object") return false
+        if (b.type !== type) return false
+        const content = type === "figure" ? b.figure : b.table
+        return content && typeof content === "object" && content.label === label
+    })
+    if (idx === -1) return analysis
+
+    const [moved] = from.blocks.splice(idx, 1)
+    to.blocks.push(moved)
+    return rebuildDerivedLists(analysis)
+}
+
 export default function ReportEditorPage() {
     const params = useParams()
     const router = useRouter()
@@ -172,6 +226,11 @@ export default function ReportEditorPage() {
             })
         })
         return slots
+    }, [analysis?.experiments])
+
+    const experimentOptions = useMemo(() => {
+        const exps = analysis?.experiments || []
+        return exps.map((exp: any, i: number) => ({ index: i, label: exp?.name || `実験${i + 1}` }))
     }, [analysis?.experiments])
 
     const handleSave = async (skipToast = false) => {
@@ -411,6 +470,32 @@ export default function ReportEditorPage() {
                                                             </div>
                                                             <div className="max-w-[220px] truncate text-xs text-muted-foreground">{image.file_name}</div>
                                                         </div>
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <Label className="text-xs text-muted-foreground">割り当て先</Label>
+                                                            <select
+                                                                className="h-7 rounded border bg-background px-2 text-[11px] text-foreground"
+                                                                value={slot.expIndex}
+                                                                onChange={(e) => {
+                                                                    const nextExpIndex = Number(e.target.value)
+                                                                    setAnalysis((prev) => {
+                                                                        if (!prev) return prev
+                                                                        const cloned = JSON.parse(JSON.stringify(prev))
+                                                                        return moveBlockByLabel(cloned, {
+                                                                            type: "figure",
+                                                                            fromExpIndex: slot.expIndex,
+                                                                            label: slot.figure.label,
+                                                                            toExpIndex: nextExpIndex,
+                                                                        })
+                                                                    })
+                                                                }}
+                                                            >
+                                                                {experimentOptions.map((o: any) => (
+                                                                    <option key={o.index} value={o.index}>
+                                                                        {o.label}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
                                                         <div className="space-y-1">
                                                             <Label className="text-xs text-muted-foreground">キャプション</Label>
                                                             <Input
@@ -495,7 +580,32 @@ export default function ReportEditorPage() {
                                         <div className="flex h-16 w-24 items-center justify-center rounded bg-muted text-xs text-muted-foreground">画像なし</div>
                                         <div className="flex-1 space-y-1">
                                             <div className="text-sm font-semibold">{slot.figure.label}</div>
-                                            <div className="text-xs text-muted-foreground">{slot.experimentName}</div>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="text-xs text-muted-foreground">{slot.experimentName}</div>
+                                                <select
+                                                    className="h-7 rounded border bg-background px-2 text-[11px] text-foreground"
+                                                    value={slot.expIndex}
+                                                    onChange={(e) => {
+                                                        const nextExpIndex = Number(e.target.value)
+                                                        setAnalysis((prev) => {
+                                                            if (!prev) return prev
+                                                            const cloned = JSON.parse(JSON.stringify(prev))
+                                                            return moveBlockByLabel(cloned, {
+                                                                type: "figure",
+                                                                fromExpIndex: slot.expIndex,
+                                                                label: slot.figure.label,
+                                                                toExpIndex: nextExpIndex,
+                                                            })
+                                                        })
+                                                    }}
+                                                >
+                                                    {experimentOptions.map((o: any) => (
+                                                        <option key={o.index} value={o.index}>
+                                                            {o.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                             <Label className="text-xs text-muted-foreground">キャプション</Label>
                                             <Input
                                                 value={slot.figure.caption}
@@ -528,6 +638,29 @@ export default function ReportEditorPage() {
                                             <div className="text-sm font-semibold">{slot.table.label}</div>
                                             <div className="text-xs text-muted-foreground">{slot.experimentName}</div>
                                         </div>
+                                        <select
+                                            className="h-7 rounded border bg-background px-2 text-[11px] text-foreground"
+                                            value={slot.expIndex}
+                                            onChange={(e) => {
+                                                const nextExpIndex = Number(e.target.value)
+                                                setAnalysis((prev) => {
+                                                    if (!prev) return prev
+                                                    const cloned = JSON.parse(JSON.stringify(prev))
+                                                    return moveBlockByLabel(cloned, {
+                                                        type: "table",
+                                                        fromExpIndex: slot.expIndex,
+                                                        label: slot.table.label,
+                                                        toExpIndex: nextExpIndex,
+                                                    })
+                                                })
+                                            }}
+                                        >
+                                            {experimentOptions.map((o: any) => (
+                                                <option key={o.index} value={o.index}>
+                                                    {o.label}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <Label className="text-xs text-muted-foreground">キャプション</Label>
                                     <Input

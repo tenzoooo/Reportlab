@@ -14,8 +14,10 @@ from .nodes.discussion_extract import discussion_extract
 from .nodes.method_extract import method_extract
 from .nodes.unit_init import unit_init
 from .nodes.image_analyze import image_analyze
+from .nodes.image_rerank import image_rerank
 from .nodes.image_assign import image_assign
 from .nodes.table_parse import table_parse
+from .nodes.table_rerank import table_rerank
 from .nodes.table_assign import table_assign
 from .nodes.discussion import discussion
 from .nodes.summary import summary
@@ -131,10 +133,19 @@ def build_graph(*, storage: Storage, llm: LLMClient, template_path: str, mode: s
     )
     graph.add_node("snapshot_image_analyze", lambda s: snapshot(s, storage=storage, step="image_analyze"))
     graph.add_node(
+        "image_rerank",
+        _named_node(
+            key="image_rerank",
+            label="08 画像割当再ランキング（LLM）",
+            fn=lambda s: image_rerank(s, llm=llm),
+        ),
+    )
+    graph.add_node("snapshot_image_rerank", lambda s: snapshot(s, storage=storage, step="image_rerank"))
+    graph.add_node(
         "image_assign",
         _named_node(
             key="image_assign",
-            label="08 画像割当",
+            label="09 画像割当",
             fn=lambda s: image_assign(s),
         ),
     )
@@ -144,16 +155,25 @@ def build_graph(*, storage: Storage, llm: LLMClient, template_path: str, mode: s
         "table_parse",
         _named_node(
             key="table_parse",
-            label="09 表解析（LLM）",
+            label="10 表解析（LLM）",
             fn=lambda s: table_parse(s, llm=llm),
         ),
     )
     graph.add_node("snapshot_table_parse", lambda s: snapshot(s, storage=storage, step="table_parse"))
     graph.add_node(
+        "table_rerank",
+        _named_node(
+            key="table_rerank",
+            label="11 表割当再ランキング（LLM）",
+            fn=lambda s: table_rerank(s, llm=llm),
+        ),
+    )
+    graph.add_node("snapshot_table_rerank", lambda s: snapshot(s, storage=storage, step="table_rerank"))
+    graph.add_node(
         "table_assign",
         _named_node(
             key="table_assign",
-            label="10 表割当",
+            label="12 表割当",
             fn=lambda s: table_assign(s),
         ),
     )
@@ -250,12 +270,16 @@ def build_graph(*, storage: Storage, llm: LLMClient, template_path: str, mode: s
     # Assets are optional; nodes are no-ops when empty.
     graph.add_edge("snapshot_unit_init", "image_analyze")
     graph.add_edge("image_analyze", "snapshot_image_analyze")
-    graph.add_edge("snapshot_image_analyze", "image_assign")
+    graph.add_edge("snapshot_image_analyze", "image_rerank")
+    graph.add_edge("image_rerank", "snapshot_image_rerank")
+    graph.add_edge("snapshot_image_rerank", "image_assign")
     graph.add_edge("image_assign", "snapshot_image_assign")
 
     graph.add_edge("snapshot_image_assign", "table_parse")
     graph.add_edge("table_parse", "snapshot_table_parse")
-    graph.add_edge("snapshot_table_parse", "table_assign")
+    graph.add_edge("snapshot_table_parse", "table_rerank")
+    graph.add_edge("table_rerank", "snapshot_table_rerank")
+    graph.add_edge("snapshot_table_rerank", "table_assign")
     graph.add_edge("table_assign", "snapshot_table_assign")
 
     graph.add_edge("snapshot_table_assign", "discussion")

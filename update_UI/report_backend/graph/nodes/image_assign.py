@@ -22,13 +22,21 @@ def image_assign(state: AgentState) -> AgentState:
         if not analysis:
             continue
 
-        candidates = analysis.belongs_to or []
-        best = max(candidates, key=lambda c: c.score, default=None)
-        if best is None or best.score < threshold:
+        exp_key = (getattr(analysis, "assigned_exp_key", "") or "").strip()
+        score = float(getattr(analysis, "assigned_score", 0.0) or 0.0)
+
+        if not exp_key:
+            candidates = analysis.belongs_to or []
+            best = max(candidates, key=lambda c: c.score, default=None)
+            if best is None:
+                updated_assets[img.image_id] = img.model_copy(update={"assigned_to": None})
+                continue
+            exp_key = best.exp_key
+            score = best.score
+
+        if not exp_key or score < threshold:
             updated_assets[img.image_id] = img.model_copy(update={"assigned_to": None})
             continue
-
-        exp_key = best.exp_key
 
         block = FigureBlock(
             figure=FigureContent(

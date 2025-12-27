@@ -1,9 +1,13 @@
 import { createServiceClient } from "@/lib/supabase/server"
 import { createHash } from "node:crypto"
-import { readFile } from "node:fs/promises"
+import { execFile as execFileCb } from "node:child_process"
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
+import os from "node:os"
 import path from "node:path"
 import PizZip from "pizzip"
 import { Agent } from "undici"
+import { promisify } from "node:util"
+import * as XLSX from "xlsx"
 
 export class ReportAlreadyProcessingError extends Error {
   constructor(reportId: string) {
@@ -83,6 +87,25 @@ const guessMimeType = (filename: string) => {
 }
 
 const XLSX_EXTENSIONS = new Set([".xlsx", ".xlsm", ".xltx", ".xltm"])
+const EXCEL_SHEET_META_MARKER = "::sheet="
+
+const stripExcelMetaFromFilename = (filename: string) => {
+  const raw = filename || ""
+  const idx = raw.indexOf(EXCEL_SHEET_META_MARKER)
+  return idx === -1 ? raw : raw.slice(0, idx)
+}
+
+const parseExcelSheetNameFromFilename = (filename: string) => {
+  const raw = filename || ""
+  const idx = raw.indexOf(EXCEL_SHEET_META_MARKER)
+  if (idx === -1) return ""
+  const encoded = raw.slice(idx + EXCEL_SHEET_META_MARKER.length)
+  try {
+    return decodeURIComponent(encoded).trim()
+  } catch {
+    return encoded.trim()
+  }
+}
 
 const safeFilename = (name: string) => {
   const cleaned = (name || "")
@@ -111,6 +134,217 @@ const isLikelyImagePath = (zipPath: string) => {
   const ext = (m?.[1] || "").toLowerCase()
   if (!ext) return false
   return ["png", "jpg", "jpeg", "gif", "bmp", "webp", "tif", "tiff", "svg", "emf", "wmf"].includes(ext)
+}
+
+const execFile = promisify(execFileCb)
+
+const hasExcelCharts = (xlsxBytes: Buffer) => {
+  try {
+    const zip = new PizZip(xlsxBytes)
+    const files = zip.files || {}
+    for (const zipPath of Object.keys(files)) {
+      const normalized = normalizeZipPath(zipPath).toLowerCase()
+      if (normalized.startsWith("xl/charts/")) return true
+    }
+    return false
+  } catch {
+    return false
+  }
+}
+
+type LibreOfficeConvertedImage = {
+  filename: string
+  bytes: Buffer
+}
+
+const convertSpreadsheetToPngsWithLibreOffice = async (params: {
+  xlsxBytes: Buffer
+  originalFilename: string
+  timeoutMs?: number
+}) => {
+  const { xlsxBytes, originalFilename } = params
+  const timeoutMs = params.timeoutMs ?? Number(process.env.EXCEL_LIBREOFFICE_TIMEOUT_MS || 120_000)
+
+  const bin = (process.env.LIBREOFFICE_BIN || process.env.SOFFICE_PATH || "soffice").trim() || "soffice"
+  const tmpBase = await mkdtemp(path.join(os.tmpdir(), "reportlab-xlsx-"))
+  const outDir = path.join(tmpBase, "out")
+  try {
+    await mkdir(outDir, { recursive: true })
+    const inputName = safeFilename(originalFilename || "workbook.xlsx")
+    const inputPath = path.join(tmpBase, inputName)
+    await writeFile(inputPath, xlsxBytes)
+    await execFile(
+      bin,
+      [
+        "--headless",
+        "--nologo",
+        "--nolockcheck",
+        "--nodefault",
+        "--norestore",
+        "--invisible",
+        "--convert-to",
+        "png",
+        "--outdir",
+        outDir,
+        inputPath,
+      ],
+      { timeout: timeoutMs }
+    )
+
+    const files = await readdir(outDir).catch(() => [])
+    const pngNames = files.filter((f) => f.toLowerCase().endsWith(".png")).sort((a, b) => a.localeCompare(b))
+    const maxPngs = Number(process.env.EXCEL_LIBREOFFICE_MAX_PNGS || 24)
+    const selected = pngNames.slice(0, maxPngs)
+    const images: LibreOfficeConvertedImage[] = []
+    for (const name of selected) {
+      // eslint-disable-next-line no-await-in-loop
+      const bytes = await readFile(path.join(outDir, name))
+      if (!bytes || bytes.length === 0) continue
+      images.push({ filename: name, bytes })
+    }
+    return images
+  } finally {
+    await rm(tmpBase, { recursive: true, force: true }).catch(() => {})
+  }
+}
+
+type ExtractedTable = {
+  name: string
+  csv: string
+}
+
+const isNonEmptyCell = (value: unknown) => {
+  if (value === null || value === undefined) return false
+  const s = typeof value === "string" ? value : String(value)
+  return s.trim().length > 0
+}
+
+const detectTablesFromGrid = (grid: string[][]) => {
+  const maxRows = Number(process.env.EXCEL_TABLE_EXTRACT_MAX_ROWS || 1200)
+  const maxCols = Number(process.env.EXCEL_TABLE_EXTRACT_MAX_COLS || 200)
+  const minNonEmptyCells = Number(process.env.EXCEL_TABLE_EXTRACT_MIN_NONEMPTY || 10)
+  const maxCells = Number(process.env.EXCEL_TABLE_EXTRACT_MAX_CELLS || 200_000)
+
+  const rowCount = Math.min(grid.length, maxRows)
+  let colCount = 0
+  for (let r = 0; r < rowCount; r += 1) colCount = Math.max(colCount, grid[r]?.length || 0)
+  colCount = Math.min(colCount, maxCols)
+  if (rowCount * colCount > maxCells) {
+    const scale = Math.sqrt(maxCells / (rowCount * colCount))
+    const scaledRows = Math.max(1, Math.floor(rowCount * scale))
+    const scaledCols = Math.max(1, Math.floor(colCount * scale))
+    return detectTablesFromGrid(grid.slice(0, scaledRows).map((row) => (row || []).slice(0, scaledCols)))
+  }
+
+  const visited: boolean[][] = Array.from({ length: rowCount }, () => Array(colCount).fill(false))
+  const nonEmpty = (r: number, c: number) => {
+    const v = grid[r]?.[c]
+    return isNonEmptyCell(v)
+  }
+
+  type Box = { top: number; left: number; bottom: number; right: number; cells: number }
+  const boxes: Box[] = []
+  const q: Array<[number, number]> = []
+
+  for (let r = 0; r < rowCount; r += 1) {
+    for (let c = 0; c < colCount; c += 1) {
+      if (visited[r][c] || !nonEmpty(r, c)) continue
+      let top = r
+      let left = c
+      let bottom = r
+      let right = c
+      let cells = 0
+      visited[r][c] = true
+      q.length = 0
+      q.push([r, c])
+      while (q.length) {
+        const [cr, cc] = q.pop() as [number, number]
+        cells += 1
+        if (cr < top) top = cr
+        if (cc < left) left = cc
+        if (cr > bottom) bottom = cr
+        if (cc > right) right = cc
+        const neighbors: Array<[number, number]> = [
+          [cr - 1, cc],
+          [cr + 1, cc],
+          [cr, cc - 1],
+          [cr, cc + 1],
+        ]
+        for (const [nr, nc] of neighbors) {
+          if (nr < 0 || nc < 0 || nr >= rowCount || nc >= colCount) continue
+          if (visited[nr][nc] || !nonEmpty(nr, nc)) continue
+          visited[nr][nc] = true
+          q.push([nr, nc])
+        }
+      }
+      if (cells >= minNonEmptyCells) {
+        boxes.push({ top, left, bottom, right, cells })
+      }
+    }
+  }
+
+  const isRowEmpty = (r: number, left: number, right: number) => {
+    for (let c = left; c <= right; c += 1) if (nonEmpty(r, c)) return false
+    return true
+  }
+  const isColEmpty = (c: number, top: number, bottom: number) => {
+    for (let r = top; r <= bottom; r += 1) if (nonEmpty(r, c)) return false
+    return true
+  }
+
+  const trimmed = boxes
+    .map((b) => {
+      let top = b.top
+      let left = b.left
+      let bottom = b.bottom
+      let right = b.right
+      while (top <= bottom && isRowEmpty(top, left, right)) top += 1
+      while (top <= bottom && isRowEmpty(bottom, left, right)) bottom -= 1
+      while (left <= right && isColEmpty(left, top, bottom)) left += 1
+      while (left <= right && isColEmpty(right, top, bottom)) right -= 1
+      return { ...b, top, left, bottom, right }
+    })
+    .filter((b) => b.top <= b.bottom && b.left <= b.right)
+    .sort((a, b) => (a.top !== b.top ? a.top - b.top : a.left - b.left))
+
+  return trimmed
+}
+
+const extractTablesFromXlsxBytes = (params: { xlsxBytes: Buffer; workbookName: string; sheetName: string }) => {
+  const { xlsxBytes, workbookName } = params
+  const requestedSheet = (params.sheetName || "").trim()
+  const maxTables = Number(process.env.EXCEL_TABLE_EXTRACT_MAX_TABLES || 8)
+
+  const workbook = XLSX.read(xlsxBytes, { type: "buffer", cellText: true, cellDates: false })
+  const sheetNames = workbook.SheetNames || []
+  if (sheetNames.length === 0) return { sheetName: "", tables: [] as ExtractedTable[] }
+  const resolvedSheetName = requestedSheet && sheetNames.includes(requestedSheet) ? requestedSheet : sheetNames[0]
+  const ws = workbook.Sheets[resolvedSheetName]
+  if (!ws) return { sheetName: resolvedSheetName, tables: [] as ExtractedTable[] }
+
+  const gridRaw = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "", blankrows: false }) as any[][]
+  const grid: string[][] = gridRaw.map((row) => (Array.isArray(row) ? row.map((v) => (v === null || v === undefined ? "" : String(v))) : []))
+
+  const boxes = detectTablesFromGrid(grid).slice(0, maxTables)
+  const safeBook = safeFilename(fileStem(workbookName || "excel")).slice(0, 60)
+  const safeSheet = safeFilename(resolvedSheetName).slice(0, 60)
+  const tables: ExtractedTable[] = []
+  for (let i = 0; i < boxes.length; i += 1) {
+    const b = boxes[i]
+    const rows: string[][] = []
+    for (let r = b.top; r <= b.bottom; r += 1) {
+      const row: string[] = []
+      for (let c = b.left; c <= b.right; c += 1) {
+        row.push((grid[r]?.[c] ?? "").toString())
+      }
+      rows.push(row)
+    }
+    const csv = rowsToCsv(rows)
+    if (!csv.trim()) continue
+    const name = `${safeBook}__${safeSheet}__table-${i + 1}.csv`
+    tables.push({ name, csv })
+  }
+  return { sheetName: resolvedSheetName, tables }
 }
 
 const extractImagesFromXlsxBytes = (xlsxBytes: Buffer): ExtractedZipImage[] => {
@@ -176,15 +410,32 @@ const ensureExcelImagesExtracted = async (params: {
 
   const maxImagesPerWorkbook = Number(process.env.EXCEL_IMAGE_EXTRACT_MAX_PER_WORKBOOK || 50)
   const maxImageBytes = Number(process.env.EXCEL_IMAGE_EXTRACT_MAX_BYTES || 25 * 1024 * 1024)
+  const enableLibreOfficeCharts =
+    ({ "1": true, true: true, yes: true, y: true, on: true } as Record<string, boolean | undefined>)[
+      (process.env.EXCEL_CHART_EXTRACT_WITH_LIBREOFFICE || "").trim().toLowerCase()
+    ] === true
 
   let insertedAny = false
   for (const excel of excelFiles) {
     try {
       const excelBytes = await downloadStorageBytes(excel.file_url)
-      const extracted = extractImagesFromXlsxBytes(excelBytes).slice(0, maxImagesPerWorkbook)
+      let extracted = extractImagesFromXlsxBytes(excelBytes).slice(0, maxImagesPerWorkbook)
+      if (extracted.length === 0 && enableLibreOfficeCharts && hasExcelCharts(excelBytes)) {
+        try {
+          const converted = await convertSpreadsheetToPngsWithLibreOffice({
+            xlsxBytes: excelBytes,
+            originalFilename: stripExcelMetaFromFilename(excel.file_name || "") || path.basename(excel.file_url) || "workbook.xlsx",
+          })
+          extracted = converted
+            .map((c) => ({ zipPath: `libreoffice/${c.filename}`, bytes: c.bytes }))
+            .slice(0, maxImagesPerWorkbook)
+        } catch {
+          // ignore (best-effort)
+        }
+      }
       if (extracted.length === 0) continue
 
-      const excelNameStem = safeFilename(fileStem(excel.file_name || "excel"))
+      const excelNameStem = safeFilename(fileStem(stripExcelMetaFromFilename(excel.file_name || "") || "excel"))
       const usedNames = new Set<string>()
       const baseMs = excel.uploaded_at ? Date.parse(excel.uploaded_at) : Date.now()
       const baseTimestampMs = Number.isFinite(baseMs) ? baseMs : Date.now()
@@ -551,6 +802,17 @@ export async function runReportAgentFromSupabaseReport(params: { reportId: strin
       await addTable(jobId, bytes.toString("utf-8"), tbl.file_name || "table.csv")
       continue
     }
+    if (lower.endsWith(".xlsx") || lower.endsWith(".xlsm")) {
+      const bytes = await downloadStorageBytes(fileUrl)
+      const desiredSheet = parseExcelSheetNameFromFilename(tbl.file_name || "")
+      const baseName = stripExcelMetaFromFilename(tbl.file_name || "") || path.basename(fileUrl) || "workbook.xlsx"
+      const { tables } = extractTablesFromXlsxBytes({ xlsxBytes: bytes, workbookName: baseName, sheetName: desiredSheet })
+      for (const t of tables) {
+        // eslint-disable-next-line no-await-in-loop
+        await addTable(jobId, t.csv, t.name)
+      }
+      continue
+    }
   }
 
   let run: Awaited<ReturnType<typeof runJob>>
@@ -734,6 +996,18 @@ export async function prepareReportAgentFromSupabaseReport(params: { reportId: s
       await addTable(jobId, bytes.toString("utf-8"), tbl.file_name || "table.csv")
       continue
     }
+    if (lower.endsWith(".xlsx") || lower.endsWith(".xlsm")) {
+      // eslint-disable-next-line no-await-in-loop
+      const bytes = await downloadStorageBytes(fileUrl)
+      const desiredSheet = parseExcelSheetNameFromFilename(tbl.file_name || "")
+      const baseName = stripExcelMetaFromFilename(tbl.file_name || "") || path.basename(fileUrl) || "workbook.xlsx"
+      const { tables } = extractTablesFromXlsxBytes({ xlsxBytes: bytes, workbookName: baseName, sheetName: desiredSheet })
+      for (const t of tables) {
+        // eslint-disable-next-line no-await-in-loop
+        await addTable(jobId, t.csv, t.name)
+      }
+      continue
+    }
   }
 
   let run: Awaited<ReturnType<typeof runJob>>
@@ -875,6 +1149,35 @@ const applyImageOrderToBlocks = (analysis: any) => {
   }
 }
 
+const relabelBlocksInAnalysis = (analysis: any) => {
+  const chapter = typeof analysis?.chapter === "number" ? analysis.chapter : Number(analysis?.chapter) || 4
+  const experiments = Array.isArray(analysis?.experiments) ? analysis.experiments : []
+
+  for (const exp of experiments) {
+    const idx = typeof exp?.idx === "string" ? exp.idx : exp?.idx != null ? String(exp.idx) : ""
+    const subidx = typeof exp?.subidx === "string" ? exp.subidx : exp?.subidx != null ? String(exp.subidx) : ""
+    const parts = [String(chapter).trim(), idx.trim(), subidx.trim()].filter((p) => p)
+    const path = parts.join(".")
+
+    let figSeq = 1
+    let tblSeq = 1
+    const blocks = Array.isArray(exp?.blocks) ? exp.blocks : []
+    for (const block of blocks) {
+      if (!block || typeof block !== "object") continue
+      if (block.type === "figure" && block.figure && typeof block.figure === "object") {
+        block.figure.label = `図 ${path}.${figSeq}`
+        figSeq += 1
+      } else if (block.type === "table" && block.table && typeof block.table === "object") {
+        block.table.label = `表 ${path}.${tblSeq}`
+        tblSeq += 1
+      }
+    }
+
+    exp.figures = blocks.filter((b: any) => b?.type === "figure").map((b: any) => b.figure)
+    exp.tables = blocks.filter((b: any) => b?.type === "table").map((b: any) => b.table)
+  }
+}
+
 export async function renderReportFromSupabaseAnalysis(params: { reportId: string; userId: string }) {
   const admin = createServiceClient()
   const { reportId, userId } = params
@@ -900,6 +1203,8 @@ export async function renderReportFromSupabaseAnalysis(params: { reportId: strin
   applyEditsToBlocks(analysis)
   // Apply global image order (drag & drop) into figure blocks.
   applyImageOrderToBlocks(analysis)
+  // Re-label blocks after any HITL reassignment.
+  relabelBlocksInAnalysis(analysis)
 
   // Build image bytes by image_id (UploadFile.filename == image_id).
   const assetsImages = Array.isArray(analysis?.__assets_images) ? analysis.__assets_images : []

@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from docxtpl import DocxTemplate, InlineImage, RichText
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.shared import Mm
 from jinja2 import Environment, TemplateSyntaxError
 
@@ -152,6 +154,124 @@ def _inject_tables(doc: DocxTemplate, context: dict) -> None:
                 tbl["body"] = subdoc
 
 
+def _paragraph_text(p_elm) -> str:
+    try:
+        texts: list[str] = []
+        for node in p_elm.iter():
+            if node.tag == qn("w:t"):
+                texts.append(node.text or "")
+        return "".join(texts).strip()
+    except Exception:
+        return ""
+
+
+def _set_keep_next(p_elm) -> None:
+    """
+    Word pagination controls:
+    - keepNext: keep this paragraph with the next element
+    - keepLines: keep lines together within this paragraph
+    """
+    try:
+        p_pr = p_elm.get_or_add_pPr()
+        if p_pr.find(qn("w:keepNext")) is None:
+            p_pr.append(OxmlElement("w:keepNext"))
+        if p_pr.find(qn("w:keepLines")) is None:
+            p_pr.append(OxmlElement("w:keepLines"))
+    except Exception:
+        return
+
+
+def _set_row_cant_split(row) -> None:
+    """
+    Prevent a *single row* from splitting across pages (Word's "Allow row to break across pages" = off).
+    """
+    try:
+        tr = row._tr  # python-docx internal
+        tr_pr = tr.get_or_add_trPr()
+        if tr_pr.find(qn("w:cantSplit")) is None:
+            tr_pr.append(OxmlElement("w:cantSplit"))
+    except Exception:
+        return
+
+
+def _looks_like_table_caption(text: str) -> bool:
+    t = (text or "").strip()
+    if not t:
+        return False
+    low = t.lower()
+    if "表" in t or "table" in low:
+        return True
+    # Short "caption-ish" line (e.g., "1-1: xxxx", "実験結果:", etc.)
+    if len(t) <= 60 and (":" in t or "：" in t):
+        return True
+    return False
+
+
+def _apply_table_pagination_rules(doc: DocxTemplate) -> None:
+    """
+    Best-effort Word pagination controls:
+    - Keep table captions together with the following table.
+    - Avoid splitting table rows across pages.
+    - Encourage keeping the whole table together when it fits.
+
+    Notes:
+    - Word cannot *guarantee* an entire table stays on one page if it is taller than a page.
+    """
+    docx_obj = doc.get_docx()
+    if not docx_obj:
+        return
+
+    # 1) Keep captions with the table:
+    #    - Always keep the nearest non-empty paragraph with the following table.
+    #    - Also keep 1 more preceding paragraph when it looks like a caption line.
+    try:
+        body = docx_obj.element.body
+        children = list(body.iterchildren())
+        for i, child in enumerate(children):
+            if child.tag != qn("w:tbl"):
+                continue
+            candidates: list[Any] = []
+            j = i - 1
+            while j >= 0 and len(candidates) < 2:
+                prev = children[j]
+                j -= 1
+                if prev.tag != qn("w:p"):
+                    break
+                text = _paragraph_text(prev)
+                if not text:
+                    continue
+                if not candidates:
+                    candidates.append(prev)
+                    continue
+                if _looks_like_table_caption(text):
+                    candidates.append(prev)
+                break
+
+            # candidates[0] is nearest to the table; candidates[1] keeps with candidates[0].
+            for p in candidates:
+                _set_keep_next(p)
+    except Exception:
+        pass
+
+    # 2) Avoid splitting rows across pages & encourage keeping the whole table together.
+    try:
+        for table in docx_obj.tables:
+            rows = table.rows
+            for r_idx, row in enumerate(rows):
+                _set_row_cant_split(row)
+                if r_idx >= len(rows) - 1:
+                    continue
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        try:
+                            p.paragraph_format.keep_with_next = True
+                            p.paragraph_format.keep_together = True
+                        except Exception:
+                            continue
+    except Exception:
+        return
+
+
 def render_docx_bytes(
     *,
     template_path: str,
@@ -186,6 +306,8 @@ def render_docx_bytes(
         doc.render(context, jinja_env=env)
     except TemplateSyntaxError as exc:
         raise RuntimeError(f"Docx template parse failed: {exc}") from exc
+
+    _apply_table_pagination_rules(doc)
 
     out = BytesIO()
     doc.save(out)

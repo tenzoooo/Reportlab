@@ -16,6 +16,7 @@ from core.text import caption_len
 from llm.schemas.discussion import DiscussionOutput
 from llm.schemas.discussion_extract import DiscussionExtractOutput
 from llm.schemas.equation_line_ocr import EquationLineOCROutput
+from llm.schemas.assign_rerank import AssignmentRerankOutput
 from llm.schemas.method_extract import MethodExtractResult
 from llm.schemas.pdf_sections import PdfSectionsOutput
 from llm.schemas.references import ReferencesOutput
@@ -95,6 +96,7 @@ def _process_text_fields(fields: list[str]):
 def _process_image_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
     img_url = str(inputs.get("image_b64_url") or "")
     method_context = str(inputs.get("method_context") or "")
+    extracted_hint = str(inputs.get("extracted_hint") or "")
     experiments = inputs.get("experiments") or []
 
     mime = ""
@@ -105,6 +107,7 @@ def _process_image_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
         "image": {"mime": mime, "data_url_len": len(img_url)},
         "experiments_count": len(experiments) if isinstance(experiments, list) else 0,
         "method_context": {"len": len(method_context), "preview": _preview_text(method_context, max_len=300)},
+        "extracted_hint": {"len": len(extracted_hint), "preview": _preview_text(extracted_hint, max_len=200)},
         "attempts": inputs.get("attempts"),
     }
 
@@ -148,6 +151,7 @@ class LLMClient:
         *,
         model: Optional[str] = None,
         messages: list[dict[str, Any]],
+        temperature: float | None = None,
         attempts: int = 3,
     ) -> T:
         if self.mock:
@@ -161,6 +165,7 @@ class LLMClient:
                     model=model_name,
                     messages=messages,
                     response_format=response_model,
+                    temperature=temperature,
                 )
                 parsed = completion.choices[0].message.parsed
                 if parsed is None:
@@ -204,6 +209,7 @@ class LLMClient:
         image_b64_url: str,
         experiments: list[dict[str, str]],
         method_context: str,
+        extracted_hint: str = "",
         attempts: int = 3,
     ) -> ImageAnalysis:
         from llm.prompts.image_analyze import IMAGE_ANALYZE_SYSTEM, build_image_analyze_user
@@ -213,7 +219,7 @@ class LLMClient:
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": build_image_analyze_user(experiments, method_context)},
+                    {"type": "text", "text": build_image_analyze_user(experiments, method_context, extracted_hint=extracted_hint)},
                     {"type": "image_url", "image_url": {"url": image_b64_url}},
                 ],
             },
@@ -225,8 +231,8 @@ class LLMClient:
                 raise LLMError("Image analysis belongs_to is empty")
             if caption_len(analysis.caption) > 15:
                 raise LLMError("Image analysis caption exceeds 15 characters")
-            if len(analysis.belongs_to) > 3:
-                analysis = analysis.model_copy(update={"belongs_to": analysis.belongs_to[:3]})
+            if len(analysis.belongs_to) > 8:
+                analysis = analysis.model_copy(update={"belongs_to": analysis.belongs_to[:8]})
             return analysis
 
         return retry(_call, attempts=attempts, retry_on=(LLMError,))
@@ -237,7 +243,7 @@ class LLMClient:
         tags=["workflow:report_agent", "agent:llm", "task:table_analyze"],
         process_inputs=_process_text_fields(["raw_csv"]),
     )
-    def analyze_table(self, raw_csv: str, *, experiments: list[dict[str, str]]) -> TableAnalysis:
+    def analyze_table(self, raw_csv: str, *, experiments: list[dict[str, str]], table_summary: str = "") -> TableAnalysis:
         from llm.prompts.table_analyze import TABLE_ANALYZE_SYSTEM, build_table_analyze_user
 
         return self.parse(
@@ -245,10 +251,132 @@ class LLMClient:
             model=self.text_model,
             messages=[
                 {"role": "system", "content": TABLE_ANALYZE_SYSTEM},
-                {"role": "user", "content": build_table_analyze_user(raw_csv, experiments)},
+                {"role": "user", "content": build_table_analyze_user(raw_csv, experiments, table_summary=table_summary)},
             ],
             attempts=2,
         )
+
+    @_traceable_if_enabled(
+        name="LLM: 画像割当再ランキング（image_rerank）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:image_rerank"],
+    )
+    def rerank_image_assignment(self, *, payload: dict, attempts: int = 2) -> AssignmentRerankOutput:
+        from llm.prompts.assign_rerank_image import ASSIGN_RERANK_IMAGE_SYSTEM, build_assign_rerank_image_user
+
+        sample_n_env = os.environ.get("REPORT_AGENT_ASSIGN_SAMPLE_N") or ""
+        sample_n = int(sample_n_env) if sample_n_env.strip().isdigit() else 1
+        sample_n = max(1, min(sample_n, 7))
+        temp_env = os.environ.get("REPORT_AGENT_ASSIGN_SAMPLE_TEMPERATURE") or ""
+        temperature = float(temp_env) if temp_env.strip() else 0.4
+        if temperature < 0:
+            temperature = 0.0
+        if temperature > 1.5:
+            temperature = 1.5
+
+        messages = [
+            {"role": "system", "content": ASSIGN_RERANK_IMAGE_SYSTEM},
+            {"role": "user", "content": build_assign_rerank_image_user(payload)},
+        ]
+
+        if sample_n == 1:
+            return self.parse(
+                AssignmentRerankOutput,
+                model=self.text_model,
+                messages=messages,
+                temperature=temperature,
+                attempts=attempts,
+            )
+
+        results: list[AssignmentRerankOutput] = []
+        for _ in range(sample_n):
+            results.append(
+                self.parse(
+                    AssignmentRerankOutput,
+                    model=self.text_model,
+                    messages=messages,
+                    temperature=temperature,
+                    attempts=1,
+                )
+            )
+
+        scores: dict[str, float] = {}
+        best_rationale: dict[str, str] = {}
+        for r in results:
+            key = (r.exp_key or "").strip()
+            if not key:
+                continue
+            scores[key] = scores.get(key, 0.0) + float(r.score or 0.0)
+            if key not in best_rationale and (r.rationale or "").strip():
+                best_rationale[key] = r.rationale
+
+        if not scores:
+            return AssignmentRerankOutput(exp_key="", score=0.0, rationale="")
+
+        best_key = max(scores.keys(), key=lambda k: scores[k])
+        avg_score = min(1.0, max(0.0, scores[best_key] / sample_n))
+        return AssignmentRerankOutput(exp_key=best_key, score=avg_score, rationale=best_rationale.get(best_key, ""))
+
+    @_traceable_if_enabled(
+        name="LLM: 表割当再ランキング（table_rerank）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:table_rerank"],
+    )
+    def rerank_table_assignment(self, *, payload: dict, attempts: int = 2) -> AssignmentRerankOutput:
+        from llm.prompts.assign_rerank_table import ASSIGN_RERANK_TABLE_SYSTEM, build_assign_rerank_table_user
+
+        sample_n_env = os.environ.get("REPORT_AGENT_ASSIGN_SAMPLE_N") or ""
+        sample_n = int(sample_n_env) if sample_n_env.strip().isdigit() else 1
+        sample_n = max(1, min(sample_n, 7))
+        temp_env = os.environ.get("REPORT_AGENT_ASSIGN_SAMPLE_TEMPERATURE") or ""
+        temperature = float(temp_env) if temp_env.strip() else 0.4
+        if temperature < 0:
+            temperature = 0.0
+        if temperature > 1.5:
+            temperature = 1.5
+
+        messages = [
+            {"role": "system", "content": ASSIGN_RERANK_TABLE_SYSTEM},
+            {"role": "user", "content": build_assign_rerank_table_user(payload)},
+        ]
+
+        if sample_n == 1:
+            return self.parse(
+                AssignmentRerankOutput,
+                model=self.text_model,
+                messages=messages,
+                temperature=temperature,
+                attempts=attempts,
+            )
+
+        results: list[AssignmentRerankOutput] = []
+        for _ in range(sample_n):
+            results.append(
+                self.parse(
+                    AssignmentRerankOutput,
+                    model=self.text_model,
+                    messages=messages,
+                    temperature=temperature,
+                    attempts=1,
+                )
+            )
+
+        scores: dict[str, float] = {}
+        best_rationale: dict[str, str] = {}
+        for r in results:
+            key = (r.exp_key or "").strip()
+            if not key:
+                continue
+            scores[key] = scores.get(key, 0.0) + float(r.score or 0.0)
+            if key not in best_rationale and (r.rationale or "").strip():
+                best_rationale[key] = r.rationale
+
+        if not scores:
+            return AssignmentRerankOutput(exp_key="", score=0.0, rationale="")
+
+        best_key = max(scores.keys(), key=lambda k: scores[k])
+        avg_score = min(1.0, max(0.0, scores[best_key] / sample_n))
+        return AssignmentRerankOutput(exp_key=best_key, score=avg_score, rationale=best_rationale.get(best_key, ""))
 
     @_traceable_if_enabled(
         name="LLM: 考察生成（discussion）",

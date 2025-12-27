@@ -167,6 +167,53 @@ const isLikelyImagePath = (zipPath: string) => {
   return ["png", "jpg", "jpeg", "gif", "bmp", "webp", "tif", "tiff", "svg", "emf", "wmf"].includes(ext)
 }
 
+const decodeXmlEntities = (value: string) => {
+  return (value || "")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+}
+
+const extractSheetNamesFromWorkbookXml = (xml: string) => {
+  const out: string[] = []
+  const re = /<sheet\b[^>]*\bname="([^"]+)"/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(xml))) {
+    const name = decodeXmlEntities(m[1] || "").trim()
+    if (name) out.push(name)
+  }
+  return out
+}
+
+const getZipEntryText = (entry: any) => {
+  try {
+    if (typeof entry?.asText === "function") return entry.asText() as string
+    if (typeof entry?.asBinary === "function") return entry.asBinary() as string
+    if (typeof entry?.asUint8Array === "function") {
+      const bytes = entry.asUint8Array() as Uint8Array
+      return new TextDecoder("utf-8").decode(bytes)
+    }
+  } catch {
+    // ignore
+  }
+  return ""
+}
+
+const stripExcelSheetMeta = (filename: string) => {
+  const raw = filename || ""
+  const idx = raw.indexOf("::sheet=")
+  return idx === -1 ? raw : raw.slice(0, idx)
+}
+
+const withExcelSheetMeta = (filename: string, sheetName: string) => {
+  const base = stripExcelSheetMeta(filename)
+  const sheet = (sheetName || "").trim()
+  if (!sheet) return base
+  return `${base}::sheet=${encodeURIComponent(sheet)}`
+}
+
 const parseHtmlTable = (html: string): string[][] => {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, "text/html")
@@ -286,6 +333,8 @@ export default function NewReportPage() {
   const [tableFiles, setTableFiles] = useState<File[]>([])
   const [excelImagePreviews, setExcelImagePreviews] = useState<ExcelImagePreview[]>([])
   const [excelZipMetaBySourceKey, setExcelZipMetaBySourceKey] = useState<Record<string, ExcelZipMeta>>({})
+  const [excelSheetNamesBySourceKey, setExcelSheetNamesBySourceKey] = useState<Record<string, string[]>>({})
+  const [excelSelectedSheetBySourceKey, setExcelSelectedSheetBySourceKey] = useState<Record<string, string>>({})
   const [excelExtracting, setExcelExtracting] = useState<Record<string, boolean>>({})
   const [excelExtractErrors, setExcelExtractErrors] = useState<Record<string, string>>({})
   const processedExcelPreviewKeysRef = useRef<Set<string>>(new Set())
@@ -760,6 +809,18 @@ export default function NewReportPage() {
       }
       setExcelZipMetaBySourceKey((prev) => ({ ...prev, [sourceKey]: meta }))
 
+      const workbookEntryKey =
+        Object.keys(zipFiles).find((k) => normalizeZipPath(k).toLowerCase() === "xl/workbook.xml") || ""
+      const workbookXml = workbookEntryKey ? getZipEntryText((zipFiles as any)[workbookEntryKey]) : ""
+      const sheetNames = workbookXml ? extractSheetNamesFromWorkbookXml(workbookXml) : []
+      if (sheetNames.length > 0) {
+        setExcelSheetNamesBySourceKey((prev) => ({ ...prev, [sourceKey]: sheetNames }))
+        setExcelSelectedSheetBySourceKey((prev) => {
+          if (prev[sourceKey]) return prev
+          return { ...prev, [sourceKey]: sheetNames[0] }
+        })
+      }
+
       const entries = Object.entries(zipFiles)
         .filter(([zipPath, entry]) => {
           const normalized = normalizeZipPath(zipPath).toLowerCase()
@@ -825,7 +886,7 @@ export default function NewReportPage() {
         setExcelExtractErrors((prev) => ({
           ...prev,
           [sourceKey]: meta.charts_count > 0
-            ? `画像が見つかりませんでした（このExcelにはグラフが ${meta.charts_count} 個ありますが、グラフは画像ファイルとして保存されないため抽出できません。「グラフを画像として保存」または「図として貼り付け」で埋め込み画像にしてください）`
+            ? `画像が見つかりませんでした（このExcelにはグラフが ${meta.charts_count} 個あります。グラフは通常 xl/media に画像として保存されないため、ブラウザだけでは抽出できません。送信後にサーバ側でLibreOfficeを使ってPNG化→抽出する設定も可能です）`
             : "画像が見つかりませんでした（この .xlsx に埋め込み画像がない/リンク画像/保護されたファイル/.xls の可能性があります）",
         }))
       } else if (previews.length === 0) {
@@ -907,6 +968,18 @@ export default function NewReportPage() {
         const stillExists = next.some((f) => isExcelTableFile(f) && excelSourceKey(f) === key)
         if (!stillExists) {
           removeExcelImagePreviewsBySourceKey(key)
+          setExcelSheetNamesBySourceKey((prevMeta) => {
+            if (!prevMeta[key]) return prevMeta
+            const nextMeta = { ...prevMeta }
+            delete nextMeta[key]
+            return nextMeta
+          })
+          setExcelSelectedSheetBySourceKey((prevSel) => {
+            if (!prevSel[key]) return prevSel
+            const nextSel = { ...prevSel }
+            delete nextSel[key]
+            return nextSel
+          })
         }
       }
       return next
@@ -1257,11 +1330,13 @@ export default function NewReportPage() {
           }
 
           const uploadedAt = new Date(Date.now() + i + 2000).toISOString()
+          const storageFileName =
+            isExcelTableFile(file) ? withExcelSheetMeta(file.name, excelSelectedSheetBySourceKey[excelSourceKey(file)] || "") : file.name
           // eslint-disable-next-line no-await-in-loop
           const { error: insertError } = await supabase.from("experiment_data").insert([
             {
               report_id: reportId,
-              file_name: file.name,
+              file_name: storageFileName,
               file_type: "excel",
               file_url: tableStoragePath,
               uploaded_at: uploadedAt,
@@ -1589,7 +1664,45 @@ export default function NewReportPage() {
                           <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-0.5">
                             {tableFiles.map((f, idx) => (
                               <li key={`${f.name}-${idx}`} className="flex items-center justify-between gap-2">
-                                <span className="break-all">{f.name}</span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="break-all">{f.name}</div>
+                                  {isExcelTableFile(f) ? (
+                                    <div className="mt-1 flex items-center gap-2">
+                                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">抽出シート</span>
+                                      {excelSheetNamesBySourceKey[excelSourceKey(f)]?.length ? (
+                                        <select
+                                          className="h-7 rounded border bg-background px-2 text-[11px] text-foreground"
+                                          value={excelSelectedSheetBySourceKey[excelSourceKey(f)] || ""}
+                                          onChange={(e) =>
+                                            setExcelSelectedSheetBySourceKey((prev) => ({
+                                              ...prev,
+                                              [excelSourceKey(f)]: e.target.value,
+                                            }))
+                                          }
+                                        >
+                                          {excelSheetNamesBySourceKey[excelSourceKey(f)].map((name) => (
+                                            <option key={name} value={name}>
+                                              {name}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      ) : (
+                                        <input
+                                          className="h-7 w-40 rounded border bg-background px-2 text-[11px] text-foreground"
+                                          placeholder="例: Sheet1"
+                                          value={excelSelectedSheetBySourceKey[excelSourceKey(f)] || ""}
+                                          onChange={(e) =>
+                                            setExcelSelectedSheetBySourceKey((prev) => ({
+                                              ...prev,
+                                              [excelSourceKey(f)]: e.target.value,
+                                            }))
+                                          }
+                                        />
+                                      )}
+                                      <span className="text-[10px] text-muted-foreground">（このシートから表を自動抽出）</span>
+                                    </div>
+                                  ) : null}
+                                </div>
                                 <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeTableFile(idx)}>
                                   削除
                                 </Button>
