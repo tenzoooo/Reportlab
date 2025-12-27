@@ -1478,15 +1478,17 @@ export default function NewReportPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-8"
-      >
-        <h1 className="text-3xl font-bold text-foreground mb-2">新規レポート作成</h1>
-        <p className="text-muted-foreground">実験書PDFをアップロードして、編集用データを作成します</p>
-        {error && (
-          <p className="mt-2 text-sm text-red-600">{error}</p>
-        )}
-      </motion.div>
+	        transition={{ duration: 0.5 }}
+	        className="mb-8"
+	      >
+	        <h1 className="text-3xl font-bold text-foreground mb-2">新規レポート作成</h1>
+	        <p className="text-muted-foreground" suppressHydrationWarning>
+	          実験書PDFをアップロードして、編集用データを作成します
+	        </p>
+	        {error && (
+	          <p className="mt-2 text-sm text-red-600">{error}</p>
+	        )}
+	      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
