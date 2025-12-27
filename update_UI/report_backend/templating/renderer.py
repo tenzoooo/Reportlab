@@ -43,6 +43,8 @@ def _patch_template(doc: DocxTemplate, context: dict) -> None:
     if not docx_obj:
         return
 
+    _normalize_jinja_tags(docx_obj)
+
     replacements = {
         "{{ consideration.units | consideration_units | nl2br }}": "{{ consideration_units_rt }}",
         "{{ consideration.units | consideration_units }}": "{{ consideration_units_rt }}",
@@ -83,6 +85,123 @@ def _patch_template(doc: DocxTemplate, context: dict) -> None:
             for cell in row.cells:
                 patch_paragraphs(cell.paragraphs)
 
+
+def _normalize_jinja_tags(docx_obj) -> None:
+    """
+    DocxTemplate (docxtpl) requires Jinja tags like `{{ var }}` / `{% ... %}` to be contiguous.
+    Word often splits them across multiple runs, which results in variables not being rendered.
+
+    This function best-effort merges only the run fragments needed to make Jinja tags contiguous,
+    without flattening whole paragraphs (to avoid losing formatting).
+    """
+
+    def normalize_paragraph(p) -> None:
+        try:
+            runs = list(p.runs)
+        except Exception:
+            return
+        if not runs:
+            return
+
+        # Fast path: if nothing looks like Jinja, skip.
+        try:
+            joined = "".join((r.text or "") for r in runs)
+        except Exception:
+            return
+        if "{{" not in joined and "{%" not in joined and "}}" not in joined and "%}" not in joined:
+            return
+
+        def merge_boundary(i: int) -> bool:
+            if i + 1 >= len(runs):
+                return False
+            a = runs[i].text or ""
+            b = runs[i + 1].text or ""
+            if not a or not b:
+                return False
+            last = a[-1]
+            first = b[0]
+            # Stitch common split patterns: "{", "{", "{", "%", "}", "}", "%", "}".
+            if last == "{" and first in {"{", "%"}:
+                runs[i].text = a + b
+                runs[i + 1].text = ""
+                return True
+            if last == "}" and first == "}":
+                runs[i].text = a + b
+                runs[i + 1].text = ""
+                return True
+            if last == "%" and first == "}":
+                runs[i].text = a + b
+                runs[i + 1].text = ""
+                return True
+            return False
+
+        def find_start(text: str) -> tuple[int, str, str] | None:
+            candidates: list[tuple[int, str, str]] = []
+            i1 = text.find("{{")
+            if i1 != -1:
+                candidates.append((i1, "{{", "}}"))
+            i2 = text.find("{%")
+            if i2 != -1:
+                candidates.append((i2, "{%", "%}"))
+            if not candidates:
+                return None
+            return min(candidates, key=lambda t: t[0])
+
+        i = 0
+        while i < len(runs):
+            if merge_boundary(i):
+                continue
+
+            text = runs[i].text or ""
+            start = find_start(text)
+            if not start:
+                i += 1
+                continue
+
+            start_idx, _start_marker, end_marker = start
+            # If end marker already exists in this run after the start, it's contiguous enough.
+            if text.find(end_marker, start_idx + 2) != -1:
+                i += 1
+                continue
+
+            # Otherwise, merge subsequent runs until we find the end marker.
+            j = i
+            while j < len(runs):
+                if merge_boundary(j):
+                    continue
+                cur = runs[j].text or ""
+                pos = cur.find(end_marker, (start_idx + 2) if j == i else 0)
+                if pos == -1:
+                    j += 1
+                    continue
+
+                # Found end marker in run j. Merge i..j into run i,
+                # preserving any suffix after the end marker in run j.
+                if j == i:
+                    break
+
+                prefix_end = cur[: pos + len(end_marker)]
+                suffix = cur[pos + len(end_marker) :]
+
+                merged = (runs[i].text or "") + "".join((runs[k].text or "") for k in range(i + 1, j)) + prefix_end
+                runs[i].text = merged
+                for k in range(i + 1, j):
+                    runs[k].text = ""
+                runs[j].text = suffix
+                break
+
+            i += 1
+
+    try:
+        for p in docx_obj.paragraphs:
+            normalize_paragraph(p)
+        for t in docx_obj.tables:
+            for row in t.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        normalize_paragraph(p)
+    except Exception:
+        return
 
 def _inject_inline_images(
     doc: DocxTemplate,
