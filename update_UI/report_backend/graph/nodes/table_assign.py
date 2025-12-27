@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+import os
+
 from graph.state import AgentState
 from graph.utils import infer_report_chapter
 from graph.nodes.asset_order import insert_block_in_upload_order
 from models.contracts import TableBlock, TableContent
 
 
+def _disable_auto_captions() -> bool:
+    return (os.environ.get("REPORT_AGENT_DISABLE_AUTO_CAPTIONS") or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
 def table_assign(state: AgentState) -> AgentState:
     threshold = 0.6
+    disable_auto_captions = _disable_auto_captions()
     updated_assets = {tbl.table_id: tbl for tbl in state.assets_tables}
 
     tables_sorted = sorted(enumerate(state.assets_tables), key=lambda t: (t[1].upload_index or 0, t[0]))
@@ -34,7 +41,7 @@ def table_assign(state: AgentState) -> AgentState:
 
         content = TableContent(
             label="",
-            caption=analysis.caption,
+            caption="" if disable_auto_captions else analysis.caption,
             rows=tbl.rows,
             quant_comment=analysis.quant_comment,
             asset_upload_index=tbl.upload_index,

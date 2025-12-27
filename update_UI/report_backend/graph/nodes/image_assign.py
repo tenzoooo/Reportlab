@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import os
+
 from graph.state import AgentState
 from graph.utils import infer_report_chapter
 from graph.nodes.asset_order import insert_block_in_upload_order
 from models.contracts import FigureBlock, FigureContent
+
+
+def _disable_auto_captions() -> bool:
+    return (os.environ.get("REPORT_AGENT_DISABLE_AUTO_CAPTIONS") or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def image_assign(state: AgentState) -> AgentState:
@@ -13,6 +19,7 @@ def image_assign(state: AgentState) -> AgentState:
     threshold = 0.6
 
     chapter = infer_report_chapter(state)
+    disable_auto_captions = _disable_auto_captions()
 
     updated_assets = {img.image_id: img for img in state.assets_images}
 
@@ -43,7 +50,7 @@ def image_assign(state: AgentState) -> AgentState:
                 figure_image_id=img.image_id,
                 asset_upload_index=img.upload_index,
                 label="",
-                caption=analysis.caption,
+                caption="" if disable_auto_captions else analysis.caption,
                 quant_comment=analysis.quant_comment,
             )
         )

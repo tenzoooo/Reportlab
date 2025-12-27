@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 
 from core.storage import Storage
@@ -104,6 +105,7 @@ def validate(state: AgentState, *, storage: Storage, llm: LLMClient) -> AgentSta
     state.next_action = ""
 
     chapter = infer_report_chapter(state)
+    disable_auto_captions = (os.environ.get("REPORT_AGENT_DISABLE_AUTO_CAPTIONS") or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
     # Duplicate experiment idx detection.
     seen_exp: set[str] = set()
@@ -114,7 +116,6 @@ def validate(state: AgentState, *, storage: Storage, llm: LLMClient) -> AgentSta
             )
         seen_exp.add(exp.idx)
 
-    # Caption length enforcement (15 chars for images).
     for img in state.assets_images:
         if not img.analysis:
             state.validation_report.errors.append(
@@ -124,17 +125,20 @@ def validate(state: AgentState, *, storage: Storage, llm: LLMClient) -> AgentSta
                 ValidationIssue(code="retry_image_analyze", message="retry image analyze", target=img.image_id)
             )
             continue
-        cap = img.analysis.caption
-        if caption_len(cap) > 15:
-            truncated = truncate_caption(cap, max_len=15)
-            img.analysis.caption = truncated
-            state.validation_report.warnings.append(
-                ValidationIssue(
-                    code="caption_truncated",
-                    message=f"caption truncated to 15 chars: '{cap}' -> '{truncated}'",
-                    target=img.image_id,
+
+        # Caption length enforcement (15 chars for images).
+        if not disable_auto_captions:
+            cap = img.analysis.caption
+            if caption_len(cap) > 15:
+                truncated = truncate_caption(cap, max_len=15)
+                img.analysis.caption = truncated
+                state.validation_report.warnings.append(
+                    ValidationIssue(
+                        code="caption_truncated",
+                        message=f"caption truncated to 15 chars: '{cap}' -> '{truncated}'",
+                        target=img.image_id,
+                    )
                 )
-            )
 
         if not img.analysis.belongs_to:
             state.validation_report.errors.append(
@@ -192,7 +196,9 @@ def validate(state: AgentState, *, storage: Storage, llm: LLMClient) -> AgentSta
                         )
                     used_image_ids.add(image_id)
                     match = next((img for img in state.assets_images if img.image_id == image_id), None)
-                    if match and match.analysis:
+                    if disable_auto_captions:
+                        block.figure.caption = ""
+                    elif match and match.analysis:
                         block.figure.caption = match.analysis.caption
             elif block.type == "table":
                 block.table.label = f"表 {path}.{tbl_seq}"
