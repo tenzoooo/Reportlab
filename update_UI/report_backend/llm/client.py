@@ -161,12 +161,14 @@ class LLMClient:
 
         def _call() -> T:
             try:
-                completion = self._client.beta.chat.completions.parse(
-                    model=model_name,
-                    messages=messages,
-                    response_format=response_model,
-                    temperature=temperature,
-                )
+                kwargs: dict[str, Any] = {
+                    "model": model_name,
+                    "messages": messages,
+                    "response_format": response_model,
+                }
+                if temperature is not None:
+                    kwargs["temperature"] = temperature
+                completion = self._client.beta.chat.completions.parse(**kwargs)
                 parsed = completion.choices[0].message.parsed
                 if parsed is None:
                     raise LLMError("LLM returned empty parsed response")
@@ -268,11 +270,12 @@ class LLMClient:
         sample_n = int(sample_n_env) if sample_n_env.strip().isdigit() else 1
         sample_n = max(1, min(sample_n, 7))
         temp_env = os.environ.get("REPORT_AGENT_ASSIGN_SAMPLE_TEMPERATURE") or ""
-        temperature = float(temp_env) if temp_env.strip() else 0.4
+        temperature = float(temp_env) if temp_env.strip() else 1.0
         if temperature < 0:
             temperature = 0.0
         if temperature > 1.5:
             temperature = 1.5
+        temperature_arg: float | None = None if abs(temperature - 1.0) < 1e-9 else temperature
 
         messages = [
             {"role": "system", "content": ASSIGN_RERANK_IMAGE_SYSTEM},
@@ -280,25 +283,54 @@ class LLMClient:
         ]
 
         if sample_n == 1:
-            return self.parse(
-                AssignmentRerankOutput,
-                model=self.text_model,
-                messages=messages,
-                temperature=temperature,
-                attempts=attempts,
-            )
-
-        results: list[AssignmentRerankOutput] = []
-        for _ in range(sample_n):
-            results.append(
-                self.parse(
+            try:
+                return self.parse(
                     AssignmentRerankOutput,
                     model=self.text_model,
                     messages=messages,
-                    temperature=temperature,
-                    attempts=1,
+                    temperature=temperature_arg,
+                    attempts=attempts,
                 )
-            )
+            except LLMError as exc:
+                # Some models only support default sampling params (e.g., temperature fixed at 1).
+                if temperature_arg is not None and "Unsupported value: 'temperature'" in str(exc):
+                    logger.warning("Rerank image: temperature override unsupported for model=%s; retrying without it", self.text_model)
+                    return self.parse(
+                        AssignmentRerankOutput,
+                        model=self.text_model,
+                        messages=messages,
+                        temperature=None,
+                        attempts=attempts,
+                    )
+                raise
+
+        results: list[AssignmentRerankOutput] = []
+        for _ in range(sample_n):
+            try:
+                results.append(
+                    self.parse(
+                        AssignmentRerankOutput,
+                        model=self.text_model,
+                        messages=messages,
+                        temperature=temperature_arg,
+                        attempts=1,
+                    )
+                )
+            except LLMError as exc:
+                if temperature_arg is not None and "Unsupported value: 'temperature'" in str(exc):
+                    logger.warning("Rerank image: temperature override unsupported for model=%s; continuing without it", self.text_model)
+                    temperature_arg = None
+                    results.append(
+                        self.parse(
+                            AssignmentRerankOutput,
+                            model=self.text_model,
+                            messages=messages,
+                            temperature=None,
+                            attempts=1,
+                        )
+                    )
+                else:
+                    raise
 
         scores: dict[str, float] = {}
         best_rationale: dict[str, str] = {}
@@ -329,11 +361,12 @@ class LLMClient:
         sample_n = int(sample_n_env) if sample_n_env.strip().isdigit() else 1
         sample_n = max(1, min(sample_n, 7))
         temp_env = os.environ.get("REPORT_AGENT_ASSIGN_SAMPLE_TEMPERATURE") or ""
-        temperature = float(temp_env) if temp_env.strip() else 0.4
+        temperature = float(temp_env) if temp_env.strip() else 1.0
         if temperature < 0:
             temperature = 0.0
         if temperature > 1.5:
             temperature = 1.5
+        temperature_arg: float | None = None if abs(temperature - 1.0) < 1e-9 else temperature
 
         messages = [
             {"role": "system", "content": ASSIGN_RERANK_TABLE_SYSTEM},
@@ -341,25 +374,53 @@ class LLMClient:
         ]
 
         if sample_n == 1:
-            return self.parse(
-                AssignmentRerankOutput,
-                model=self.text_model,
-                messages=messages,
-                temperature=temperature,
-                attempts=attempts,
-            )
-
-        results: list[AssignmentRerankOutput] = []
-        for _ in range(sample_n):
-            results.append(
-                self.parse(
+            try:
+                return self.parse(
                     AssignmentRerankOutput,
                     model=self.text_model,
                     messages=messages,
-                    temperature=temperature,
-                    attempts=1,
+                    temperature=temperature_arg,
+                    attempts=attempts,
                 )
-            )
+            except LLMError as exc:
+                if temperature_arg is not None and "Unsupported value: 'temperature'" in str(exc):
+                    logger.warning("Rerank table: temperature override unsupported for model=%s; retrying without it", self.text_model)
+                    return self.parse(
+                        AssignmentRerankOutput,
+                        model=self.text_model,
+                        messages=messages,
+                        temperature=None,
+                        attempts=attempts,
+                    )
+                raise
+
+        results: list[AssignmentRerankOutput] = []
+        for _ in range(sample_n):
+            try:
+                results.append(
+                    self.parse(
+                        AssignmentRerankOutput,
+                        model=self.text_model,
+                        messages=messages,
+                        temperature=temperature_arg,
+                        attempts=1,
+                    )
+                )
+            except LLMError as exc:
+                if temperature_arg is not None and "Unsupported value: 'temperature'" in str(exc):
+                    logger.warning("Rerank table: temperature override unsupported for model=%s; continuing without it", self.text_model)
+                    temperature_arg = None
+                    results.append(
+                        self.parse(
+                            AssignmentRerankOutput,
+                            model=self.text_model,
+                            messages=messages,
+                            temperature=None,
+                            attempts=1,
+                        )
+                    )
+                else:
+                    raise
 
         scores: dict[str, float] = {}
         best_rationale: dict[str, str] = {}
