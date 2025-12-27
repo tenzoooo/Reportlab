@@ -38,6 +38,7 @@ class JobMeta(BaseModel):
 
     text_model: str = ""
     vision_model: str = ""
+    template_path: str = ""
 
 
 class PdfData(BaseModel):

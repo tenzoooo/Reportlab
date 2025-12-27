@@ -507,6 +507,9 @@ def build_router(*, storage: Storage, llm: LLMClient, template_path: str) -> API
 
         graph = build_graph(storage=storage, llm=llm, template_path=template_path, mode=resolved_mode)
         state.status = JobStatus.running
+        state.job_meta.text_model = llm.text_model
+        state.job_meta.vision_model = llm.vision_model
+        state.job_meta.template_path = template_path
         state.job_meta.updated_at = now_iso()
         save_state(storage, state)
 
