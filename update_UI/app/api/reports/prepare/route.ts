@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { logError, logRequest } from "@/lib/server/logger"
 import { createClient, createServiceClient } from "@/lib/supabase/server"
-import { prepareReportAgentFromSupabaseReport, ReportAlreadyProcessingError } from "@/lib/server/report-agent"
+import { prepareReportAgentFromSupabaseReport, ReportAlreadyProcessingError, ReportUserError } from "@/lib/server/report-agent"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -56,6 +56,14 @@ export async function POST(request: NextRequest) {
     if (error instanceof ReportAlreadyProcessingError) {
       return NextResponse.json({ error: "このレポートは現在処理中です" }, { status: 409 })
     }
+    if (error instanceof ReportUserError) {
+      await admin
+        .from("reports")
+        .update({ status: "draft", updated_at: new Date().toISOString() })
+        .eq("id", reportId)
+        .eq("user_id", userId)
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     logError("reports:prepare", error)
     await admin
       .from("reports")
@@ -65,4 +73,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 })
   }
 }
-

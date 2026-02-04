@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 TARGET_WIDTH_MM = 106.29
 TARGET_HEIGHT_MM = 60.57
+_MISSING_CELL_MARK = "＼"
 
 
 def _build_env() -> Environment:
@@ -301,6 +302,32 @@ def _inject_inline_images(
             )
 
 
+def _is_missing_cell_value(value: str) -> bool:
+    s = (value or "").strip()
+    return not s or s == _MISSING_CELL_MARK
+
+
+def _apply_missing_cell_diagonal(cell) -> None:
+    # Draw a top-right to bottom-left diagonal in empty cells.
+    try:
+        tc = cell._tc
+        tc_pr = tc.get_or_add_tcPr()
+        borders = tc_pr.find(qn("w:tcBorders"))
+        if borders is None:
+            borders = OxmlElement("w:tcBorders")
+            tc_pr.append(borders)
+        diag = borders.find(qn("w:tr2bl"))
+        if diag is None:
+            diag = OxmlElement("w:tr2bl")
+            borders.append(diag)
+        diag.set(qn("w:val"), "single")
+        diag.set(qn("w:sz"), "4")
+        diag.set(qn("w:space"), "0")
+        diag.set(qn("w:color"), "auto")
+    except Exception:
+        return
+
+
 def _build_table_subdoc(doc: DocxTemplate, rows: Any):
     if not isinstance(rows, list) or not rows:
         return None
@@ -316,7 +343,12 @@ def _build_table_subdoc(doc: DocxTemplate, rows: Any):
             val = ""
             if c_idx < len(row_list):
                 val = "" if row_list[c_idx] is None else str(row_list[c_idx])
-            table.cell(r_idx, c_idx).text = val
+            cell = table.cell(r_idx, c_idx)
+            if r_idx > 0 and _is_missing_cell_value(val):
+                cell.text = ""
+                _apply_missing_cell_diagonal(cell)
+            else:
+                cell.text = val
     return sub
 
 

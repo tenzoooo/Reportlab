@@ -1,0 +1,20 @@
+{
+  "violations": [
+    {
+      "type": "english_caption",
+      "location": 3,
+      "text": "表 5.1.2.1：IB−VBE特性の測定：VbeとIbの測定結果"
+    },
+    {
+      "type": "english_caption",
+      "location": 6,
+      "text": "図 5.1.2.1：Ib-Vbe測定"
+    }
+  ],
+  "warnings": [],
+  "fatal_errors": [],
+  "auto_fixed": [],
+  "parse": {
+    "blocks": 8
+  }
+}

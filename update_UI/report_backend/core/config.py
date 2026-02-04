@@ -25,6 +25,10 @@ def _load_openai_env_from_dotenv_files() -> None:
         "OPENAI_API_KEY",
         "OPENAI_MODEL",
         "OPENAI_VISION_MODEL",
+        # Quantitative comment mode/prompt (optional)
+        "REPORT_AGENT_QUANT_COMMENT_MODE",
+        "REPORT_AGENT_QUANT_VISION_PROMPT_PATH",
+        "REPORT_AGENT_QUANT_COMMENT_TEMPERATURE",
         # LangSmith / LangChain tracing (optional)
         "LANGSMITH_API_KEY",
         "LANGSMITH_TRACING",

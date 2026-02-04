@@ -97,6 +97,100 @@ def _compact_result_summary(value: str, *, max_len: int = 80) -> tuple[str, bool
     return text, False
 
 
+def _as_float(value: str) -> float | None:
+    s = (value or "").strip()
+    if not s:
+        return None
+    s = s.replace(",", "")
+    try:
+        return float(s)
+    except Exception:
+        return None
+
+
+def _mvp_quant_insights_from_table(rows: list[list[str]]) -> dict[str, object]:
+    """
+    Derive simple, defensible "result" facts from the Excel table:
+    - ranges of IC
+    - approximate plateau behavior at VCE>=~1V
+    - missing/blank cells
+    - target vs measured VCE deviation
+    Table layout (current MVP):
+      col0: target Vce
+      (col1,col2), (col3,col4), (col5,col6), (col7,col8) are (Vce,Ic) pairs
+    """
+    if not rows or len(rows) < 2:
+        return {}
+
+    body = rows[1:]  # skip header
+    pair_starts = [1, 3, 5, 7]
+
+    series: list[dict[str, object]] = []
+    target_dev: list[float] = []
+
+    for si, start in enumerate(pair_starts, start=1):
+        points: list[tuple[float, float]] = []
+        missing = 0
+        missing_targets: list[str] = []
+        for r in body:
+            target = _as_float(r[0] if len(r) > 0 else "")
+            vce = _as_float(r[start] if len(r) > start else "")
+            ic = _as_float(r[start + 1] if len(r) > start + 1 else "")
+            if vce is None or ic is None:
+                # count only when there is at least some row content (avoid trailing empties)
+                if (len(r) > start and (r[start] or "").strip()) or (len(r) > start + 1 and (r[start + 1] or "").strip()):
+                    missing += 1
+                else:
+                    # true blank
+                    missing += 1
+                if len(r) > 0 and str(r[0] or "").strip():
+                    missing_targets.append(str(r[0]).strip())
+                continue
+            points.append((vce, ic))
+            if target is not None:
+                target_dev.append(abs(vce - target))
+
+        if not points:
+            continue
+
+        ics = [ic for _, ic in points]
+        min_ic = min(ics)
+        max_ic = max(ics)
+        v_ge_1 = [ic for v, ic in points if v >= 1.0]
+        plateau = None
+        if len(v_ge_1) >= 2:
+            plateau = (min(v_ge_1), max(v_ge_1))
+
+        series.append(
+            {
+                "series": si,
+                "min_ic": min_ic,
+                "max_ic": max_ic,
+                "plateau": plateau,
+                "missing": missing,
+                "missing_targets": missing_targets[:8],
+                "n": len(points),
+            }
+        )
+
+    if not series:
+        return {}
+
+    # Sort series by max_ic (gives "largest current" series last).
+    series_sorted = sorted(series, key=lambda d: float(d.get("max_ic") or 0.0))
+    smallest = series_sorted[0]
+    largest = series_sorted[-1]
+
+    dev_max = max(target_dev) if target_dev else None
+
+    return {
+        "series": series_sorted,
+        "smallest": smallest,
+        "largest": largest,
+        "target_vce_dev_max": dev_max,
+    }
+
+
 def validate(state: AgentState, *, storage: Storage, llm: LLMClient) -> AgentState:
     state.validation_report.errors = []
     state.validation_report.warnings = []
@@ -144,6 +238,16 @@ def validate(state: AgentState, *, storage: Storage, llm: LLMClient) -> AgentSta
                 ValidationIssue(code="retry_image_analyze", message="retry image analyze", target=img.image_id)
             )
 
+        # Some MVP paths populate `analysis.assigned_exp_key` but skip the explicit image-assign node.
+        # Treat that as the assignment source of truth before reporting `unassigned_image`.
+        if not img.assigned_to:
+            exp_key = str(getattr(img.analysis, "assigned_exp_key", "") or "").strip()
+            if not exp_key:
+                first = img.analysis.belongs_to[0] if img.analysis.belongs_to else None
+                exp_key = str(getattr(first, "exp_key", "") or "").strip()
+            if exp_key:
+                img.assigned_to = exp_key
+
         if not img.assigned_to:
             state.validation_report.errors.append(
                 ValidationIssue(code="unassigned_image", message="image was not assigned to any experiment", target=img.image_id)
@@ -158,19 +262,28 @@ def validate(state: AgentState, *, storage: Storage, llm: LLMClient) -> AgentSta
                 ValidationIssue(code="retry_table_analyze", message="retry table analyze", target=tbl.table_id)
             )
         if tbl.analysis and not tbl.assigned_to:
+            exp_key = str(getattr(tbl.analysis, "assigned_exp_key", "") or "").strip()
+            if not exp_key:
+                first = tbl.analysis.belongs_to[0] if tbl.analysis.belongs_to else None
+                exp_key = str(getattr(first, "exp_key", "") or "").strip()
+            if exp_key:
+                tbl.assigned_to = exp_key
+        if tbl.analysis and not tbl.assigned_to:
             state.validation_report.errors.append(
                 ValidationIssue(code="unassigned_table", message="table was not assigned to any experiment", target=tbl.table_id)
             )
 
     # Discussion retry: if we have discussion text/prompts but got no units.
+    run_mode = (state.job_meta.run_mode or "").strip().lower()
     has_discussion_source = bool(state.pdf.consideration_prompts) or bool(state.pdf.discussion_text.strip())
-    if has_discussion_source and not state.consideration.units:
-        state.validation_report.errors.append(
-            ValidationIssue(code="missing_discussion_units", message="consideration units are missing")
-        )
-        state.validation_report.retry_targets.append(
-            ValidationIssue(code="retry_discussion", message="retry discussion generation")
-        )
+    if run_mode not in {"mvp"}:
+        if has_discussion_source and not state.consideration.units:
+            state.validation_report.errors.append(
+                ValidationIssue(code="missing_discussion_units", message="consideration units are missing")
+            )
+            state.validation_report.retry_targets.append(
+                ValidationIssue(code="retry_discussion", message="retry discussion generation")
+            )
 
     # Re-number labels deterministically using: 図/表 {chapter}.{idx}.{subidx}.{seq} (subidx omitted when empty).
     used_image_ids: set[str] = set()
@@ -213,7 +326,40 @@ def validate(state: AgentState, *, storage: Storage, llm: LLMClient) -> AgentSta
             exp.description_brief = exp.method_summary.strip()
             continue
 
-        exp.description_brief = f"{exp.method_summary} {_result_sentence(exp.model_dump())}".strip()
+        # MVP wants a more explicit narrative: process → table/figure references.
+        if run_mode in {"mvp"}:
+            exp_dump = exp.model_dump()
+            blocks = exp_dump.get("blocks") if isinstance(exp_dump.get("blocks"), list) else []
+            tbl = next((b for b in blocks if isinstance(b, dict) and b.get("type") == "table"), None)
+            fig = next((b for b in blocks if isinstance(b, dict) and b.get("type") == "figure"), None)
+            tbl_label = ""
+            fig_label = ""
+            tbl_rows: list[list[str]] = []
+            if isinstance(tbl, dict):
+                t = tbl.get("table")
+                if isinstance(t, dict):
+                    tbl_label = str(t.get("label") or "").strip()
+                    rr = t.get("rows")
+                    if isinstance(rr, list):
+                        tbl_rows = [[str(c or "") for c in (row or [])] for row in rr if isinstance(row, list)]
+            if isinstance(fig, dict):
+                f = fig.get("figure")
+                if isinstance(f, dict):
+                    fig_label = str(f.get("label") or "").strip()
+
+            # IMPORTANT (TA feedback):
+            # Do not place quantitative conclusions before showing the evidence (table/figure).
+            # Keep the pre-evidence text purely procedural + pointers.
+            parts: list[str] = []
+            if exp.method_summary.strip():
+                parts.append(exp.method_summary.strip())
+            if tbl_label:
+                parts.append(f"測定で得られた値を{tbl_label}に整理し、以下に示す。")
+            if fig_label:
+                parts.append(f"また、同データの傾向を{fig_label}に示す。")
+            exp.description_brief = " ".join([p for p in parts if p]).strip()
+        else:
+            exp.description_brief = f"{exp.method_summary} {_result_sentence(exp.model_dump())}".strip()
 
     # Build TemplateContext.
     ctx = TemplateContext(

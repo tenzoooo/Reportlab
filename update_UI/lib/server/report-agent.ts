@@ -16,6 +16,16 @@ export class ReportAlreadyProcessingError extends Error {
   }
 }
 
+export class ReportUserError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = "ReportUserError"
+    this.status = status
+  }
+}
+
 class ReportAgentHttpError extends Error {
   url: string
   status: number
@@ -315,7 +325,12 @@ const extractTablesFromXlsxBytes = (params: { xlsxBytes: Buffer; workbookName: s
   const requestedSheet = (params.sheetName || "").trim()
   const maxTables = Number(process.env.EXCEL_TABLE_EXTRACT_MAX_TABLES || 8)
 
-  const workbook = XLSX.read(xlsxBytes, { type: "buffer", cellText: true, cellDates: false })
+  let workbook: XLSX.WorkBook
+  try {
+    workbook = XLSX.read(xlsxBytes, { type: "buffer", cellText: true, cellDates: false })
+  } catch {
+    return { sheetName: requestedSheet || "", tables: [] as ExtractedTable[] }
+  }
   const sheetNames = workbook.SheetNames || []
   if (sheetNames.length === 0) return { sheetName: "", tables: [] as ExtractedTable[] }
   const resolvedSheetName = requestedSheet && sheetNames.includes(requestedSheet) ? requestedSheet : sheetNames[0]
@@ -517,6 +532,88 @@ const downloadStorageBytes = async (path: string) => {
 
 const analysisStorageKey = (userId: string, reportId: string) => {
   return `${userId}/${reportId}/analysis/analysis.json`
+}
+
+const inferChapterFromIntermediate = (intermediate: any, defaultChapter = 4) => {
+  const methodChapter =
+    typeof intermediate?.pdf?.method_chapter === "number"
+      ? intermediate.pdf.method_chapter
+      : Number(intermediate?.pdf?.method_chapter)
+  if (Number.isFinite(methodChapter) && methodChapter) return Math.max(1, Math.floor(methodChapter) + 1)
+
+  const discussionChapter =
+    typeof intermediate?.pdf?.discussion_chapter === "number"
+      ? intermediate.pdf.discussion_chapter
+      : Number(intermediate?.pdf?.discussion_chapter)
+  if (Number.isFinite(discussionChapter) && discussionChapter) return Math.max(1, Math.floor(discussionChapter) - 1)
+
+  return defaultChapter
+}
+
+const experimentsHaveBlocks = (experiments: any[]) => {
+  for (const exp of experiments) {
+    const blocks = Array.isArray(exp?.blocks) ? exp.blocks : []
+    if (blocks.length > 0) return true
+  }
+  return false
+}
+
+const buildFallbackAnalysisFromIntermediate = (params: {
+  intermediate: any
+  reportId: string
+  jobId: string
+  assetsImages: Array<{ image_id: string; filename: string; upload_index: number }>
+  tableFiles: ExperimentDataRow[]
+  run: { status?: string; errors?: unknown; warnings?: unknown }
+}) => {
+  const { intermediate, reportId, jobId, assetsImages, tableFiles, run } = params
+
+  const chapter = inferChapterFromIntermediate(intermediate, 4)
+  const experimentsRaw = Array.isArray(intermediate?.experiments) ? intermediate.experiments : []
+  const experiments = experimentsRaw.slice()
+
+  if (experiments.length === 0 || !experimentsHaveBlocks(experiments)) {
+    const blocks: any[] = []
+    for (let i = 0; i < assetsImages.length; i += 1) {
+      blocks.push({ type: "figure", figure: { label: "", caption: "", figure_image_id: "" } })
+    }
+    const tables = (tableFiles || []).filter((t) => t.file_url)
+    for (let i = 0; i < tables.length; i += 1) {
+      blocks.push({ type: "table", table: { label: "", caption: "" } })
+    }
+    experiments.push({
+      idx: "1",
+      subidx: "",
+      name: "実験",
+      method_summary: "",
+      description_brief: "",
+      quant_comment: "",
+      blocks,
+    })
+  }
+
+  const analysis: any = {
+    chapter,
+    chapter_plus_1: chapter + 1,
+    chapter_plus_2: chapter + 2,
+    experiments,
+    consideration: intermediate?.consideration && typeof intermediate.consideration === "object" ? intermediate.consideration : { units: [] },
+    summary: intermediate?.summary && typeof intermediate.summary === "object" ? intermediate.summary : {},
+    __assets_images: assetsImages,
+    image_order: assetsImages.map((i) => i.filename),
+    __hitl: { mode: "prepare", prepared_at: new Date().toISOString(), step: 0 },
+    __agent: {
+      report_id: reportId,
+      job_id: jobId,
+      status: typeof run?.status === "string" ? run.status : "",
+      errors: (run as any)?.errors || [],
+      warnings: (run as any)?.warnings || [],
+    },
+  }
+
+  // Ensure labels / derived lists exist for the editor UI.
+  relabelBlocksInAnalysis(analysis)
+  return analysis
 }
 
 const agentProgressStorageKey = (userId: string, reportId: string) => {
@@ -892,8 +989,8 @@ export async function prepareReportAgentFromSupabaseReport(params: { reportId: s
     .eq("id", reportId)
     .maybeSingle()
   if (reportError) throw new Error(reportError.message)
-  if (!report) throw new Error("レポートが見つかりません")
-  if (report.user_id !== userId) throw new Error("権限がありません")
+  if (!report) throw new ReportUserError(404, "レポートが見つかりません")
+  if (report.user_id !== userId) throw new ReportUserError(403, "権限がありません")
 
   await acquireProcessingLock({ reportId, userId })
 
@@ -920,8 +1017,9 @@ export async function prepareReportAgentFromSupabaseReport(params: { reportId: s
   if (filesError) throw new Error(filesError.message)
 
   let normalizedFiles = (files || []) as ExperimentDataRow[]
-  const pdfFile = normalizedFiles.find((f) => (f.file_url || "").toLowerCase().endsWith(".pdf"))
-  if (!pdfFile?.file_url) throw new Error("実験書PDFが見つかりません（PDFのアップロードが必要です）")
+  const isPdfLike = (value: unknown) => (typeof value === "string" ? value.toLowerCase().endsWith(".pdf") : false)
+  const pdfFile = normalizedFiles.find((f) => isPdfLike(f.file_url) || isPdfLike(f.file_name))
+  if (!pdfFile?.file_url) throw new ReportUserError(400, "実験書PDFが見つかりません（PDFのアップロードが必要です）")
 
   const { insertedAny: insertedExcelImages } = await ensureExcelImagesExtracted({ admin, reportId, userId, files: normalizedFiles })
   if (insertedExcelImages) {
@@ -968,44 +1066,59 @@ export async function prepareReportAgentFromSupabaseReport(params: { reportId: s
       return ta - tb
     })
   for (const img of imageFiles) {
-    // eslint-disable-next-line no-await-in-loop
-    const bytes = await downloadStorageBytes(img.file_url as string)
-    // eslint-disable-next-line no-await-in-loop
-    await addImage(jobId, bytes, img.file_name || "image.png")
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const bytes = await downloadStorageBytes(img.file_url as string)
+      // eslint-disable-next-line no-await-in-loop
+      await addImage(jobId, bytes, img.file_name || "image.png")
+    } catch {
+      // Best-effort: invalid or missing images shouldn't block preparing the editor JSON.
+      continue
+    }
   }
 
   const tableFiles = normalizedFiles.filter((f) => f.file_type === "excel" && f.file_url)
   for (const tbl of tableFiles) {
-    const fileUrl = tbl.file_url as string
-    const lower = fileUrl.toLowerCase()
-    if (lower.endsWith(".json")) {
-      // eslint-disable-next-line no-await-in-loop
-      const bytes = await downloadStorageBytes(fileUrl)
-      const parsed = JSON.parse(bytes.toString("utf-8")) as { rows?: unknown }
-      const rows = Array.isArray(parsed.rows) ? (parsed.rows as string[][]) : []
-      if (rows.length > 0) {
+    try {
+      const fileUrl = tbl.file_url as string
+      const lower = fileUrl.toLowerCase()
+      if (lower.endsWith(".json")) {
         // eslint-disable-next-line no-await-in-loop
-        await addTable(jobId, rowsToCsv(rows), tbl.file_name || "table.json")
+        const bytes = await downloadStorageBytes(fileUrl)
+        let parsed: { rows?: unknown } | null = null
+        try {
+          parsed = JSON.parse(bytes.toString("utf-8")) as { rows?: unknown }
+        } catch {
+          parsed = null
+        }
+        const rows = parsed && Array.isArray(parsed.rows) ? (parsed.rows as string[][]) : []
+        if (rows.length > 0) {
+          // eslint-disable-next-line no-await-in-loop
+          await addTable(jobId, rowsToCsv(rows), tbl.file_name || "table.json")
+        }
+        continue
       }
-      continue
-    }
-    if (lower.endsWith(".csv")) {
-      // eslint-disable-next-line no-await-in-loop
-      const bytes = await downloadStorageBytes(fileUrl)
-      // eslint-disable-next-line no-await-in-loop
-      await addTable(jobId, bytes.toString("utf-8"), tbl.file_name || "table.csv")
-      continue
-    }
-    if (lower.endsWith(".xlsx") || lower.endsWith(".xlsm")) {
-      // eslint-disable-next-line no-await-in-loop
-      const bytes = await downloadStorageBytes(fileUrl)
-      const desiredSheet = parseExcelSheetNameFromFilename(tbl.file_name || "")
-      const baseName = stripExcelMetaFromFilename(tbl.file_name || "") || path.basename(fileUrl) || "workbook.xlsx"
-      const { tables } = extractTablesFromXlsxBytes({ xlsxBytes: bytes, workbookName: baseName, sheetName: desiredSheet })
-      for (const t of tables) {
+      if (lower.endsWith(".csv")) {
         // eslint-disable-next-line no-await-in-loop
-        await addTable(jobId, t.csv, t.name)
+        const bytes = await downloadStorageBytes(fileUrl)
+        // eslint-disable-next-line no-await-in-loop
+        await addTable(jobId, bytes.toString("utf-8"), tbl.file_name || "table.csv")
+        continue
       }
+      if (lower.endsWith(".xlsx") || lower.endsWith(".xlsm")) {
+        // eslint-disable-next-line no-await-in-loop
+        const bytes = await downloadStorageBytes(fileUrl)
+        const desiredSheet = parseExcelSheetNameFromFilename(tbl.file_name || "")
+        const baseName = stripExcelMetaFromFilename(tbl.file_name || "") || path.basename(fileUrl) || "workbook.xlsx"
+        const { tables } = extractTablesFromXlsxBytes({ xlsxBytes: bytes, workbookName: baseName, sheetName: desiredSheet })
+        for (const t of tables) {
+          // eslint-disable-next-line no-await-in-loop
+          await addTable(jobId, t.csv, t.name)
+        }
+        continue
+      }
+    } catch {
+      // Best-effort: invalid or missing tables shouldn't block preparing the editor JSON.
       continue
     }
   }
@@ -1043,10 +1156,27 @@ export async function prepareReportAgentFromSupabaseReport(params: { reportId: s
     .sort((a: any, b: any) => (a.upload_index || 0) - (b.upload_index || 0))
 
   if (!templateContext || typeof templateContext !== "object") {
-    const firstError = run.errors?.[0]?.message
-    throw new Error(
-      `分析結果が生成されませんでした（status=${run.status}${firstError ? ` / ${firstError}` : ""}）。agentの中間JSONは ${getAgentBaseUrl()}/jobs/${jobId}/intermediate で確認できます。`
-    )
+    const analysis = buildFallbackAnalysisFromIntermediate({
+      intermediate,
+      reportId,
+      jobId,
+      assetsImages: minimalAssetsImages,
+      tableFiles,
+      run,
+    })
+    const key = analysisStorageKey(userId, reportId)
+    await admin.storage.from(EXPERIMENT_BUCKET).upload(key, JSON.stringify(analysis, null, 2), {
+      contentType: "application/json",
+      upsert: true,
+    })
+
+    await admin
+      .from("reports")
+      .update({ status: "draft", updated_at: new Date().toISOString() })
+      .eq("id", reportId)
+      .eq("user_id", userId)
+
+    return { jobId }
   }
 
   const analysis = {

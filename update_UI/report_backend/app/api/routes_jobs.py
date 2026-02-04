@@ -38,10 +38,15 @@ class AddTableResponse(BaseModel):
     table_id: str
 
 
+class AddExcelResponse(BaseModel):
+    filename: str
+
+
 class RunJobResponse(BaseModel):
     job_id: str
     status: JobStatus
     artifact_docx_key: Optional[str] = None
+    artifact_markdown_key: Optional[str] = None
     errors: list[ValidationIssue] = Field(default_factory=list)
     warnings: list[ValidationIssue] = Field(default_factory=list)
 
@@ -494,6 +499,32 @@ def build_router(*, storage: Storage, llm: LLMClient, template_path: str) -> API
         save_state(storage, state)
         return AddTableResponse(table_id=table_id)
 
+    @r.post("/jobs/{job_id}/excel", response_model=AddExcelResponse)
+    async def _add_excel(job_id: str, excel: UploadFile = File(...)) -> AddExcelResponse:
+        """
+        Upload an Excel file (.xlsx) to be used by MVP mode.
+        """
+        try:
+            state = load_state(storage, job_id=job_id)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        raw = await excel.read()
+        if not raw:
+            raise HTTPException(status_code=400, detail="Empty excel upload")
+
+        ext = _ext_from_filename(excel.filename or "")
+        if ext not in {".xlsx", ".xlsm"}:
+            raise HTTPException(status_code=400, detail="Unsupported excel type (expected .xlsx or .xlsm)")
+
+        key = f"jobs/{job_id}/source/excel{ext}"
+        storage.put_bytes(key, raw)
+        state.excel.filename = excel.filename or f"excel{ext}"
+        state.excel.storage_key = key
+        state.job_meta.updated_at = now_iso()
+        save_state(storage, state)
+        return AddExcelResponse(filename=state.excel.filename)
+
     @r.post("/jobs/{job_id}/run", response_model=RunJobResponse)
     async def _run_job(job_id: str, mode: str = "full") -> RunJobResponse:
         try:
@@ -502,14 +533,15 @@ def build_router(*, storage: Storage, llm: LLMClient, template_path: str) -> API
             raise HTTPException(status_code=404, detail="Job not found")
 
         resolved_mode = (mode or "full").strip().lower()
-        if resolved_mode not in {"full", "prepare"}:
-            raise HTTPException(status_code=400, detail="Invalid mode (expected 'full' or 'prepare')")
+        if resolved_mode not in {"full", "prepare", "mvp"}:
+            raise HTTPException(status_code=400, detail="Invalid mode (expected 'full' | 'prepare' | 'mvp')")
 
         graph = build_graph(storage=storage, llm=llm, template_path=template_path, mode=resolved_mode)
         state.status = JobStatus.running
         state.job_meta.text_model = llm.text_model
         state.job_meta.vision_model = llm.vision_model
         state.job_meta.template_path = template_path
+        state.job_meta.run_mode = resolved_mode
         state.job_meta.updated_at = now_iso()
         save_state(storage, state)
 
@@ -558,6 +590,7 @@ def build_router(*, storage: Storage, llm: LLMClient, template_path: str) -> API
                 job_id=job_id,
                 status=state.status,
                 artifact_docx_key=state.artifact_docx_key,
+                artifact_markdown_key=state.artifact_markdown_key,
                 errors=state.validation_report.errors,
                 warnings=state.validation_report.warnings,
             )
@@ -567,6 +600,7 @@ def build_router(*, storage: Storage, llm: LLMClient, template_path: str) -> API
             job_id=job_id,
             status=result_state.status,
             artifact_docx_key=result_state.artifact_docx_key,
+            artifact_markdown_key=result_state.artifact_markdown_key,
             errors=result_state.validation_report.errors,
             warnings=result_state.validation_report.warnings,
         )
@@ -601,6 +635,57 @@ def build_router(*, storage: Storage, llm: LLMClient, template_path: str) -> API
             content=raw,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={"Content-Disposition": f'attachment; filename="report_{job_id}.docx"'},
+        )
+
+    @r.get("/jobs/{job_id}/artifact/markdown")
+    async def _get_artifact_markdown(job_id: str):
+        try:
+            state = load_state(storage, job_id=job_id)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        if not state.artifact_markdown_key:
+            raise HTTPException(status_code=404, detail="Markdown artifact not available yet")
+
+        raw = storage.get_bytes(state.artifact_markdown_key)
+        return Response(
+            content=raw,
+            media_type="text/markdown; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="report_{job_id}.md"'},
+        )
+
+    @r.get("/jobs/{job_id}/artifact/markdown/raw")
+    async def _get_artifact_markdown_raw(job_id: str):
+        try:
+            state = load_state(storage, job_id=job_id)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        if not state.artifact_markdown_raw_key:
+            raise HTTPException(status_code=404, detail="Raw markdown artifact not available yet")
+
+        raw = storage.get_bytes(state.artifact_markdown_raw_key)
+        return Response(
+            content=raw,
+            media_type="text/markdown; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="report_{job_id}_raw.md"'},
+        )
+
+    @r.get("/jobs/{job_id}/artifact/review_log")
+    async def _get_review_log(job_id: str):
+        try:
+            state = load_state(storage, job_id=job_id)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        if not state.artifact_review_log_key:
+            raise HTTPException(status_code=404, detail="Review log not available yet")
+
+        raw = storage.get_bytes(state.artifact_review_log_key)
+        return Response(
+            content=raw,
+            media_type="application/json; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="review_log_{job_id}.json"'},
         )
 
     return r

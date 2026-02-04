@@ -25,7 +25,12 @@ from .nodes.references import references
 from .nodes.validate import validate
 from .nodes.retry_decide import retry_decide
 from .nodes.render_docx import render_docx
+from .nodes.render_docx_markdown import render_docx_markdown
+from .nodes.render_markdown import render_markdown
+from .nodes.review_markdown import review_markdown_node
 from .nodes.snapshot import snapshot
+from .nodes.excel_mvp import excel_mvp
+from .nodes.quant_comment_mvp import quant_comment_mvp
 
 
 def build_graph(*, storage: Storage, llm: LLMClient, template_path: str, mode: str = "full"):
@@ -35,7 +40,7 @@ def build_graph(*, storage: Storage, llm: LLMClient, template_path: str, mode: s
     """
 
     resolved_mode = (mode or "full").strip().lower()
-    if resolved_mode not in {"full", "prepare"}:
+    if resolved_mode not in {"full", "prepare", "mvp"}:
         raise ValueError(f"Invalid graph mode: {mode}")
 
     mode_tag = f"mode:{resolved_mode}"
@@ -84,26 +89,6 @@ def build_graph(*, storage: Storage, llm: LLMClient, template_path: str, mode: s
     graph.add_node("snapshot_pdf_parse", lambda s: snapshot(s, storage=storage, step="pdf_parse"))
 
     graph.add_node(
-        "pdf_sections",
-        _named_node(
-            key="pdf_sections",
-            label="03 章見出し検出（LLM）",
-            fn=lambda s: pdf_sections(s, llm=llm),
-        ),
-    )
-    graph.add_node("snapshot_pdf_sections", lambda s: snapshot(s, storage=storage, step="pdf_sections"))
-
-    graph.add_node(
-        "discussion_extract",
-        _named_node(
-            key="discussion_extract",
-            label="04 考察プロンプト抽出（LLM）",
-            fn=lambda s: discussion_extract(s, llm=llm),
-        ),
-    )
-    graph.add_node("snapshot_discussion_extract", lambda s: snapshot(s, storage=storage, step="discussion_extract"))
-
-    graph.add_node(
         "method_extract",
         _named_node(
             key="method_extract",
@@ -123,91 +108,123 @@ def build_graph(*, storage: Storage, llm: LLMClient, template_path: str, mode: s
     )
     graph.add_node("snapshot_unit_init", lambda s: snapshot(s, storage=storage, step="unit_init"))
 
-    graph.add_node(
-        "image_analyze",
-        _named_node(
-            key="image_analyze",
-            label="07 画像解析（Vision LLM）",
-            fn=lambda s: image_analyze(s, storage=storage, llm=llm),
-        ),
-    )
-    graph.add_node("snapshot_image_analyze", lambda s: snapshot(s, storage=storage, step="image_analyze"))
-    graph.add_node(
-        "image_rerank",
-        _named_node(
-            key="image_rerank",
-            label="08 画像割当再ランキング（LLM）",
-            fn=lambda s: image_rerank(s, llm=llm),
-        ),
-    )
-    graph.add_node("snapshot_image_rerank", lambda s: snapshot(s, storage=storage, step="image_rerank"))
-    graph.add_node(
-        "image_assign",
-        _named_node(
-            key="image_assign",
-            label="09 画像割当",
-            fn=lambda s: image_assign(s),
-        ),
-    )
-    graph.add_node("snapshot_image_assign", lambda s: snapshot(s, storage=storage, step="image_assign"))
+    if resolved_mode != "mvp":
+        graph.add_node(
+            "pdf_sections",
+            _named_node(
+                key="pdf_sections",
+                label="03 章見出し検出（LLM）",
+                fn=lambda s: pdf_sections(s, llm=llm),
+            ),
+        )
+        graph.add_node("snapshot_pdf_sections", lambda s: snapshot(s, storage=storage, step="pdf_sections"))
 
-    graph.add_node(
-        "table_parse",
-        _named_node(
-            key="table_parse",
-            label="10 表解析（LLM）",
-            fn=lambda s: table_parse(s, llm=llm),
-        ),
-    )
-    graph.add_node("snapshot_table_parse", lambda s: snapshot(s, storage=storage, step="table_parse"))
-    graph.add_node(
-        "table_rerank",
-        _named_node(
-            key="table_rerank",
-            label="11 表割当再ランキング（LLM）",
-            fn=lambda s: table_rerank(s, llm=llm),
-        ),
-    )
-    graph.add_node("snapshot_table_rerank", lambda s: snapshot(s, storage=storage, step="table_rerank"))
-    graph.add_node(
-        "table_assign",
-        _named_node(
-            key="table_assign",
-            label="12 表割当",
-            fn=lambda s: table_assign(s),
-        ),
-    )
-    graph.add_node("snapshot_table_assign", lambda s: snapshot(s, storage=storage, step="table_assign"))
+        graph.add_node(
+            "discussion_extract",
+            _named_node(
+                key="discussion_extract",
+                label="04 考察プロンプト抽出（LLM）",
+                fn=lambda s: discussion_extract(s, llm=llm),
+            ),
+        )
+        graph.add_node("snapshot_discussion_extract", lambda s: snapshot(s, storage=storage, step="discussion_extract"))
 
-    graph.add_node(
-        "discussion",
-        _named_node(
-            key="discussion",
-            label="11 考察生成（LLM）",
-            fn=lambda s: discussion(s, llm=llm),
-        ),
-    )
-    graph.add_node("snapshot_discussion", lambda s: snapshot(s, storage=storage, step="discussion"))
+    if resolved_mode == "mvp":
+        graph.add_node(
+            "excel_mvp",
+            _named_node(
+                key="excel_mvp",
+                label="07 Excel→表抽出→グラフ生成（MVP）",
+                fn=lambda s: excel_mvp(s, storage=storage, llm=llm),
+            ),
+        )
+        graph.add_node("snapshot_excel_mvp", lambda s: snapshot(s, storage=storage, step="excel_mvp"))
+    else:
+        graph.add_node(
+            "image_analyze",
+            _named_node(
+                key="image_analyze",
+                label="07 画像解析（Vision LLM）",
+                fn=lambda s: image_analyze(s, storage=storage, llm=llm),
+            ),
+        )
+        graph.add_node("snapshot_image_analyze", lambda s: snapshot(s, storage=storage, step="image_analyze"))
+        graph.add_node(
+            "image_rerank",
+            _named_node(
+                key="image_rerank",
+                label="08 画像割当再ランキング（LLM）",
+                fn=lambda s: image_rerank(s, llm=llm),
+            ),
+        )
+        graph.add_node("snapshot_image_rerank", lambda s: snapshot(s, storage=storage, step="image_rerank"))
+        graph.add_node(
+            "image_assign",
+            _named_node(
+                key="image_assign",
+                label="09 画像割当",
+                fn=lambda s: image_assign(s),
+            ),
+        )
+        graph.add_node("snapshot_image_assign", lambda s: snapshot(s, storage=storage, step="image_assign"))
 
-    graph.add_node(
-        "summary_generate",
-        _named_node(
-            key="summary_generate",
-            label="12 まとめ生成（LLM）",
-            fn=lambda s: summary(s, llm=llm),
-        ),
-    )
-    graph.add_node("snapshot_summary_generate", lambda s: snapshot(s, storage=storage, step="summary"))
+        graph.add_node(
+            "table_parse",
+            _named_node(
+                key="table_parse",
+                label="10 表解析（LLM）",
+                fn=lambda s: table_parse(s, llm=llm),
+            ),
+        )
+        graph.add_node("snapshot_table_parse", lambda s: snapshot(s, storage=storage, step="table_parse"))
+        graph.add_node(
+            "table_rerank",
+            _named_node(
+                key="table_rerank",
+                label="11 表割当再ランキング（LLM）",
+                fn=lambda s: table_rerank(s, llm=llm),
+            ),
+        )
+        graph.add_node("snapshot_table_rerank", lambda s: snapshot(s, storage=storage, step="table_rerank"))
+        graph.add_node(
+            "table_assign",
+            _named_node(
+                key="table_assign",
+                label="12 表割当",
+                fn=lambda s: table_assign(s),
+            ),
+        )
+        graph.add_node("snapshot_table_assign", lambda s: snapshot(s, storage=storage, step="table_assign"))
 
-    graph.add_node(
-        "references",
-        _named_node(
-            key="references",
-            label="13 参考文献",
-            fn=lambda s: references(s),
-        ),
-    )
-    graph.add_node("snapshot_references", lambda s: snapshot(s, storage=storage, step="references"))
+        graph.add_node(
+            "discussion",
+            _named_node(
+                key="discussion",
+                label="11 考察生成（LLM）",
+                fn=lambda s: discussion(s, llm=llm),
+            ),
+        )
+        graph.add_node("snapshot_discussion", lambda s: snapshot(s, storage=storage, step="discussion"))
+
+        graph.add_node(
+            "summary_generate",
+            _named_node(
+                key="summary_generate",
+                label="12 まとめ生成（LLM）",
+                fn=lambda s: summary(s, llm=llm),
+            ),
+        )
+        graph.add_node("snapshot_summary_generate", lambda s: snapshot(s, storage=storage, step="summary"))
+
+        graph.add_node(
+            "references",
+            _named_node(
+                key="references",
+                label="13 参考文献",
+                fn=lambda s: references(s),
+            ),
+        )
+        graph.add_node("snapshot_references", lambda s: snapshot(s, storage=storage, step="references"))
 
     graph.add_node(
         "validate",
@@ -219,25 +236,66 @@ def build_graph(*, storage: Storage, llm: LLMClient, template_path: str, mode: s
     )
     graph.add_node("snapshot_validate", lambda s: snapshot(s, storage=storage, step="validate"))
 
-    graph.add_node(
-        "retry_decide",
-        _named_node(
-            key="retry_decide",
-            label="15 リトライ判断",
-            fn=lambda s: retry_decide(s),
-        ),
-    )
-
-    if resolved_mode == "full":
+    if resolved_mode != "mvp":
         graph.add_node(
-            "render_docx",
+            "retry_decide",
             _named_node(
-                key="render_docx",
-                label="16 DOCX生成",
-                fn=lambda s: render_docx(s, storage=storage, template_path=template_path),
+                key="retry_decide",
+                label="15 リトライ判断",
+                fn=lambda s: retry_decide(s),
             ),
         )
-        graph.add_node("snapshot_render_docx", lambda s: snapshot(s, storage=storage, step="render_docx"))
+
+    if resolved_mode in {"full", "mvp"}:
+        if resolved_mode == "mvp":
+            graph.add_node(
+                "quant_comment_mvp",
+                _named_node(
+                    key="quant_comment_mvp",
+                    label="16.5 定量コメント生成（MVP）",
+                    fn=lambda s: quant_comment_mvp(s, llm=llm, storage=storage),
+                ),
+            )
+            graph.add_node(
+                "snapshot_quant_comment_mvp", lambda s: snapshot(s, storage=storage, step="quant_comment_mvp")
+            )
+            graph.add_node(
+                "render_markdown",
+                _named_node(
+                    key="render_markdown",
+                    label="16 Markdown生成（MVP）",
+                    fn=lambda s: render_markdown(s, storage=storage),
+                ),
+            )
+            graph.add_node("snapshot_render_markdown", lambda s: snapshot(s, storage=storage, step="render_markdown"))
+            graph.add_node(
+                "review_markdown",
+                _named_node(
+                    key="review_markdown",
+                    label="17 レビュー/修正（Markdown）",
+                    fn=lambda s: review_markdown_node(s, storage=storage),
+                ),
+            )
+            graph.add_node("snapshot_review_markdown", lambda s: snapshot(s, storage=storage, step="review_markdown"))
+            graph.add_node(
+                "render_docx_markdown",
+                _named_node(
+                    key="render_docx_markdown",
+                    label="18 DOCX生成（Markdown）",
+                    fn=lambda s: render_docx_markdown(s, storage=storage),
+                ),
+            )
+            graph.add_node("snapshot_render_docx", lambda s: snapshot(s, storage=storage, step="render_docx"))
+        else:
+            graph.add_node(
+                "render_docx",
+                _named_node(
+                    key="render_docx",
+                    label="16 DOCX生成",
+                    fn=lambda s: render_docx(s, storage=storage, template_path=template_path),
+                ),
+            )
+            graph.add_node("snapshot_render_docx", lambda s: snapshot(s, storage=storage, step="render_docx"))
     else:
         def _finish_prepare(state: AgentState) -> AgentState:
             state.status = JobStatus.done if not state.validation_report.errors else JobStatus.partial
@@ -258,57 +316,78 @@ def build_graph(*, storage: Storage, llm: LLMClient, template_path: str, mode: s
     graph.add_edge("ingest", "snapshot_ingest")
     graph.add_edge("snapshot_ingest", "pdf_parse")
     graph.add_edge("pdf_parse", "snapshot_pdf_parse")
-    graph.add_edge("snapshot_pdf_parse", "pdf_sections")
-    graph.add_edge("pdf_sections", "snapshot_pdf_sections")
-    graph.add_edge("snapshot_pdf_sections", "discussion_extract")
-    graph.add_edge("discussion_extract", "snapshot_discussion_extract")
-    graph.add_edge("snapshot_discussion_extract", "method_extract")
+    if resolved_mode == "mvp":
+        graph.add_edge("snapshot_pdf_parse", "method_extract")
+    else:
+        graph.add_edge("snapshot_pdf_parse", "pdf_sections")
+        graph.add_edge("pdf_sections", "snapshot_pdf_sections")
+        graph.add_edge("snapshot_pdf_sections", "discussion_extract")
+        graph.add_edge("discussion_extract", "snapshot_discussion_extract")
+        graph.add_edge("snapshot_discussion_extract", "method_extract")
     graph.add_edge("method_extract", "snapshot_method_extract")
     graph.add_edge("snapshot_method_extract", "unit_init")
     graph.add_edge("unit_init", "snapshot_unit_init")
 
-    # Assets are optional; nodes are no-ops when empty.
-    graph.add_edge("snapshot_unit_init", "image_analyze")
-    graph.add_edge("image_analyze", "snapshot_image_analyze")
-    graph.add_edge("snapshot_image_analyze", "image_rerank")
-    graph.add_edge("image_rerank", "snapshot_image_rerank")
-    graph.add_edge("snapshot_image_rerank", "image_assign")
-    graph.add_edge("image_assign", "snapshot_image_assign")
+    if resolved_mode == "mvp":
+        graph.add_edge("snapshot_unit_init", "excel_mvp")
+        graph.add_edge("excel_mvp", "snapshot_excel_mvp")
+        graph.add_edge("snapshot_excel_mvp", "validate")
+    else:
+        # Assets are optional; nodes are no-ops when empty.
+        graph.add_edge("snapshot_unit_init", "image_analyze")
+        graph.add_edge("image_analyze", "snapshot_image_analyze")
+        graph.add_edge("snapshot_image_analyze", "image_rerank")
+        graph.add_edge("image_rerank", "snapshot_image_rerank")
+        graph.add_edge("snapshot_image_rerank", "image_assign")
+        graph.add_edge("image_assign", "snapshot_image_assign")
 
-    graph.add_edge("snapshot_image_assign", "table_parse")
-    graph.add_edge("table_parse", "snapshot_table_parse")
-    graph.add_edge("snapshot_table_parse", "table_rerank")
-    graph.add_edge("table_rerank", "snapshot_table_rerank")
-    graph.add_edge("snapshot_table_rerank", "table_assign")
-    graph.add_edge("table_assign", "snapshot_table_assign")
+        graph.add_edge("snapshot_image_assign", "table_parse")
+        graph.add_edge("table_parse", "snapshot_table_parse")
+        graph.add_edge("snapshot_table_parse", "table_rerank")
+        graph.add_edge("table_rerank", "snapshot_table_rerank")
+        graph.add_edge("snapshot_table_rerank", "table_assign")
+        graph.add_edge("table_assign", "snapshot_table_assign")
 
-    graph.add_edge("snapshot_table_assign", "discussion")
-    graph.add_edge("discussion", "snapshot_discussion")
-    graph.add_edge("snapshot_discussion", "summary_generate")
-    graph.add_edge("summary_generate", "snapshot_summary_generate")
-    graph.add_edge("snapshot_summary_generate", "references")
-    graph.add_edge("references", "snapshot_references")
-    graph.add_edge("snapshot_references", "validate")
+        graph.add_edge("snapshot_table_assign", "discussion")
+        graph.add_edge("discussion", "snapshot_discussion")
+        graph.add_edge("snapshot_discussion", "summary_generate")
+        graph.add_edge("summary_generate", "snapshot_summary_generate")
+        graph.add_edge("snapshot_summary_generate", "references")
+        graph.add_edge("references", "snapshot_references")
+        graph.add_edge("snapshot_references", "validate")
     graph.add_edge("validate", "snapshot_validate")
-    graph.add_edge("snapshot_validate", "retry_decide")
+    if resolved_mode != "mvp":
+        graph.add_edge("snapshot_validate", "retry_decide")
 
     def _route_after_validate(state: AgentState) -> str:
         return state.next_action or "render_docx"
 
-    graph.add_conditional_edges(
-        "retry_decide",
-        _route_after_validate,
-        {
-            "image_analyze": "image_analyze",
-            "table_parse": "table_parse",
-            "discussion": "discussion",
-            "render_docx": "render_docx" if resolved_mode == "full" else "finish_prepare",
-        },
-    )
+    if resolved_mode != "mvp":
+        graph.add_conditional_edges(
+            "retry_decide",
+            _route_after_validate,
+            {
+                "image_analyze": "image_analyze",
+                "table_parse": "table_parse",
+                "discussion": "discussion",
+                "render_docx": "render_docx" if resolved_mode == "full" else "finish_prepare",
+            },
+        )
 
-    if resolved_mode == "full":
-        graph.add_edge("render_docx", "snapshot_render_docx")
-        graph.add_edge("snapshot_render_docx", END)
+    if resolved_mode in {"full", "mvp"}:
+        if resolved_mode == "mvp":
+            graph.add_edge("snapshot_validate", "quant_comment_mvp")
+            graph.add_edge("quant_comment_mvp", "snapshot_quant_comment_mvp")
+            graph.add_edge("snapshot_quant_comment_mvp", "render_markdown")
+            graph.add_edge("render_markdown", "snapshot_render_markdown")
+            graph.add_edge("snapshot_render_markdown", "review_markdown")
+            graph.add_edge("review_markdown", "snapshot_review_markdown")
+            graph.add_edge("snapshot_review_markdown", "render_docx_markdown")
+            graph.add_edge("render_docx_markdown", "snapshot_render_docx")
+            graph.add_edge("snapshot_render_docx", END)
+        else:
+            graph.add_edge("render_docx", "snapshot_render_docx")
+            graph.add_edge("snapshot_render_docx", END)
     else:
         graph.add_edge("finish_prepare", END)
 
