@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import logging
 import os
@@ -20,11 +21,13 @@ from llm.schemas.assign_rerank import AssignmentRerankOutput
 from llm.schemas.method_extract import MethodExtractResult
 from llm.schemas.mvp_first_experiment import MVPFirstExperimentOutput
 from llm.schemas.mvp_quant_comment import MVPQuantCommentOutput
+from llm.schemas.past_report_hints import PastReportHintsOutput
 from llm.schemas.pdf_sections import PdfSectionsOutput
 from llm.schemas.references import ReferencesOutput
 from llm.schemas.summary import SummaryOutput
 from llm.schemas.excel_select import ExcelSelectionOutput
-from models.contracts import ImageAnalysis, TableAnalysis
+from llm.schemas.theory_formula_extract import TheoryFormulaExtractOutput
+from models.contracts import ImageAnalysis, TableAnalysis, empty_past_report_summary
 
 
 logger = logging.getLogger(__name__)
@@ -166,12 +169,20 @@ def _replace_series_with_driver(paragraph: str, *, validation_payload: dict[str,
     if not paragraph:
         return paragraph
     mapping = _series_name_map_from_payload(validation_payload)
+    if not mapping:
+        return paragraph
     out = paragraph
     for key, val in mapping.items():
-        out = out.replace(key, val)
-    # Remove any remaining generic "系列N" tokens.
-    out = re.sub(r"系列\s*\d+\s*=?\s*", "", out)
-    out = out.replace("系列", "")
+        m = re.search(r"\d+", key)
+        if not m:
+            continue
+        idx = m.group(0)
+        out = re.sub(rf"系列\s*{idx}\s*=?\s*", val, out)
+    # If any generic tokens remain, keep them readable instead of deleting context.
+    out = re.sub(r"系列\s*\d+\s*=?\s*", "条件", out)
+    out = out.replace("系列", "条件")
+    out = re.sub(r"[、,]{2,}", "、", out)
+    out = re.sub(r"\s+、", "、", out)
     return out
 
 
@@ -220,11 +231,15 @@ def _is_truthy(value: str | None) -> bool:
 
 
 def _langsmith_enabled() -> bool:
-    return (
-        _is_truthy(os.environ.get("LANGSMITH_TRACING"))
-        or _is_truthy(os.environ.get("LANGSMITH_TRACING_V2"))
-        or _is_truthy(os.environ.get("LANGCHAIN_TRACING_V2"))
-    )
+    trace_flags = [
+        os.environ.get("LANGSMITH_TRACING"),
+        os.environ.get("LANGSMITH_TRACING_V2"),
+        os.environ.get("LANGCHAIN_TRACING_V2"),
+    ]
+    explicit = [v.strip() for v in trace_flags if isinstance(v, str) and v.strip()]
+    if explicit:
+        return any(_is_truthy(v) for v in explicit)
+    return bool(os.environ.get("LANGSMITH_API_KEY") or os.environ.get("LANGCHAIN_API_KEY"))
 
 
 def _traceable_if_enabled(
@@ -307,10 +322,19 @@ def _process_equation_ocr_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
 
 class LLMClient:
     def __init__(self, settings: Settings):
+        # Force-disable LangSmith tracing for all LLM calls unless explicitly re-enabled upstream.
+        os.environ.setdefault("LANGSMITH_TRACING", "false")
+        os.environ.setdefault("LANGSMITH_TRACING_V2", "false")
+        os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
+        os.environ.setdefault("LANGSMITH_ENDPOINT", "")
         self._settings = settings
         self.text_model = settings.openai_model
         self.vision_model = settings.openai_vision_model
-        client = OpenAI(api_key=settings.openai_api_key)
+        default_headers = {
+            "Authorization": f"Bearer {settings.openai_api_key}",
+            "Content-Type": "application/json",
+        }
+        client = OpenAI(api_key=settings.openai_api_key, default_headers=default_headers)
         if _langsmith_enabled():
             try:
                 from langsmith.wrappers import wrap_openai
@@ -332,7 +356,7 @@ class LLMClient:
         model: Optional[str] = None,
         messages: list[dict[str, Any]],
         temperature: float | None = None,
-        attempts: int = 3,
+        attempts: int = 5,
     ) -> T:
         if self.mock:
             return self._mock_response(response_model, messages)
@@ -377,6 +401,40 @@ class LLMClient:
                 {"role": "user", "content": build_method_extract_user(method_text)},
             ],
             attempts=3,
+        )
+
+    @_traceable_if_enabled(
+        name="LLM: 理論式抽出（theory_formula_extract）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:theory_formula_extract"],
+        process_inputs=_process_text_fields(["pdf_text"]),
+    )
+    def extract_theory_formulas(
+        self,
+        *,
+        pdf_text: str,
+        experiments: list[str],
+        chunk_index: int,
+        chunk_count: int,
+    ) -> TheoryFormulaExtractOutput:
+        from llm.prompts.theory_formula_extract import THEORY_FORMULA_EXTRACT_SYSTEM, build_theory_formula_extract_user
+
+        return self.parse(
+            TheoryFormulaExtractOutput,
+            model=self.text_model,
+            messages=[
+                {"role": "system", "content": THEORY_FORMULA_EXTRACT_SYSTEM},
+                {
+                    "role": "user",
+                    "content": build_theory_formula_extract_user(
+                        pdf_text=pdf_text,
+                        experiments=experiments,
+                        chunk_index=chunk_index,
+                        chunk_count=chunk_count,
+                    ),
+                },
+            ],
+            attempts=2,
         )
 
     @_traceable_if_enabled(
@@ -439,6 +497,39 @@ class LLMClient:
         )
 
     @_traceable_if_enabled(
+        name="LLM: 過去レポート構造化ヒント抽出（past_report_hints）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:past_report_hints"],
+        process_inputs=_process_text_fields(["text"]),
+    )
+    def extract_past_report_hints(self, text: str, *, image_b64_urls: list[str] | None = None) -> PastReportHintsOutput:
+        from llm.prompts.past_report_hints import PAST_REPORT_HINTS_SYSTEM, build_past_report_hints_user
+        from llm.schemas.past_report_hints import PastReportHintsOutput
+
+        images = [u for u in (image_b64_urls or []) if isinstance(u, str) and u]
+        if images:
+            content: list[dict[str, Any]] = [{"type": "text", "text": build_past_report_hints_user(text)}]
+            content.extend([{"type": "image_url", "image_url": {"url": url}} for url in images])
+            messages = [
+                {"role": "system", "content": PAST_REPORT_HINTS_SYSTEM},
+                {"role": "user", "content": content},
+            ]
+            model = self.vision_model
+        else:
+            messages = [
+                {"role": "system", "content": PAST_REPORT_HINTS_SYSTEM},
+                {"role": "user", "content": build_past_report_hints_user(text)},
+            ]
+            model = self.text_model
+
+        return self.parse(
+            PastReportHintsOutput,
+            model=model,
+            messages=messages,
+            attempts=2,
+        )
+
+    @_traceable_if_enabled(
         name="LLM: MVP 最初の実験選定（mvp_first_experiment）",
         run_type="llm",
         tags=["workflow:report_agent", "agent:llm", "task:mvp_first_experiment"],
@@ -475,6 +566,63 @@ class LLMClient:
         )
 
     @_traceable_if_enabled(
+        name="LLM: Excel シート選択（excel_sheet_select）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:excel_sheet_select"],
+    )
+    def excel_sheet_select(self, *, payload: dict[str, Any]):
+        from llm.prompts.excel_sheet_select import EXCEL_SHEET_SELECT_SYSTEM, build_excel_sheet_select_user
+        from llm.schemas.excel_sheet_select import ExcelSheetSelectionOutput
+
+        return self.parse(
+            ExcelSheetSelectionOutput,
+            model=self.text_model,
+            messages=[
+                {"role": "system", "content": EXCEL_SHEET_SELECT_SYSTEM},
+                {"role": "user", "content": build_excel_sheet_select_user(payload)},
+            ],
+            attempts=1,
+        )
+
+    @_traceable_if_enabled(
+        name="LLM: Excel 列バインド（excel_column_bind）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:excel_column_bind"],
+    )
+    def excel_column_bind(self, *, payload: dict[str, Any]):
+        from llm.prompts.excel_column_bind import EXCEL_COLUMN_BIND_SYSTEM, build_excel_column_bind_user
+        from llm.schemas.excel_column_bind import ExcelColumnBindingOutput
+
+        return self.parse(
+            ExcelColumnBindingOutput,
+            model=self.text_model,
+            messages=[
+                {"role": "system", "content": EXCEL_COLUMN_BIND_SYSTEM},
+                {"role": "user", "content": build_excel_column_bind_user(payload)},
+            ],
+            attempts=1,
+        )
+
+    @_traceable_if_enabled(
+        name="LLM: Excel 代入パラメータ（excel_param_bind）",
+        run_type="llm",
+        tags=["workflow:report_agent", "agent:llm", "task:excel_param_bind"],
+    )
+    def excel_param_bind(self, *, payload: dict[str, Any]):
+        from llm.prompts.excel_param_bind import EXCEL_PARAM_BIND_SYSTEM, build_excel_param_bind_user
+        from llm.schemas.excel_param_bind import ExcelParamBindingOutput
+
+        return self.parse(
+            ExcelParamBindingOutput,
+            model=self.text_model,
+            messages=[
+                {"role": "system", "content": EXCEL_PARAM_BIND_SYSTEM},
+                {"role": "user", "content": build_excel_param_bind_user(payload)},
+            ],
+            attempts=1,
+        )
+
+    @_traceable_if_enabled(
         name="LLM: MVP 定量コメント生成（mvp_quant_comment）",
         run_type="llm",
         tags=["workflow:report_agent", "agent:llm", "task:mvp_quant_comment"],
@@ -506,6 +654,35 @@ class LLMClient:
             # while requiring at least some numeric grounding.
             if not re.search(r"\d", paragraph):
                 raise LLMError("mvp_quant_comment must include at least one digit")
+
+            series = validation_payload.get("series") if isinstance(validation_payload, dict) else None
+            series_names: list[str] = []
+            missing_series: list[dict[str, Any]] = []
+            if isinstance(series, list):
+                for item in series:
+                    if not isinstance(item, dict):
+                        continue
+                    name = str(item.get("name") or "").strip()
+                    if name:
+                        series_names.append(name)
+                    if int(item.get("missing_count") or 0) > 0:
+                        missing_series.append(item)
+
+            if series_names:
+                required_names = series_names if len(series_names) <= 6 else series_names[:3]
+                missing_names = [n for n in required_names if n not in paragraph]
+                if missing_names:
+                    raise LLMError("mvp_quant_comment must mention series names explicitly")
+
+            if missing_series:
+                for item in missing_series:
+                    name = str(item.get("name") or "").strip()
+                    if name and name not in paragraph:
+                        raise LLMError("mvp_quant_comment must name series with missing data")
+                    targets = item.get("missing_targets") if isinstance(item.get("missing_targets"), list) else []
+                    targets_s = [str(t).strip() for t in targets if str(t).strip()]
+                    if targets_s and not any(t in paragraph for t in targets_s[:6]):
+                        raise LLMError("mvp_quant_comment must cite missing x values")
 
             # Missing data mention is optional; some users prefer focusing on theory/target consistency instead.
 
@@ -1087,22 +1264,110 @@ class LLMClient:
             return response_model.model_validate({"exp_key": "3.1", "rationale": "番号が最小で先頭にあるため。"})
 
         if response_model is MVPQuantCommentOutput:
+            payload: dict[str, Any] = {}
+            user_text = ""
+            for m in messages:
+                if m.get("role") == "user" and isinstance(m.get("content"), str):
+                    user_text = m["content"]
+                    break
+            marker = "payload:"
+            if user_text and marker in user_text:
+                raw = user_text.split(marker, 1)[1].strip()
+                if raw:
+                    try:
+                        payload = json.loads(raw)
+                    except Exception:
+                        try:
+                            payload = ast.literal_eval(raw)
+                        except Exception:
+                            payload = {}
+            series = payload.get("series") if isinstance(payload, dict) else []
+            names: list[str] = []
+            if isinstance(series, list):
+                for item in series:
+                    if not isinstance(item, dict):
+                        continue
+                    name = str(item.get("name") or "").strip()
+                    if name:
+                        names.append(name)
+            if not names:
+                names = ["条件A", "条件B"]
+            names_text = "、".join(names[:6])
             return response_model.model_validate(
                 {
-                    "paragraph": "IBを0 μAから60 μAまで増加させると、VCE≈1 V付近におけるICは約0.008〜5.5 mAの範囲で増加する関係が確認された。特に、VCE≳1 Vの領域ではIB=60 μAの条件においてICは約5.5〜6.8 mAに分布し、平均は約6.2 mAであった。測定値には最大で約±29%のばらつきと欠測6点があるが、本結果からは当該条件下でICがIBによって制御される傾向が定量的に確認できた。"
+                    "paragraph": f"{names_text}の条件では値が1以上となり、全体として増加傾向が確認できた。条件間の差も観測され、約2倍の違いが見られた。"
                 }
             )
 
         if response_model is ExcelSelectionOutput:
+            payload: dict[str, Any] = {}
+            user_text = ""
+            for m in messages:
+                if m.get("role") == "user" and isinstance(m.get("content"), str):
+                    user_text = m["content"]
+                    break
+            marker = "payload:"
+            if user_text and marker in user_text:
+                raw = user_text.split(marker, 1)[1].strip()
+                if raw:
+                    try:
+                        payload = json.loads(raw)
+                    except Exception:
+                        try:
+                            payload = ast.literal_eval(raw)
+                        except Exception:
+                            payload = {}
+
+            candidates = payload.get("candidates") if isinstance(payload, dict) else []
+            if isinstance(candidates, list) and candidates:
+                picked = candidates[0] if isinstance(candidates[0], dict) else {}
+                return response_model.model_validate(
+                    {
+                        "excel_id": str(picked.get("excel_id") or "").strip(),
+                        "selection_type": "range",
+                        "sheet": str(picked.get("sheet") or "Sheet1").strip(),
+                        "a1_range": str(picked.get("a1_range") or "A1:B3").strip(),
+                        "chart_id": None,
+                        "rationale": "最も単純な数値表を選択した。",
+                    }
+                )
+
+            charts = payload.get("charts") if isinstance(payload, dict) else []
+            if isinstance(charts, list) and charts:
+                picked = charts[0] if isinstance(charts[0], dict) else {}
+                return response_model.model_validate(
+                    {
+                        "excel_id": str(picked.get("excel_id") or "").strip(),
+                        "selection_type": "chart",
+                        "sheet": str(picked.get("sheet") or "").strip(),
+                        "a1_range": "",
+                        "chart_id": picked.get("chart_id"),
+                        "rationale": "既存チャートを選択した。",
+                    }
+                )
+
             return response_model.model_validate(
                 {
+                    "excel_id": "",
+                    "stop": True,
                     "selection_type": "range",
-                    "sheet": "Sheet1",
-                    "a1_range": "A1:B3",
+                    "sheet": "",
+                    "a1_range": "",
                     "chart_id": None,
-                    "rationale": "最も単純な数値表を選択した。",
+                    "rationale": "",
                 }
             )
+
+        if response_model is PastReportHintsOutput:
+            return response_model.model_validate(
+                {
+                    "experiments": [],
+                    "report_summary": empty_past_report_summary().model_dump(),
+                }
+            )
+
+        if response_model is TheoryFormulaExtractOutput:
+            return response_model.model_validate({"items": []})
 
         # Fallback: attempt to parse JSON from assistant content when available
         for m in reversed(messages):

@@ -1,61 +1,84 @@
 from __future__ import annotations
 
 from graph.state import AgentState
-from graph.utils import infer_report_chapter
-from graph.nodes.asset_order import insert_block_in_upload_order
 from models.contracts import FigureBlock, FigureContent
 
 
+def _exp_keys_for_lookup(exp) -> set[str]:
+    keys: set[str] = set()
+    source_idx = str(getattr(exp, "source_idx", "") or "").strip()
+    idx = str(getattr(exp, "idx", "") or "").strip()
+    subidx = str(getattr(exp, "subidx", "") or "").strip()
+    if source_idx:
+        keys.add(source_idx)
+    if idx:
+        keys.add(idx)
+        if subidx:
+            keys.add(f"{idx}.{subidx}")
+    return keys
+
+
+def _resolve_assigned_exp_key(image) -> str:
+    key = str(getattr(image, "assigned_to", "") or "").strip()
+    if key:
+        return key
+    analysis = getattr(image, "analysis", None)
+    if not analysis:
+        return ""
+    key = str(getattr(analysis, "assigned_exp_key", "") or "").strip()
+    if key:
+        return key
+    belongs = list(getattr(analysis, "belongs_to", []) or [])
+    if not belongs:
+        return ""
+    return str(getattr(belongs[0], "exp_key", "") or "").strip()
+
+
+def _reorder_blocks(blocks: list):
+    def _upload_order(block) -> int:
+        if getattr(block, "type", "") == "table":
+            return int(getattr(getattr(block, "table", None), "asset_upload_index", 10**9) or 10**9)
+        if getattr(block, "type", "") == "figure":
+            return int(getattr(getattr(block, "figure", None), "asset_upload_index", 10**9) or 10**9)
+        return 10**9
+
+    return sorted(list(blocks or []), key=_upload_order)
+
+
 def image_assign(state: AgentState) -> AgentState:
-    if not state.assets_images:
-        return state
+    exp_key_to_index: dict[str, int] = {}
+    for idx, exp in enumerate(state.experiments):
+        for key in _exp_keys_for_lookup(exp):
+            exp_key_to_index[key] = idx
 
-    threshold = 0.6
-
-    chapter = infer_report_chapter(state)
-
-    updated_assets = {img.image_id: img for img in state.assets_images}
-
-    images_sorted = sorted(enumerate(state.assets_images), key=lambda t: (t[1].upload_index or 0, t[0]))
-    for _, img in images_sorted:
-        analysis = img.analysis
-        if not analysis:
+    figure_blocks_by_exp: dict[int, list[FigureBlock]] = {}
+    for image in state.assets_images:
+        exp_key = _resolve_assigned_exp_key(image)
+        if exp_key:
+            image.assigned_to = exp_key
+        exp_idx = exp_key_to_index.get(exp_key)
+        if exp_idx is None:
             continue
-
-        exp_key = (getattr(analysis, "assigned_exp_key", "") or "").strip()
-        score = float(getattr(analysis, "assigned_score", 0.0) or 0.0)
-
-        if not exp_key:
-            candidates = analysis.belongs_to or []
-            best = max(candidates, key=lambda c: c.score, default=None)
-            if best is None:
-                updated_assets[img.image_id] = img.model_copy(update={"assigned_to": None})
-                continue
-            exp_key = best.exp_key
-            score = best.score
-
-        if not exp_key or score < threshold:
-            updated_assets[img.image_id] = img.model_copy(update={"assigned_to": None})
-            continue
-
-        block = FigureBlock(
-            figure=FigureContent(
-                figure_image_id=img.image_id,
-                asset_upload_index=img.upload_index,
-                label="",
-                caption=analysis.caption,
-                quant_comment=analysis.quant_comment,
+        analysis = image.analysis
+        figure_blocks_by_exp.setdefault(exp_idx, []).append(
+            FigureBlock(
+                figure=FigureContent(
+                    figure_image_id=image.image_id,
+                    asset_upload_index=image.upload_index,
+                    label="",
+                    caption=str(getattr(analysis, "caption", "") or ""),
+                    quant_comment=str(getattr(analysis, "quant_comment", "") or ""),
+                    evidence_refs=list(getattr(analysis, "evidence_refs", []) or []),
+                )
             )
         )
 
-        assigned = False
-        for exp in state.experiments:
-            if exp.source_idx == exp_key or exp.idx == exp_key:
-                insert_block_in_upload_order(exp.blocks, block)
-                assigned = True
-                break
+    for idx, exp in enumerate(state.experiments):
+        non_figure_blocks = [b for b in list(exp.blocks or []) if getattr(b, "type", "") != "figure"]
+        next_blocks = non_figure_blocks + figure_blocks_by_exp.get(idx, [])
+        exp.blocks = _reorder_blocks(next_blocks)
 
-        updated_assets[img.image_id] = img.model_copy(update={"assigned_to": exp_key if assigned else None})
-
-    state.assets_images = [updated_assets.get(img.image_id, img) for img in state.assets_images]
     return state
+
+
+__all__ = ["image_assign"]
