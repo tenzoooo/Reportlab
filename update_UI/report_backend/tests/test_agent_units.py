@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 
 import fitz  # PyMuPDF
+from openpyxl import Workbook
 
 from core.config import load_settings
 from core.storage import build_storage
@@ -30,6 +32,17 @@ def _make_pdf_bytes(text: str) -> bytes:
     page = doc.new_page()
     page.insert_text((72, 72), text)
     return doc.tobytes()
+
+
+def _make_excel_bytes(rows: list[list[object]]) -> bytes:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    for row in rows:
+        ws.append(list(row))
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
 
 
 def test_unit_init_builds_experiment_list_and_resets_assignments():
@@ -102,7 +115,7 @@ def test_asset_assignment_preserves_upload_order_within_blocks(tmp_path, monkeyp
     assert state.experiments[0].description_brief
 
 
-def test_validate_truncates_long_caption_and_updates_block_caption(tmp_path, monkeypatch):
+def test_validate_warns_long_caption_and_updates_block_caption(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "dummy")
     monkeypatch.setenv("OPENAI_MODEL", "dummy")
     monkeypatch.setenv("REPORT_AGENT_MOCK_LLM", "1")
@@ -133,10 +146,10 @@ def test_validate_truncates_long_caption_and_updates_block_caption(tmp_path, mon
     table_assign(state)
     validate(state, storage=build_storage(backend="local", storage_dir=tmp_path), llm=LLMClient(load_settings()))
 
-    captions = [w for w in state.validation_report.warnings if w.code == "caption_truncated"]
+    captions = [w for w in state.validation_report.warnings if w.code == "WARN_CAPTION_TOO_LONG"]
     assert captions
     assert state.assets_images[0].analysis is not None
-    assert len(state.assets_images[0].analysis.caption) == 15
+    assert len(state.assets_images[0].analysis.caption) == 16
     fig_block = next(b for b in state.experiments[0].blocks if b.type == "figure")
     assert fig_block.figure.caption == state.assets_images[0].analysis.caption
     # Label format: 図 {chapter}.{idx}.{seq} (subidx omitted when empty).
@@ -193,7 +206,7 @@ def test_sanitize_mvp_quant_comment_paragraph_strips_json_like_chars():
     assert "{" not in cleaned and "}" not in cleaned and "[" not in cleaned and "]" not in cleaned and "`" not in cleaned
 
 
-def test_graph_pdf_only_renders_docx(tmp_path, monkeypatch):
+def test_graph_mvp_renders_docx_with_excel(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "dummy")
     monkeypatch.setenv("OPENAI_MODEL", "dummy")
     monkeypatch.setenv("REPORT_AGENT_MOCK_LLM", "1")
@@ -206,13 +219,24 @@ def test_graph_pdf_only_renders_docx(tmp_path, monkeypatch):
     pdf_key = f"jobs/{job_id}/source/manual.pdf"
     pdf_bytes = _make_pdf_bytes("3. 実験方法\n3.1 テスト実験\n4. 考察\n導出せよ\n")
     storage.put_bytes(pdf_key, pdf_bytes)
+    excel_key = f"jobs/{job_id}/source/excel.xlsx"
+    excel_bytes = _make_excel_bytes(
+        [
+            ["Vce[V]", "Ic[mA]"],
+            [0.5, 1.2],
+            [1.0, 2.6],
+        ]
+    )
+    storage.put_bytes(excel_key, excel_bytes)
 
     state = AgentState(job_meta=JobMeta(job_id=job_id))
     state.pdf.filename = "manual.pdf"
     state.pdf.storage_key = pdf_key
+    state.excel.filename = "excel.xlsx"
+    state.excel.storage_key = excel_key
 
     template_path = (Path(__file__).resolve().parents[1] / "templates" / "chapter_fixed_docxtpl_ready.docx").resolve()
-    graph = build_graph(storage=storage, llm=llm, template_path=str(template_path))
+    graph = build_graph(storage=storage, llm=llm, template_path=str(template_path), mode="mvp")
     result = graph.invoke(state, config={"recursion_limit": 100})
     assert result["artifact_docx_key"]
     assert storage.exists(result["artifact_docx_key"])
