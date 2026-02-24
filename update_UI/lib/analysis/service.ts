@@ -1,7 +1,4 @@
 import OpenAI from "openai"
-import fs from "node:fs"
-import path from "node:path"
-import { pathToFileURL } from "node:url"
 import {
   METHOD_EXTRACTION_PROMPT,
   METHOD_SCHEMA,
@@ -21,6 +18,8 @@ import {
 } from "./prompts"
 import type { AnalysisResult } from "./types"
 import { logInfo, logError } from "@/lib/server/logger"
+import { sanitizeDeep } from "@/lib/utils/string"
+import { parsePdfText, cleanExtractedText } from "@/lib/pdf/parser"
 
 type JsonRecord = Record<string, any>
 type ChatMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam
@@ -32,40 +31,6 @@ const openai = new OpenAI({
 })
 
 logInfo("analysis:model", { model: MODEL })
-
-import { parsePdfText, cleanExtractedText } from "@/lib/pdf/parser"
-
-const resolvePdfWorkerSrc = (): string | null => {
-  // Deprecated: Logic moved to lib/pdf/parser.ts
-  return null
-}
-
-// parsePdfText moved to lib/pdf/parser.ts
-
-const decodeAndStripTags = (value: string): string => {
-  const decoded = value.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
-  // Remove any XML/HTML/OpenXML-looking tags (e.g., <w:r>...</w:t>) aggressively
-  return decoded.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
-}
-
-const sanitizeDeep = (input: any): any => {
-  if (typeof input === "string") {
-    return decodeAndStripTags(input)
-  }
-  if (Array.isArray(input)) {
-    return input.map((item) => sanitizeDeep(item))
-  }
-  if (input && typeof input === "object") {
-    const result: JsonRecord = {}
-    for (const [k, v] of Object.entries(input)) {
-      result[k] = sanitizeDeep(v)
-    }
-    return result
-  }
-  return input
-}
-
-// cleanExtractedText moved to lib/pdf/parser.ts
 
 const toPreviewString = (value: string, limit = 2000): string => {
   if (!value) return ""
@@ -304,10 +269,6 @@ export async function analyzeDocument(fileBuffer: Buffer, isPremium: boolean = f
 
     const text: string = cleanExtractedText(rawText)
     logInfo("analysis:text-extracted", { length: text.length })
-    // User requested to log the full text used in prompts
-    console.log("--- [DEBUG] FULL EXTRACTED PDF TEXT START ---")
-    console.log(text)
-    console.log("--- [DEBUG] FULL EXTRACTED PDF TEXT END ---")
     logInfo("analysis:text-preview", { preview: toPreviewString(text) })
 
     // Step 1: 抜粋（実験方法・考察）を並列取得
@@ -358,9 +319,6 @@ export async function analyzeDocument(fileBuffer: Buffer, isPremium: boolean = f
       EXPERIMENT_STRUCTURE_SCHEMA as any
     )
 
-    console.log("--- [DEBUG] LLM OUTPUT (STRUCTURE) START ---")
-    console.log(structureRaw)
-    console.log("--- [DEBUG] LLM OUTPUT (STRUCTURE) END ---")
     const structureJSON = safeJSONParse<JsonRecord>(structureRaw, { experiments: [], chapter: 5 })
 
     // Step 3: 実験詳細抽出
@@ -409,12 +367,9 @@ export async function analyzeDocument(fileBuffer: Buffer, isPremium: boolean = f
 
       const commentPromises = experimentsList.map(async (exp: JsonRecord) => {
         try {
-          // Prepare context for the experiment
           const expName = exp.name || ""
           const tables = exp.tables || []
           const tablesText = JSON.stringify(tables, null, 2)
-
-          // Use the full PDF text as context to ensure theoretical background is included
           const contextText = text
 
           const prompt = QUANTITATIVE_COMMENT_PROMPT
@@ -439,8 +394,6 @@ export async function analyzeDocument(fileBuffer: Buffer, isPremium: boolean = f
       })
 
       experimentsWithComments = await Promise.all(commentPromises)
-
-      // Update descriptionsJSON with new comments
       descriptionsJSON.experiments = experimentsWithComments
     }
 
@@ -454,7 +407,6 @@ export async function analyzeDocument(fileBuffer: Buffer, isPremium: boolean = f
     )
     let summaryJSON = safeJSONParse<JsonRecord>(summaryRaw, { summary: "" })
 
-    // Fallback: if summary is empty, try a plain JSON object generation once more
     if (!summaryJSON.summary) {
       const summaryRetry = await callJSONCompletion(
         [
@@ -507,7 +459,7 @@ export async function analyzeDocument(fileBuffer: Buffer, isPremium: boolean = f
       result_json: sanitizedMerged,
     }
 
-    logInfo("analysis:success", { experiments: sanitizedMerged.experiments?.length ?? 0 })
+    logInfo("analysis:success", { experiments: (sanitizedMerged as JsonRecord).experiments?.length ?? 0 })
     return wrappedOutput as AnalysisResult
   } catch (error) {
     logError("analysis:error", error)

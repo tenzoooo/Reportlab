@@ -10,6 +10,7 @@ import type {
   DocTemplateBlock,
 } from "./template-data"
 import { buildDocTemplateData } from "./template-data"
+import { sanitizeDeep } from "@/lib/utils/string"
 
 export { buildDocTemplateData } from "./template-data"
 
@@ -40,28 +41,6 @@ const getBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "")
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`.replace(/\/+$/, "")
   return "http://localhost:3000"
-}
-
-const decodeAndStripTags = (value: string): string => {
-  const decoded = value.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
-  return decoded.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
-}
-
-const sanitizeDeep = (input: unknown): unknown => {
-  if (typeof input === "string") {
-    return decodeAndStripTags(input)
-  }
-  if (Array.isArray(input)) {
-    return input.map((item) => sanitizeDeep(item))
-  }
-  if (input && typeof input === "object") {
-    const result: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
-      result[k] = sanitizeDeep(v)
-    }
-    return result
-  }
-  return input
 }
 
 type SerializableFigureImage = Omit<DocTemplateFigureImage, "buffer"> & { buffer: string }
@@ -160,19 +139,8 @@ const toBase64Figures = (data: DocTemplateData): SerializableDocTemplateData => 
 }
 
 const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<Buffer> => {
-  // [DEBUG] Save the context to a file in the project root for inspection
-  try {
-    await writeFile(path.join(process.cwd(), "debug_template_data.json"), JSON.stringify(context, null, 2), "utf-8")
-    console.log("[DEBUG] Saved template data to debug_template_data.json")
-  } catch (err) {
-    console.error("[DEBUG] Failed to save debug template data:", err)
-  }
-
   // Check if running on Vercel
   if (process.env.VERCEL) {
-    console.log("Running on Vercel, invoking Python Serverless Function...")
-
-    // Read template file and convert to base64
     const templateBuffer = await readFile(TEMPLATE_PATH)
     const templateBase64 = templateBuffer.toString("base64")
 
@@ -181,12 +149,7 @@ const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<
       context,
     }
 
-    // Determine API URL
-    // On Vercel, we can usually use a relative URL if calling from the frontend, 
-    // but here we are likely server-side. 
     const apiUrl = `${getBaseUrl()}/api/generate_docx`
-
-    console.log(`Sending request to ${apiUrl}`)
 
     const headers: Record<string, string> = { "Content-Type": "application/json" }
     if (PROTECTION_BYPASS_TOKEN) {
@@ -204,8 +167,7 @@ const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<
       throw new Error(`Python renderer API failed: ${response.status} ${response.statusText} - ${errorText}`)
     }
 
-    const arrayBuffer = await response.arrayBuffer()
-    return Buffer.from(arrayBuffer)
+    return Buffer.from(await response.arrayBuffer())
   }
 
   // Local execution via child_process
@@ -217,11 +179,6 @@ const runPythonRenderer = async (context: SerializableDocTemplateData): Promise<
   }
 
   await writeFile(path.join(workdir, "payload.json"), JSON.stringify(payload), "utf-8")
-
-  // [DEBUG] Log the payload sent to Python
-  console.log("--- [DEBUG] PYTHON PAYLOAD START ---")
-  console.log(JSON.stringify(payload, null, 2))
-  console.log("--- [DEBUG] PYTHON PAYLOAD END ---")
 
   await new Promise<void>((resolve, reject) => {
     const child = spawn(PYTHON_BIN, [PY_RENDERER_PATH], {
@@ -283,7 +240,6 @@ export async function generateReport({ difyOutput, figureImages }: GenerateRepor
     difyType: typeof difyOutput,
     hasFigures: Array.isArray(figureImages),
   })
-  console.log("Loading DOCX template from:", TEMPLATE_PATH)
 
   try {
     const sanitized = sanitizeDeep(difyOutput)
@@ -296,8 +252,7 @@ export async function generateReport({ difyOutput, figureImages }: GenerateRepor
     const dataWithImages = applyFigureImages(dataWithBlocks, figureImages)
     const serialized = toBase64Figures(dataWithImages)
 
-    const buffer = await runPythonRenderer(serialized)
-    return buffer
+    return await runPythonRenderer(serialized)
   } catch (error) {
     console.error("Failed to prepare/render docx template:", error)
     if (error instanceof Error) {
