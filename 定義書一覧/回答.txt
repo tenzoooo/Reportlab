@@ -1,0 +1,69 @@
+1) RequiredOutputsAmbiguityGate → SelectExcelSheetPerExperiyCompareToggle
+	•	誤記です。
+	•	正しくは RequiredOutputsAmbiguityGate → SelectExcelSheetPerExperiment で確定。
+
+理由：Cで必要数が確定した後に、Eでシート選択に進むのが正しい。
+
+⸻
+
+2) ExtractPastReportStructureHints
+	•	はい。現行の past_report_hints ノードを指すでOKです。
+	•	エッジは past_report_hints → InferRequiredOutputs（Cの推定補助として合流）で確定。
+
+⸻
+
+3) ParseManualStructure → LocateDiscussionSection（位置）
+	•	B層直後に移動して良い。むしろ推奨。
+	•	確定：ParseManualStructure → LocateDiscussionSection をB内に置く。
+
+理由：考察範囲の不明は早期にHITL化すべきで、I層後に回す理由がない。
+
+⸻
+
+4) InspectExcel → InferRequiredOutputs（Excel前提に切り替え？）
+	•	切り替えはNG。
+	•	確定：InferRequiredOutputs は Manual（実験方法）主導のまま。
+エッジは ParseManualStructure/ExtractMethodNumbers → InferRequiredOutputs（C）で確定。
+	•	Excelは補助に使ってよいが、前提にはしない。
+
+理由：required_outputsは「何を測るか/何を出すか」の仕様で、Excelは結果データであり、未整備でも成立する必要がある。
+
+⸻
+
+5) ComputeTheoryValue → BindTheorySubstitutionParams（順序）
+	•	あなたの現行（BindTheorySubstitutionParamsが前段）が正しい。後段移動はNG。
+	•	確定：BindTheorySubstitutionParams → ComputeTheoryValue。
+
+理由：理論値は代入パラメータが無いと計算できない。
+
+⸻
+
+6) ResolveAxesAndUnits → ComputeSlopeAndExtreme（OFF時のみ直結？）
+	•	Yes。OFF時のみ直結で確定。
+	•	確定：
+	•	DecideTheoryCompareToggle --OFF--> ResolveAxesAndUnits → ComputeSlopeAndExtreme
+	•	DecideTheoryCompareToggle --ON--> BindTheorySubstitutionParams → ComputeTheoryValue → ComputeDeltaAndAbsError
+
+理由：傾き/極値は軸が確定して初めて計算できる。ON時は軸ではなく理論式と代入値が先。
+
+⸻
+
+7) AutoFixPreformat → ValidatePreformat（再検査ループ）
+	•	追加します（確定）。
+	•	上限回数：最大2回で確定（無限ループ防止）。
+
+確定エッジ：
+	•	ValidatePreformat --(autofix issuesあり)--> AutoFixPreformat → ValidatePreformat
+	•	2回超えて残るFAIL/HITLは停止。
+
+⸻
+
+8) AutoFixFinal → RenderDOCX（再レンダリング：トリガ）
+	•	再レンダは条件付きで確定。最大2回。
+	•	トリガ（確定）：
+	•	FAIL_OMML_MISSING
+	•	FAIL_REFERENCE_BROKEN（自動修正で直せた場合のみ）
+	•	FAIL_DOCX_RENDER_MISSING / FAIL_DOCX_RENDER_FAILED（再実行で回復見込みがある場合）
+
+確定エッジ：
+	•	ValidateFinal --(上記トリガ)--> AutoFixFinal → RenderDOCX → ValidateFinal（最大2回）

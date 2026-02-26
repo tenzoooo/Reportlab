@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { motion } from "framer-motion"
+import { motion, useMotionTemplate, useMotionValue } from "framer-motion"
 import Link from "next/link"
-import { FileText, Plus, Clock, TrendingUp, ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { FileText, Plus, Clock, TrendingUp, ArrowRight, LayoutDashboard } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import DashboardPageShell from "@/components/dashboard-page-shell"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -32,9 +34,9 @@ type ReportSummary = {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState([
-    { icon: FileText, value: "-", label: "総レポート数", color: "text-primary", bgColor: "bg-primary/10" },
-    { icon: TrendingUp, value: "-", label: "今月作成", color: "text-secondary", bgColor: "bg-secondary/10" },
-    { icon: Clock, value: "-", label: "処理中", color: "text-warning", bgColor: "bg-warning/10" },
+    { icon: FileText, value: "-", label: "総レポート数", color: "text-primary", bg: "bg-primary/10", border: "border-primary/20" },
+    { icon: TrendingUp, value: "-", label: "今月作成", color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+    { icon: Clock, value: "-", label: "処理中", color: "text-indigo-500", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
   ])
   const [recentReports, setRecentReports] = useState<ReportSummary[]>([])
   const [error, setError] = useState<string>("")
@@ -43,9 +45,7 @@ export default function DashboardPage() {
     const load = async () => {
       try {
         const supabase = createClient()
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
+        const { data: { session } } = await supabase.auth.getSession()
         if (!session) {
           setError("ログインが必要です")
           return
@@ -56,22 +56,9 @@ export default function DashboardPage() {
 
         const [{ count: total }, { count: monthly }, { count: processing }, { data: recent }] = await Promise.all([
           supabase.from("reports").select("id", { count: "exact", head: true }).eq("user_id", session.user.id),
-          supabase
-            .from("reports")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", session.user.id)
-            .gte("created_at", startOfMonth),
-          supabase
-            .from("reports")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", session.user.id)
-            .eq("status", "processing"),
-          supabase
-            .from("reports")
-            .select("id, title, status, created_at")
-            .eq("user_id", session.user.id)
-            .order("created_at", { ascending: false })
-            .limit(5),
+          supabase.from("reports").select("id", { count: "exact", head: true }).eq("user_id", session.user.id).gte("created_at", startOfMonth),
+          supabase.from("reports").select("id", { count: "exact", head: true }).eq("user_id", session.user.id).eq("status", "processing"),
+          supabase.from("reports").select("id, title, status, created_at").eq("user_id", session.user.id).order("created_at", { ascending: false }).limit(5),
         ])
 
         setStats((prev) =>
@@ -83,14 +70,12 @@ export default function DashboardPage() {
           })
         )
 
-        setRecentReports(
-          (recent || []).map((r) => ({
-            id: r.id as string,
-            title: (r.title as string) || "無題のレポート",
-            status: r.status as ReportSummary["status"],
-            created_at: r.created_at as string | null,
-          }))
-        )
+        setRecentReports((recent || []).map(r => ({
+          id: r.id,
+          title: r.title || "無題のレポート",
+          status: r.status,
+          created_at: r.created_at,
+        })))
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err))
       }
@@ -100,163 +85,195 @@ export default function DashboardPage() {
 
   const formattedReports = useMemo(() => {
     return recentReports.map((report) => {
-      const date = report.created_at ? new Date(report.created_at).toLocaleDateString() : "-"
+      const date = report.created_at ? new Date(report.created_at).toLocaleDateString('ja-JP') : "-"
       const statusLabel =
         report.status === "completed" ? "完了" : report.status === "processing" ? "処理中" : report.status === "draft" ? "下書き" : "エラー"
       return { ...report, date, statusLabel }
     })
   }, [recentReports])
 
-  return (
-    <div className="page-container">
-      {/* Page Title */}
-      <motion.div
-        className="mb-8"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <h1 className="text-3xl font-bold text-foreground">ダッシュボード</h1>
-        <p className="text-muted-foreground mt-2">実験レポートの作成状況を確認できます</p>
-      </motion.div>
+  // Mouse spotlight effect (subtle)
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    mouseX.set(e.clientX - rect.left)
+    mouseY.set(e.clientY - rect.top)
+  }
+  const spotlight = useMotionTemplate`radial-gradient(1000px circle at ${mouseX}px ${mouseY}px, var(--primary) 0%, transparent 80%)` // Using CSS var for spotlight color if possible, or opacity trick
 
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+  return (
+    <DashboardPageShell
+      title="Dashboard"
+      subtitle="実験レポートの作成状況と統計"
+      icon={<LayoutDashboard className="h-6 w-6" />}
+    >
+      <div 
+        onMouseMove={handleMouseMove} 
+        className="relative overflow-hidden rounded-[2.5rem] border border-border bg-background shadow-sm"
       >
-        {stats.map((stat, index) => (
-          <motion.div
-            key={index}
-            variants={fadeInUp}
-            whileHover={{
-              scale: 1.05,
-              y: -5,
-              transition: { type: "spring", stiffness: 300 },
-            }}
-          >
-            <Card className="kpi-card">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <motion.div
-                      className={`inline-flex items-center justify-center h-12 w-12 rounded-lg ${stat.bgColor} mb-4`}
-                      whileHover={{ rotate: 360 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                    </motion.div>
-                    <motion.div
-                      className="text-4xl font-bold text-foreground mb-2"
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.3 + index * 0.1, type: "spring" }}
-                    >
-                      {stat.value}
-                    </motion.div>
-                    <div className="text-sm text-muted-foreground">{stat.label}</div>
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:40px_40px] opacity-10 pointer-events-none" />
+        
+        {/* Spotlight overlay - careful with light mode visibility */}
+        <motion.div 
+          className="absolute inset-0 pointer-events-none z-0 opacity-5 dark:opacity-10" 
+          style={{ background: `radial-gradient(600px circle at ${mouseX}px ${mouseY}px, currentColor, transparent 80%)`, color: 'var(--primary)' }} 
+        />
+
+        <div className="relative z-10 p-8 sm:p-12 space-y-12">
+
+        {/* KPI Grid */}
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-3 gap-8"
+        >
+          {stats.map((stat, index) => (
+            <motion.div key={index} variants={fadeInUp} whileHover={{ y: -5 }}>
+              <Card className="h-full border-border bg-card/50 backdrop-blur-sm hover:bg-card transition-all duration-300 overflow-hidden group">
+                <CardContent className="p-8 flex flex-col justify-between h-full space-y-6">
+                  <div className={cn("p-4 rounded-2xl w-fit transition-transform group-hover:scale-110", stat.bg, stat.border, "border")}>
+                    <stat.icon className={cn("h-7 w-7", stat.color)} />
                   </div>
+                  <div>
+                    <div className="text-5xl font-bold text-foreground instrument tracking-tighter mb-1">{stat.value}</div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{stat.label}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* Recent Reports List */}
+          <motion.div 
+            className="lg:col-span-2 space-y-6"
+            initial="hidden" 
+            animate="visible" 
+            variants={fadeInUp}
+          >
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-2xl font-bold text-foreground instrument">Recent Reports</h2>
+              <Link href="/dashboard/reports" className="text-sm font-bold text-primary hover:text-primary/80 flex items-center gap-2 group transition-colors">
+                すべて見る <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            <Card className="rounded-[2.5rem] border-border bg-card/50 backdrop-blur-sm overflow-hidden shadow-md">
+              <div className="divide-y divide-border">
+                {formattedReports.length > 0 ? (
+                  formattedReports.map((report, index) => (
+                    <Link
+                      key={report.id}
+                      href={`/dashboard/reports/${report.id}`}
+                      className="flex items-center justify-between p-6 hover:bg-muted/50 transition-all group"
+                    >
+                      <div className="flex items-center gap-5">
+                        <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-all">
+                          <FileText className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-foreground text-lg tracking-tight group-hover:text-primary transition-colors">{report.title}</p>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{report.date}</p>
+                            <span className="h-1 w-1 rounded-full bg-border" />
+                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">ID: {report.id.slice(0, 8)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className={cn(
+                          "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] border",
+                          report.status === "completed"
+                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
+                            : report.status === "processing"
+                              ? "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400"
+                              : report.status === "draft"
+                                ? "bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-400"
+                                : "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400"
+                        )}>
+                          {report.statusLabel}
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="p-20 text-center space-y-4">
+                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+                      <FileText className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs">
+                      No reports found
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Quick Actions */}
+          <motion.div 
+            initial="hidden" 
+            animate="visible" 
+            variants={fadeInUp}
+            className="space-y-6"
+          >
+            <h2 className="text-2xl font-bold text-foreground instrument px-2">Quick Actions</h2>
+            
+            <Card className="rounded-[3rem] border-border bg-gradient-to-br from-primary/5 to-purple-500/5 overflow-hidden relative group hover:shadow-lg transition-all">
+              <CardContent className="p-10 text-center space-y-8 relative z-10">
+                <div className="relative">
+                  <div className="mx-auto h-20 w-20 rounded-[2rem] bg-card shadow-lg flex items-center justify-center text-primary mb-2 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-500 border border-border">
+                    <Plus className="h-10 w-10" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 h-6 w-6 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-[10px] font-black animate-bounce">NEW</div>
+                </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-bold text-foreground instrument tracking-tight">Generate Report</h3>
+                  <p className="text-xs text-muted-foreground mincho leading-relaxed max-w-[200px] mx-auto">
+                    実験データをアップロードして、<br />AIがレポートを即座に生成。
+                  </p>
+                </div>
+
+                <Button 
+                  className="w-full py-6 h-auto bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl font-bold text-base shadow-lg shadow-primary/20"
+                  asChild
+                >
+                  <Link href="/dashboard/reports/new">
+                    新規作成を開始
+                  </Link>
+                </Button>
+              </CardContent>
+              
+              {/* Decorative blob */}
+              <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700 pointer-events-none" />
+            </Card>
+
+            {/* AI Insight Card (light-mode friendly) */}
+            <Card className="rounded-[2rem] border border-border bg-card/70 shadow-md backdrop-blur-sm">
+              <CardContent className="p-5 flex items-start gap-3">
+                <div className="mt-1 flex-shrink-0">
+                  <div className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-[0_0_0_3px_rgba(59,130,246,0.25)]" />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600">
+                    AI Tip
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed mincho">
+                    過去のレポートをアップロードすると、AIがあなたの文体を学習し、より自然な執筆を支援します。
+                  </p>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
-        ))}
-      </motion.div>
-
-      <motion.div
-        className="mb-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold text-foreground">最近のレポート</h2>
-          <Link
-            href="/dashboard/reports"
-            className="text-primary hover:text-primary/90 font-medium text-sm flex items-center gap-1"
-          >
-            すべて見る
-            <ArrowRight className="h-4 w-4" />
-          </Link>
         </div>
-
-        <Card>
-          <CardContent className="p-0">
-            <div className="divide-y divide-border">
-              {formattedReports.map((report, index) => (
-                <motion.div
-                  key={report.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + index * 0.1 }}
-                  whileHover={{ backgroundColor: "rgba(59, 130, 246, 0.1)" }}
-                >
-                  <Link
-                    href={`/dashboard/reports/${report.id}`}
-                    className="flex items-center justify-between p-4 hover:bg-primary/10 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      <span className="font-semibold text-foreground">{report.title}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-muted-foreground">{report.date}</span>
-                      <motion.span
-                        whileHover={{ scale: 1.1 }}
-                        className={`status-pill ${
-                          report.status === "completed"
-                            ? "bg-success/10 text-success"
-                            : report.status === "processing"
-                              ? "bg-primary/10 text-primary"
-                              : "bg-destructive/10 text-destructive"
-                        }`}
-                      >
-                        {report.statusLabel}
-                      </motion.span>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.8 }}
-        whileHover={{ scale: 1.02 }}
-      >
-        <Card className="bg-gradient-to-r from-primary to-secondary border-0 relative overflow-hidden">
-          <motion.div
-            className="absolute inset-0 opacity-10"
-            animate={{
-              backgroundPosition: ["0% 0%", "100% 100%"],
-            }}
-            transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-            style={{
-              backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
-              backgroundSize: "20px 20px",
-            }}
-          />
-          <CardContent className="p-8 relative z-10">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="text-primary-foreground space-y-2">
-                <h3 className="text-2xl font-bold">新しいレポートを作成</h3>
-                <p className="text-primary-foreground/90">実験データをアップロードして、AIがレポートを自動生成します</p>
-              </div>
-              <Button size="lg" className="bg-card text-primary hover:bg-card/90 gap-2" asChild>
-                <Link href="/dashboard/reports/new">
-                  <Plus className="h-5 w-5" />
-                  新規レポート作成
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
+        </div>
+      </div>
+    </DashboardPageShell>
   )
 }

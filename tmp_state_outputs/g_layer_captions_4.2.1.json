@@ -1,0 +1,22 @@
+{
+  "exp_key": "4.2.1",
+  "table_captions": [
+    {
+      "asset_id": "tbl_4.2.1_1",
+      "caption": "無負荷時・各負荷状態の入出力特性比較表",
+      "error": ""
+    }
+  ],
+  "graph_captions": [
+    {
+      "asset_id": "fig_4.2.1_1",
+      "caption": "無負荷 Vo–Vin 特性グラフ",
+      "error": ""
+    },
+    {
+      "asset_id": "fig_4.2.1_2",
+      "caption": "複数負荷状態を重ねた Vo–Vin グラフ",
+      "error": ""
+    }
+  ]
+}

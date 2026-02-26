@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import socket
 from typing import Any, Optional, TypeVar
 
 from openai import OpenAI
@@ -33,10 +34,20 @@ from models.contracts import ImageAnalysis, TableAnalysis, empty_past_report_sum
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+_MAX_LLM_API_ATTEMPTS = 3
 
 
 def _compact_spaces(value: str) -> str:
     return re.sub(r"\s+", " ", value or "").strip()
+
+
+def _clamp_api_attempts(attempts: int) -> int:
+    """Keep retry count deterministic and bounded for all LLM API calls."""
+    if attempts < 1:
+        return 1
+    if attempts > _MAX_LLM_API_ATTEMPTS:
+        return _MAX_LLM_API_ATTEMPTS
+    return attempts
 
 
 def _env_temperature(name: str, *, default: float | None = None) -> float | None:
@@ -53,6 +64,45 @@ def _env_temperature(name: str, *, default: float | None = None) -> float | None
         t = 1.5
     return t
 
+
+def _exc_chain_message(exc: BaseException) -> str:
+    """
+    Preserve the root-cause message (e.g. DNS resolution / TLS) for debugging and retry tuning.
+    """
+    parts: list[str] = []
+    seen: set[int] = set()
+
+    cur: BaseException | None = exc
+    while cur is not None and id(cur) not in seen and len(parts) < 6:
+        seen.add(id(cur))
+        msg = str(cur) or cur.__class__.__name__
+        parts.append(f"{cur.__class__.__name__}: {msg}")
+        cur = cur.__cause__ or cur.__context__
+
+    return " | ".join(parts)
+
+def _net_debug_snapshot() -> str:
+    """
+    Best-effort network debug snapshot to distinguish:
+    - DNS resolution failure (getaddrinfo)
+    - HTTPS reachability (simple GET to /v1/models without auth -> should be 401)
+
+    Kept small and safe: no secrets are logged.
+    """
+    if not _is_truthy(os.environ.get("REPORT_AGENT_LLM_NET_DEBUG")):
+        return ""
+    try:
+        # DNS check
+        ip = socket.getaddrinfo("api.openai.com", 443)[0][4][0]
+    except Exception as exc:
+        return f"net_debug:dns=FAIL({type(exc).__name__}:{exc})"
+    try:
+        import httpx
+
+        r = httpx.get("https://api.openai.com/v1/models", timeout=5.0)
+        return f"net_debug:dns=OK({ip});http={r.status_code}"
+    except Exception as exc:
+        return f"net_debug:dns=OK({ip});http=FAIL({type(exc).__name__}:{exc})"
 
 def _sanitize_mvp_quant_comment_paragraph(paragraph: str) -> str:
     """
@@ -231,6 +281,12 @@ def _is_truthy(value: str | None) -> bool:
 
 
 def _langsmith_enabled() -> bool:
+    override = (os.environ.get("REPORT_AGENT_ENABLE_LANGSMITH") or "").strip().lower()
+    if override in {"1", "true", "yes", "y", "on"}:
+        return True
+    if override in {"0", "false", "no", "n", "off"}:
+        return False
+
     trace_flags = [
         os.environ.get("LANGSMITH_TRACING"),
         os.environ.get("LANGSMITH_TRACING_V2"),
@@ -322,11 +378,6 @@ def _process_equation_ocr_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
 
 class LLMClient:
     def __init__(self, settings: Settings):
-        # Force-disable LangSmith tracing for all LLM calls unless explicitly re-enabled upstream.
-        os.environ.setdefault("LANGSMITH_TRACING", "false")
-        os.environ.setdefault("LANGSMITH_TRACING_V2", "false")
-        os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
-        os.environ.setdefault("LANGSMITH_ENDPOINT", "")
         self._settings = settings
         self.text_model = settings.openai_model
         self.vision_model = settings.openai_vision_model
@@ -334,7 +385,16 @@ class LLMClient:
             "Authorization": f"Bearer {settings.openai_api_key}",
             "Content-Type": "application/json",
         }
-        client = OpenAI(api_key=settings.openai_api_key, default_headers=default_headers)
+        # Avoid hanging forever on transient network/DNS failures.
+        timeout_s = 60.0
+        raw_timeout = (os.environ.get("REPORT_AGENT_OPENAI_TIMEOUT_S") or "").strip()
+        if raw_timeout:
+            try:
+                timeout_s = max(5.0, float(raw_timeout))
+            except Exception:
+                timeout_s = 60.0
+
+        client = OpenAI(api_key=settings.openai_api_key, default_headers=default_headers, timeout=timeout_s)
         if _langsmith_enabled():
             try:
                 from langsmith.wrappers import wrap_openai
@@ -356,10 +416,37 @@ class LLMClient:
         model: Optional[str] = None,
         messages: list[dict[str, Any]],
         temperature: float | None = None,
-        attempts: int = 5,
+        attempts: int = 3,
     ) -> T:
         if self.mock:
             return self._mock_response(response_model, messages)
+
+        # Environment can request a higher floor, but final retry count is capped globally.
+        raw_attempts = (os.environ.get("REPORT_AGENT_LLM_ATTEMPTS") or "").strip()
+        if raw_attempts:
+            try:
+                floor = int(raw_attempts)
+            except Exception:
+                floor = 0
+            if floor > attempts:
+                attempts = floor
+        attempts = _clamp_api_attempts(attempts)
+
+        # Retry tuning for flaky DNS/networks. Keep defaults conservative, allow env overrides.
+        base_delay_s = 0.5
+        max_delay_s = 8.0
+        raw_base = (os.environ.get("REPORT_AGENT_LLM_RETRY_BASE_DELAY_S") or "").strip()
+        raw_max = (os.environ.get("REPORT_AGENT_LLM_RETRY_MAX_DELAY_S") or "").strip()
+        if raw_base:
+            try:
+                base_delay_s = max(0.0, float(raw_base))
+            except Exception:
+                base_delay_s = 0.5
+        if raw_max:
+            try:
+                max_delay_s = max(0.5, float(raw_max))
+            except Exception:
+                max_delay_s = 8.0
 
         model_name = model or self.text_model
 
@@ -380,9 +467,18 @@ class LLMClient:
             except PydanticValidationError as exc:
                 raise LLMError(f"LLM output validation failed: {exc}") from exc
             except Exception as exc:
-                raise LLMError(str(exc)) from exc
+                # Include cause chain so we can distinguish DNS failure vs other connectivity issues.
+                net = _net_debug_snapshot()
+                msg = _exc_chain_message(exc)
+                raise LLMError(f"{msg}{' | ' + net if net else ''}") from exc
 
-        return retry(_call, attempts=attempts, retry_on=(LLMError,))
+        return retry(
+            _call,
+            attempts=_clamp_api_attempts(attempts),
+            base_delay_s=base_delay_s,
+            max_delay_s=max_delay_s,
+            retry_on=(LLMError,),
+        )
 
     @_traceable_if_enabled(
         name="LLM: 実験ユニット抽出（method_extract）",
@@ -475,7 +571,7 @@ class LLMClient:
                 analysis = analysis.model_copy(update={"belongs_to": analysis.belongs_to[:8]})
             return analysis
 
-        return retry(_call, attempts=attempts, retry_on=(LLMError,))
+        return retry(_call, attempts=_clamp_api_attempts(attempts), retry_on=(LLMError,))
 
     @_traceable_if_enabled(
         name="LLM: 表解析（table_analyze）",
@@ -811,7 +907,7 @@ class LLMClient:
 
             return out.model_copy(update={"paragraph": paragraph})
 
-        return retry(_call, attempts=attempts, retry_on=(LLMError,))
+        return retry(_call, attempts=_clamp_api_attempts(attempts), retry_on=(LLMError,))
 
     @_traceable_if_enabled(
         name="LLM: 画像割当再ランキング（image_rerank）",
@@ -823,7 +919,7 @@ class LLMClient:
 
         sample_n_env = os.environ.get("REPORT_AGENT_ASSIGN_SAMPLE_N") or ""
         sample_n = int(sample_n_env) if sample_n_env.strip().isdigit() else 1
-        sample_n = max(1, min(sample_n, 7))
+        sample_n = max(1, min(sample_n, _MAX_LLM_API_ATTEMPTS))
         temp_env = os.environ.get("REPORT_AGENT_ASSIGN_SAMPLE_TEMPERATURE") or ""
         temperature = float(temp_env) if temp_env.strip() else 1.0
         if temperature < 0:
@@ -914,7 +1010,7 @@ class LLMClient:
 
         sample_n_env = os.environ.get("REPORT_AGENT_ASSIGN_SAMPLE_N") or ""
         sample_n = int(sample_n_env) if sample_n_env.strip().isdigit() else 1
-        sample_n = max(1, min(sample_n, 7))
+        sample_n = max(1, min(sample_n, _MAX_LLM_API_ATTEMPTS))
         temp_env = os.environ.get("REPORT_AGENT_ASSIGN_SAMPLE_TEMPERATURE") or ""
         temperature = float(temp_env) if temp_env.strip() else 1.0
         if temperature < 0:

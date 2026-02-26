@@ -1,0 +1,329 @@
+[
+  {
+    "exp_key": "4.1",
+    "title": "回路の製作",
+    "method_summary": "OPアンプ回路の製作方法と、部品表・抵抗カラーコード表の確認、図面の読み方・実装上の注意点を要約。写真・図面を伴い、基板実装の手順を記述している。",
+    "tables_count": 2,
+    "graphs_count": 0,
+    "photos_count": 3,
+    "table_expectations": [
+      {
+        "name": "表1 部品一覧",
+        "hint": "部品の素子値・型番の一覧"
+      },
+      {
+        "name": "表2 抵抗値と許容誤差のカラーコード",
+        "hint": "抵抗のカラーコードと許容誤差"
+      }
+    ],
+    "graph_expectations": [],
+    "confidence": 0.7,
+    "rationale": "表と図面・写真中心の製作手順を想定。部品情報の整合性を確認するアウトプットが多い。",
+    "evidence": [
+      "表1",
+      "表2",
+      "図13",
+      "図14",
+      "図15"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "4.2.1",
+    "title": "反転増幅回路",
+    "method_summary": "作成した反転増幅回路を用い、無負荷時の入力-出力特性をグラフ化し、理論値と比較する。近似と差異要因の考察を行う。",
+    "tables_count": 0,
+    "graphs_count": 1,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [
+      {
+        "name": "Vin-Vout特性グラフ",
+        "hint": "無負荷時の入出力特性を直線領域を含めて描く"
+      }
+    ],
+    "confidence": 0.65,
+    "rationale": "測定・近似・比較を含むため、入出力特性のグラフを中心に示す想定。",
+    "evidence": [
+      "Vin-Vout",
+      "グラフ",
+      "無負荷"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "4.2.1",
+    "title": "反転増幅回路（理論比較・負荷変化）",
+    "method_summary": "無負荷・3kW/1kW/750W負荷など各状態で入出力特性を測定・比較し、理論値との違いを検討する。",
+    "tables_count": 0,
+    "graphs_count": 1,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [
+      {
+        "name": "無負荷と負荷時の入出力特性グラフ",
+        "hint": "負荷状態による入出力の変化を比較"
+      }
+    ],
+    "confidence": 0.65,
+    "rationale": "負荷状態の比較と理論比較をグラフで示す想定。",
+    "evidence": [
+      "負荷状態",
+      "グラフ",
+      "理論値"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "4.2.2",
+    "title": "非反転増幅回路",
+    "method_summary": "4状態の入出力特性を測定し、無負荷時の反転入力端子電圧を理論と比較、近似を行う。",
+    "tables_count": 0,
+    "graphs_count": 1,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [
+      {
+        "name": "Vin-Vout特性グラフ",
+        "hint": "無負荷・負荷状態の入出力特性を一次近似と比較"
+      }
+    ],
+    "confidence": 0.65,
+    "rationale": "状態間の線形近似と比較をグラフ化する想定。",
+    "evidence": [
+      "Vin-Vout",
+      "グラフ",
+      "無負荷"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "4.2.3",
+    "title": "ボルテージフォロワ",
+    "method_summary": "回路を用いてボルテージフォロワの入出力特性を測定し、出力インピーダンスの概算と負荷時特性を評価する。",
+    "tables_count": 0,
+    "graphs_count": 1,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [
+      {
+        "name": "Vin-Vout特性グラフ",
+        "hint": "無負荷と並列負荷時の挙動を比較"
+      }
+    ],
+    "confidence": 0.65,
+    "rationale": "フォロワ回路の基本特性と負荷影響をグラフで示す想定。",
+    "evidence": [
+      "Vin-Vout",
+      "無負荷",
+      "負荷"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "4.2.4",
+    "title": "加算回路",
+    "method_summary": "2つの入力 Eb1, Eb2 の関係を無負荷時に測定し、1次関数近似と理論・反転増幅回路の近似結果と比較する。",
+    "tables_count": 0,
+    "graphs_count": 1,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [
+      {
+        "name": "出力と入力の関係グラフ",
+        "hint": "Eb1, Eb2を固定しての2ケースの直線近似比較"
+      }
+    ],
+    "confidence": 0.65,
+    "rationale": "加算回路の直線性と近似の比較をグラフで示す想定。",
+    "evidence": [
+      "1 次関数",
+      "近似",
+      "理論値"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "4.2.5",
+    "title": "減算回路",
+    "method_summary": "Ea, Eb1 の2入力に対する関係を無負荷時に測定し、1次関数近似と理論値の比較を行う。",
+    "tables_count": 0,
+    "graphs_count": 1,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [
+      {
+        "name": "出力と入力の関係グラフ",
+        "hint": "Ea, Eb1を固定した2ケースの直線近似比較"
+      }
+    ],
+    "confidence": 0.65,
+    "rationale": "減算回路の直線性と近似比較をグラフ化。",
+    "evidence": [
+      "1 次関数",
+      "近似",
+      "理論値"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "4.3.1",
+    "title": "積分回路",
+    "method_summary": "正弦波入力の波形と出力波形の観測、位相差の計算、周波数特性の測定とグラフ化、方形波の応答の観測と理論説明を行う。",
+    "tables_count": 0,
+    "graphs_count": 3,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [
+      {
+        "name": "正弦波入力と出力の波形グラフ",
+        "hint": "周波数10 kHzでの波形"
+      },
+      {
+        "name": "積分回路の周波数特性グラフ",
+        "hint": "10 Hz〜3 MHzの利得と位相"
+      },
+      {
+        "name": "方形波入力時の出力波形",
+        "hint": "10 kHzと300 Hzの比較"
+      }
+    ],
+    "confidence": 0.6,
+    "rationale": "積分回路の波形・周波数特性・入力波形の観測を複数グラフで示す想定。",
+    "evidence": [
+      "周波数特性",
+      "波形",
+      "方形波"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "4.3.2",
+    "title": "反転増幅回路の交流特性",
+    "method_summary": "反転増幅回路を用い、入力 Eb1 の振幅・周波数変化で三角波になる条件を観測し、周波数特性と波形の比較を行う。",
+    "tables_count": 0,
+    "graphs_count": 2,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [
+      {
+        "name": "三角波発生条件時の出力波形比較グラフ",
+        "hint": "入力波形と出力波形の関係"
+      },
+      {
+        "name": "反転増幅回路の周波数特性グラフ",
+        "hint": "周波数依存の利得と位相"
+      }
+    ],
+    "confidence": 0.65,
+    "rationale": "三角波条件と周波数特性の測定が中心の交流特性実験。",
+    "evidence": [
+      "三角波",
+      "周波数特性"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "4.3.3",
+    "title": "加算回路の交流特性",
+    "method_summary": "ファンクションジェネレータで多形状波形を入力し、加算回路の動作を観測・保存。 Eb1/ Eb2の周波数条件下での波形比較を行う。",
+    "tables_count": 0,
+    "graphs_count": 2,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [
+      {
+        "name": "加算回路の出力波形比較グラフ1",
+        "hint": "三角波と正弦波の加算出力"
+      },
+      {
+        "name": "周波数条件下の出力波形グラフ",
+        "hint": "Eb1=3kHz, Eb2=1MHzの条件など"
+      }
+    ],
+    "confidence": 0.65,
+    "rationale": "複数波形入力と周波数条件での波形観測をグラフ化。",
+    "evidence": [
+      "波形観測",
+      "保存",
+      "加算回路"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "4.3.4",
+    "title": "減算回路の交流特性",
+    "method_summary": "三角波と正弦波など任意形状の2波形を発生させ、減算回路の動作を観測・保存。出力波形を確認。",
+    "tables_count": 0,
+    "graphs_count": 1,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [
+      {
+        "name": "減算回路の出力波形グラフ",
+        "hint": "2波形の減算結果の観測"
+      }
+    ],
+    "confidence": 0.65,
+    "rationale": "交流特性の基本的な確認をグラフで示す。",
+    "evidence": [
+      "出力波形",
+      "観測",
+      "減算回路"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "5",
+    "title": "考察",
+    "method_summary": "OPアンプの利用用途と部品選定理由、オフセット・仮想地など、実験回路の考察を簡潔に述べる。",
+    "tables_count": 0,
+    "graphs_count": 0,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [],
+    "confidence": 0.5,
+    "rationale": "実験の考察は文章中心のため、図表は不要。",
+    "evidence": [
+      "OP アンプの利用用途",
+      "仮想接地",
+      "考察"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "6",
+    "title": "プレゼンテーション(DC 特性)について",
+    "method_summary": "DC特性の考察要点を選択し、スライド構成と発表の計画を述べる。",
+    "tables_count": 0,
+    "graphs_count": 0,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [],
+    "confidence": 0.5,
+    "rationale": "プレゼン用アウトプットはスライド作成に留まる想定。",
+    "evidence": [
+      "DC 特性",
+      "プレゼンテーション"
+    ],
+    "candidates": []
+  },
+  {
+    "exp_key": "7",
+    "title": "レポートについて",
+    "method_summary": "レポートの構成・内容・引用・まとめの要点を示す。写真・図の引用・参考文献の書き方を解説。",
+    "tables_count": 0,
+    "graphs_count": 0,
+    "photos_count": 0,
+    "table_expectations": [],
+    "graph_expectations": [],
+    "confidence": 0.5,
+    "rationale": "レポートの構成と引用に関する注意点を整理。",
+    "evidence": [
+      "レポート",
+      "参考文献",
+      "引用"
+    ],
+    "candidates": []
+  }
+]

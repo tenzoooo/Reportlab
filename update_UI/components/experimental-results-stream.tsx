@@ -209,7 +209,7 @@ export function ExperimentalResultsStreamCard(props: { reportId: string }) {
         try {
           const analysisRes = await fetch(`/api/reports/${reportId}/analysis`)
           const analysisJson = await analysisRes.json().catch(() => ({}))
-          let resultJson = analysisJson?.analysis?.dify_response
+          let resultJson = analysisJson?.analysis?.ai_response ?? analysisJson?.analysis?.dify_response
           if (resultJson?.output?.result_json) resultJson = resultJson.output.result_json
           else if (resultJson?.outputs?.result_json) resultJson = resultJson.outputs.result_json
           else if (resultJson?.result_json) resultJson = resultJson.result_json
@@ -228,7 +228,7 @@ export function ExperimentalResultsStreamCard(props: { reportId: string }) {
           await fetch(`/api/reports/${reportId}/analysis`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ dify_response: next }),
+            body: JSON.stringify({ ai_response: next }),
           })
         } catch {
           // ignore

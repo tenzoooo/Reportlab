@@ -1,0 +1,828 @@
+{
+  "exp_key": "4.2.1",
+  "excel_sheet_selections": [
+    {
+      "exp_key": "4.2.1",
+      "result_no": "",
+      "title": "反転増幅回路",
+      "selected_excel_id": "dc",
+      "selected_sheet": "周東いる班(反転増幅回路)",
+      "confidence": 0.6,
+      "rationale": "sheet_name:token:反転増幅回路; header:token:1; excel_name:token:x; numeric_density",
+      "evidence": [
+        "sheet_name:token:反転増幅回路",
+        "header:token:1",
+        "excel_name:token:x",
+        "numeric_density"
+      ],
+      "candidates": [
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(反転増幅回路)",
+          "confidence": 0.6,
+          "rationale": "sheet_name:token:反転増幅回路; header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "sheet_name:token:反転増幅回路",
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(非反転増幅回路)",
+          "confidence": 0.6,
+          "rationale": "sheet_name:token:反転増幅回路; header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "sheet_name:token:反転増幅回路",
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+          "confidence": 0.6,
+          "rationale": "sheet_name:token:1; header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "sheet_name:token:1",
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(反転増幅回路)",
+          "confidence": 0.6,
+          "rationale": "sheet_name:token:反転増幅回路; header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "sheet_name:token:反転増幅回路",
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(非反転増幅回路)",
+          "confidence": 0.6,
+          "rationale": "sheet_name:token:反転増幅回路; header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "sheet_name:token:反転増幅回路",
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+          "confidence": 0.6,
+          "rationale": "sheet_name:token:1; header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "sheet_name:token:1",
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "周東いる班(反転増幅回路の交流)",
+          "confidence": 0.5,
+          "rationale": "sheet_name:token:反転増幅回路; header:token:1; excel_name:token:x",
+          "evidence": [
+            "sheet_name:token:反転増幅回路",
+            "header:token:1",
+            "excel_name:token:x"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "いない班(反転増幅回路の交流)",
+          "confidence": 0.5,
+          "rationale": "sheet_name:token:反転増幅回路; header:token:1; excel_name:token:x",
+          "evidence": [
+            "sheet_name:token:反転増幅回路",
+            "header:token:1",
+            "excel_name:token:x"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "コピー元",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(ボルテージフォロワ) ",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(加算回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(減算回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(ボルテージフォロワ)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(加算回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "　いない班(減算回路) ",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "コピー元",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:x; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "Sheet1",
+          "confidence": 0.35,
+          "rationale": "sheet_name:token:1; excel_name:token:x",
+          "evidence": [
+            "sheet_name:token:1",
+            "excel_name:token:x"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "周東いる班(積分回路)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:x",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "周東いる班(加算・減算回路の交流)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:x",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "いない班(積分回路)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:x",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "　いない班(加算・減算回路の交流) ",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:x",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:x"
+          ]
+        }
+      ],
+      "used_llm": false
+    }
+  ],
+  "excel_range_selections": [
+    {
+      "exp_key": "4.2.1",
+      "title": "反転増幅回路",
+      "excel_id": "excel:dc",
+      "excel_filename": "OPアンプ DC特性.xlsx",
+      "sheet": "周東いる班(反転増幅回路)",
+      "a1_range": "B1:E12",
+      "has_graph": false,
+      "graph_axes": {
+        "x_name": "",
+        "x_unit": "",
+        "y_name": "",
+        "y_unit": "",
+        "series_names": [],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.2.1",
+        "title": "反転増幅回路",
+        "table_id": "excel:dc:周東いる班(反転増幅回路):B1:E12",
+        "table_range": {
+          "excel_id": "excel:dc",
+          "sheet": "周東いる班(反転増幅回路)",
+          "a1_range": "B1:E12"
+        },
+        "has_graph": false,
+        "graph_axes": {
+          "x_name": "",
+          "x_unit": "",
+          "y_name": "",
+          "y_unit": "",
+          "series_names": [],
+          "condition_names": []
+        },
+        "table_expectations": [
+          {
+            "name": "無負荷時・各負荷状態の入出力特性比較表",
+            "hint": "条件: 無負荷/ RL1=3kΩ, RL2=1kΩ, RL1||RL2=750Ω の3状態で Vo-Vin の直線近似を適用。列: 傾き a [V/V], オフセット b [V], 理論値との差 [V], Vo_max [V], 線形性評価 R^2。必要に応じて単位・キャプションを追記。",
+            "x_axis_label": "",
+            "y_axis_label": ""
+          },
+          {
+            "name": "1-3 1次近似結果表",
+            "hint": "係数 a, b, R^2, 理論値との差を報告。条件は 1-3 のデータ全体を対象とする。列名例: 条件, a, b [V], R^2, 理論値との差 [V]",
+            "x_axis_label": "",
+            "y_axis_label": ""
+          }
+        ],
+        "graph_expectations": [
+          {
+            "name": "無負荷 Vo–Vin 特性グラフ",
+            "hint": "Vin [-5, +5] V、直線領域を 1 V 刻み、曲がる点を区別して Vo–Vin のグラフを作成。直線領域と飽和領域を示す。",
+            "x_axis_label": "入力電圧 Vin [V]",
+            "y_axis_label": "出力電圧 Vo [V]"
+          },
+          {
+            "name": "複数負荷状態を重ねた Vo–Vin グラフ",
+            "hint": "RL1 = 3 kΩ, RL2 = 1 kΩ, RL1||RL2 の3状態を同一グラフに重ね、凡例に条件を記す。",
+            "x_axis_label": "入力電圧 Vin [V]",
+            "y_axis_label": "出力電圧 Vo [V]"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.2.1",
+      "title": "反転増幅回路",
+      "excel_id": "excel:dc",
+      "excel_filename": "OPアンプ DC特性.xlsx",
+      "sheet": "周東いる班(反転増幅回路)",
+      "a1_range": "AN15:AO52",
+      "has_graph": false,
+      "graph_axes": {
+        "x_name": "",
+        "x_unit": "",
+        "y_name": "",
+        "y_unit": "",
+        "series_names": [],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.2.1",
+        "title": "反転増幅回路",
+        "table_id": "excel:dc:周東いる班(反転増幅回路):AN15:AO52",
+        "table_range": {
+          "excel_id": "excel:dc",
+          "sheet": "周東いる班(反転増幅回路)",
+          "a1_range": "AN15:AO52"
+        },
+        "has_graph": false,
+        "graph_axes": {
+          "x_name": "",
+          "x_unit": "",
+          "y_name": "",
+          "y_unit": "",
+          "series_names": [],
+          "condition_names": []
+        },
+        "table_expectations": [
+          {
+            "name": "無負荷時・各負荷状態の入出力特性比較表",
+            "hint": "条件: 無負荷/ RL1=3kΩ, RL2=1kΩ, RL1||RL2=750Ω の3状態で Vo-Vin の直線近似を適用。列: 傾き a [V/V], オフセット b [V], 理論値との差 [V], Vo_max [V], 線形性評価 R^2。必要に応じて単位・キャプションを追記。",
+            "x_axis_label": "",
+            "y_axis_label": ""
+          },
+          {
+            "name": "1-3 1次近似結果表",
+            "hint": "係数 a, b, R^2, 理論値との差を報告。条件は 1-3 のデータ全体を対象とする。列名例: 条件, a, b [V], R^2, 理論値との差 [V]",
+            "x_axis_label": "",
+            "y_axis_label": ""
+          }
+        ],
+        "graph_expectations": [
+          {
+            "name": "無負荷 Vo–Vin 特性グラフ",
+            "hint": "Vin [-5, +5] V、直線領域を 1 V 刻み、曲がる点を区別して Vo–Vin のグラフを作成。直線領域と飽和領域を示す。",
+            "x_axis_label": "入力電圧 Vin [V]",
+            "y_axis_label": "出力電圧 Vo [V]"
+          },
+          {
+            "name": "複数負荷状態を重ねた Vo–Vin グラフ",
+            "hint": "RL1 = 3 kΩ, RL2 = 1 kΩ, RL1||RL2 の3状態を同一グラフに重ね、凡例に条件を記す。",
+            "x_axis_label": "入力電圧 Vin [V]",
+            "y_axis_label": "出力電圧 Vo [V]"
+          }
+        ]
+      }
+    }
+  ],
+  "table_column_bindings": [
+    {
+      "exp_key": "4.2.1",
+      "result_no": "",
+      "excel_id": "dc",
+      "sheet_name": "周東いる班(反転増幅回路)",
+      "header_row_index": 1,
+      "columns": [
+        {
+          "column_index": 2,
+          "header": "入力電圧[V]",
+          "name": "入力電圧",
+          "unit": "V",
+          "confidence": 0.9,
+          "rationale": "column binding",
+          "evidence": [
+            "unit_in_header",
+            "llm_unit"
+          ]
+        },
+        {
+          "column_index": 3,
+          "header": "出力電圧[V]",
+          "name": "出力電圧",
+          "unit": "V",
+          "confidence": 0.9,
+          "rationale": "column binding",
+          "evidence": [
+            "unit_in_header",
+            "llm_unit"
+          ]
+        },
+        {
+          "column_index": 4,
+          "header": "反転入力端子電圧計算値[V]",
+          "name": "反転入力端子電圧計算値",
+          "unit": "V",
+          "confidence": 0.9,
+          "rationale": "column binding",
+          "evidence": [
+            "unit_in_header",
+            "llm_unit"
+          ]
+        },
+        {
+          "column_index": 5,
+          "header": "理論値[V]",
+          "name": "理論値",
+          "unit": "V",
+          "confidence": 0.9,
+          "rationale": "column binding",
+          "evidence": [
+            "unit_in_header",
+            "llm_unit"
+          ]
+        },
+        {
+          "column_index": 6,
+          "header": "",
+          "name": "",
+          "unit": "",
+          "confidence": 0.4,
+          "rationale": "column binding",
+          "evidence": []
+        }
+      ],
+      "confidence": 0.4,
+      "missing_units": [],
+      "missing_mappings": [
+        "col_6"
+      ],
+      "used_llm": true
+    }
+  ],
+  "insert_asset_bindings": [
+    {
+      "exp_key": "4.2.1",
+      "result_no": "",
+      "tables_asset_ids": [
+        "tbl_4.2.1_1"
+      ],
+      "graphs_asset_ids": [
+        "fig_4.2.1_1",
+        "fig_4.2.1_2"
+      ],
+      "photos_asset_ids": [],
+      "required_tables": 2,
+      "required_graphs": 2,
+      "required_photos": 0,
+      "missing_tables": 1,
+      "missing_graphs": 0,
+      "missing_photos": 0,
+      "confidence": 0.95,
+      "rationale": "selected assets based on explicit assignment and filename heuristics",
+      "evidence": [
+        "explicit_table"
+      ],
+      "ambiguous": false,
+      "type_unknown": false
+    }
+  ],
+  "assets_tables": [
+    {
+      "asset_id": "tbl_4.2.1_1",
+      "table_id": "tbl_4.2.1_1",
+      "storage_key": "tables/job/4.2.1/tbl_4.2.1_1.json",
+      "raw_csv": "入力電圧[V],出力電圧[V],反転入力端子電圧計算値[V],理論値[V]\r\n-5,9.966,-0.0113333333,0\r\n-4,7.975,-0.0083333333,0\r\n-3,5.983,-0.0056666667,0\r\n-2,3.991,-0.003,0\r\n-1,1.998,-0.0006666667,0\r\n0,0.006,0.002,0\r\n1,-1.987,0.0043333333,0\r\n2,-3.979,0.007,0\r\n3,-5.971,0.0096666667,0\r\n4,-7.964,0.012,0\r\n5,-9.956,0.0146666667,0\r\n",
+      "upload_index": 1,
+      "rows": [
+        [
+          "入力電圧[V]",
+          "出力電圧[V]",
+          "反転入力端子電圧計算値[V]",
+          "理論値[V]"
+        ],
+        [
+          "-5",
+          "9.966",
+          "-0.0113333333",
+          "0"
+        ],
+        [
+          "-4",
+          "7.975",
+          "-0.0083333333",
+          "0"
+        ],
+        [
+          "-3",
+          "5.983",
+          "-0.0056666667",
+          "0"
+        ],
+        [
+          "-2",
+          "3.991",
+          "-0.003",
+          "0"
+        ],
+        [
+          "-1",
+          "1.998",
+          "-0.0006666667",
+          "0"
+        ],
+        [
+          "0",
+          "0.006",
+          "0.002",
+          "0"
+        ],
+        [
+          "1",
+          "-1.987",
+          "0.0043333333",
+          "0"
+        ],
+        [
+          "2",
+          "-3.979",
+          "0.007",
+          "0"
+        ],
+        [
+          "3",
+          "-5.971",
+          "0.0096666667",
+          "0"
+        ],
+        [
+          "4",
+          "-7.964",
+          "0.012",
+          "0"
+        ],
+        [
+          "5",
+          "-9.956",
+          "0.0146666667",
+          "0"
+        ]
+      ],
+      "analysis": null,
+      "assigned_to": "4.2.1"
+    }
+  ],
+  "assets_images": [
+    {
+      "asset_id": "fig_4.2.1_1",
+      "image_id": "fig_4.2.1_1",
+      "filename": "fig_4.2.1_1.png",
+      "mime_type": "image/png",
+      "storage_key": "graphs/55ae0e9d75954b43b183c108af357bc7/4.2.1/fig_4.2.1_1.png",
+      "upload_index": 1001,
+      "rough_class": "graph",
+      "rough_class_confidence": 1.0,
+      "rough_class_method": "generated",
+      "rough_class_rationale": "generated from Excel table",
+      "analysis": null,
+      "assigned_to": "4.2.1",
+      "x_column_index": 1,
+      "y_column_indices": [
+        2
+      ],
+      "x_label": "入力電圧[V]",
+      "y_label": "出力電圧[V]",
+      "x_range": "-5~5",
+      "y_range": "-9.956~9.966"
+    },
+    {
+      "asset_id": "fig_4.2.1_2",
+      "image_id": "fig_4.2.1_2",
+      "filename": "fig_4.2.1_2.png",
+      "mime_type": "image/png",
+      "storage_key": "graphs/55ae0e9d75954b43b183c108af357bc7/4.2.1/fig_4.2.1_2.png",
+      "upload_index": 1002,
+      "rough_class": "graph",
+      "rough_class_confidence": 1.0,
+      "rough_class_method": "generated",
+      "rough_class_rationale": "generated from Excel table",
+      "analysis": null,
+      "assigned_to": "4.2.1",
+      "x_column_index": 1,
+      "y_column_indices": [
+        2
+      ],
+      "x_label": "入力電圧[V]",
+      "y_label": "出力電圧[V]",
+      "x_range": "-5~5",
+      "y_range": "-9.956~9.966"
+    }
+  ],
+  "insert_asset_hitl": {
+    "enabled": true,
+    "codes": [
+      "HITL_INSERT_ASSET_MISSING"
+    ],
+    "message": "Confirm assets to insert for each experiment.",
+    "html": "<form data-hitl=\"insert_assets\"><section><h3>Experiment 4.2.1</h3><label>Tables <select multiple name=\"tables_asset_ids_0\"><option value=\"tbl_4.2.1_1\">tbl_4.2.1_1</option></select></label><label>Graphs <select multiple name=\"graphs_asset_ids_0\"><option value=\"fig_4.2.1_1\">fig_4.2.1_1.png</option>\n<option value=\"fig_4.2.1_2\">fig_4.2.1_2.png</option></select></label><label>Photos <select multiple name=\"photos_asset_ids_0\"><option value=\"fig_4.2.1_1\">fig_4.2.1_1.png</option>\n<option value=\"fig_4.2.1_2\">fig_4.2.1_2.png</option></select></label></section></form>",
+    "payload": {
+      "targets": [
+        {
+          "exp_key": "4.2.1",
+          "result_no": "",
+          "selected": {
+            "tables_asset_ids": [
+              "tbl_4.2.1_1"
+            ],
+            "graphs_asset_ids": [
+              "fig_4.2.1_1",
+              "fig_4.2.1_2"
+            ],
+            "photos_asset_ids": []
+          }
+        }
+      ],
+      "tables": [
+        {
+          "id": "tbl_4.2.1_1",
+          "label": "tbl_4.2.1_1"
+        }
+      ],
+      "images": [
+        {
+          "id": "fig_4.2.1_1",
+          "label": "fig_4.2.1_1.png",
+          "rough_class": "graph"
+        },
+        {
+          "id": "fig_4.2.1_2",
+          "label": "fig_4.2.1_2.png",
+          "rough_class": "graph"
+        }
+      ]
+    }
+  },
+  "theory_formulas": [
+    {
+      "formula": "E_o = G (E_{i+} - E_{i-})",
+      "context": "OP アンプの開放ループ利得の定義を示す式。差動入力信号を開放ループで増幅した結果として出力が決まることを表す。",
+      "experiments": [
+        "4.2.1 反転増幅回路",
+        "4.2.2 非反転増幅回路",
+        "4.2.3 ボルテージフォロワ",
+        "4.2.4 加算回路",
+        "4.2.5 減算回路",
+        "4.3.1 積分回路",
+        "4.3.2 反転増幅回路の交流特性",
+        "4.3.3 加算回路の交流特性",
+        "4.3.4 減算回路の交流特性"
+      ]
+    },
+    {
+      "formula": "E_o = - \\frac{R_f}{R_{b1}} E_{b1}",
+      "context": "反転増幅回路における出力が入力信号に対して反転して増幅される関係を示す基本式。",
+      "experiments": [
+        "4.2.1 反転増幅回路",
+        "4.3.2 反転増幅回路の交流特性"
+      ]
+    }
+  ],
+  "quant_comment": [
+    {
+      "asset_id": "all_tables",
+      "kind": "tables",
+      "caption": "",
+      "quant_comment": "",
+      "error": "Connection error."
+    }
+  ],
+  "experiment_number": "5.2.1",
+  "experiment_title": "反転増幅回路",
+  "experiment_name": "反転増幅回路",
+  "experiment_parent": {
+    "exp_key": "4.2",
+    "title": "直流特性の測定"
+  },
+  "method_summary": "",
+  "result_description": "",
+  "table_labels": [
+    {
+      "table_id": "tbl_4.2.1_1",
+      "label": "表5.2.1.1"
+    }
+  ],
+  "graph_labels": [
+    {
+      "image_id": "fig_4.2.1_1",
+      "label": "図5.2.1.1"
+    },
+    {
+      "image_id": "fig_4.2.1_2",
+      "label": "図5.2.1.2"
+    }
+  ],
+  "table_captions": [
+    "無負荷時・各負荷状態の入出力特性比較表",
+    "1-3 1次近似結果表",
+    "無負荷時・各負荷状態の入出力特性比較表",
+    "1-3 1次近似結果表"
+  ],
+  "graph_captions": [
+    "無負荷 Vo–Vin 特性グラフ",
+    "複数負荷状態を重ねた Vo–Vin グラフ",
+    "無負荷 Vo–Vin 特性グラフ",
+    "複数負荷状態を重ねた Vo–Vin グラフ"
+  ],
+  "tables": [
+    {
+      "table_id": "tbl_4.2.1_1",
+      "label": "表5.2.1.1",
+      "caption": "無負荷時・各負荷状態の入出力特性比較表",
+      "rows": [
+        [
+          "入力電圧[V]",
+          "出力電圧[V]",
+          "反転入力端子電圧計算値[V]",
+          "理論値[V]"
+        ],
+        [
+          "-5",
+          "9.966",
+          "-0.0113333333",
+          "0"
+        ],
+        [
+          "-4",
+          "7.975",
+          "-0.0083333333",
+          "0"
+        ],
+        [
+          "-3",
+          "5.983",
+          "-0.0056666667",
+          "0"
+        ],
+        [
+          "-2",
+          "3.991",
+          "-0.003",
+          "0"
+        ],
+        [
+          "-1",
+          "1.998",
+          "-0.0006666667",
+          "0"
+        ],
+        [
+          "0",
+          "0.006",
+          "0.002",
+          "0"
+        ],
+        [
+          "1",
+          "-1.987",
+          "0.0043333333",
+          "0"
+        ],
+        [
+          "2",
+          "-3.979",
+          "0.007",
+          "0"
+        ],
+        [
+          "3",
+          "-5.971",
+          "0.0096666667",
+          "0"
+        ],
+        [
+          "4",
+          "-7.964",
+          "0.012",
+          "0"
+        ],
+        [
+          "5",
+          "-9.956",
+          "0.0146666667",
+          "0"
+        ]
+      ],
+      "storage_key": "tables/job/4.2.1/tbl_4.2.1_1.json"
+    }
+  ],
+  "graphs": [
+    {
+      "image_id": "fig_4.2.1_1",
+      "label": "図5.2.1.1",
+      "caption": "無負荷 Vo–Vin 特性グラフ",
+      "storage_key": "graphs/55ae0e9d75954b43b183c108af357bc7/4.2.1/fig_4.2.1_1.png"
+    },
+    {
+      "image_id": "fig_4.2.1_2",
+      "label": "図5.2.1.2",
+      "caption": "複数負荷状態を重ねた Vo–Vin グラフ",
+      "storage_key": "graphs/55ae0e9d75954b43b183c108af357bc7/4.2.1/fig_4.2.1_2.png"
+    }
+  ]
+}

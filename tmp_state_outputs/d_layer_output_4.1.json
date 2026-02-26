@@ -1,0 +1,72 @@
+{
+  "exp_key": "4.1",
+  "required_outputs": [
+    {
+      "exp_key": "4.1",
+      "title": "回路の製作",
+      "method_summary": "OPアンプ回路の実装手順を図13-図15に対応付け、図14のPCB上で正しく実装・動作することを確認する。測定項目は入力/出力波形とゲイン、±15V供給安定性、部品値・極性・接続の確認、1点接地、部品リストとの一致、実装写真の報告。",
+      "tables_count": 2,
+      "graphs_count": 1,
+      "photos_count": 2,
+      "table_expectations": [
+        {
+          "name": "部品リストと実装状態の対応表",
+          "hint": "表1の部品一覧と実際の実装位置・極性・値の一致を確認。単位・列名を明示し、部品ごとに現物と照合すること。",
+          "x_axis_label": "部品名",
+          "y_axis_label": "仕様/実測値"
+        },
+        {
+          "name": "抵抗値のカラーコードと実測値の対比表",
+          "hint": "表2のカラーコードと実際の抵抗値の一致を確認。誤差範囲 ±1～±10%程度までを記録し、同じ場所に異なる値が混入していないことを検証。",
+          "x_axis_label": "部品コード/場所",
+          "y_axis_label": "抵抗値 [Ω]"
+        }
+      ],
+      "graph_expectations": [
+        {
+          "name": "Vin-Vout特性グラフ",
+          "hint": "直線領域と飽和領域を示す。回路の増幅特性を表し、入力電圧と出力電圧の関係を確認する。",
+          "x_axis_label": "入力電圧 [V]",
+          "y_axis_label": "出力電圧 [V]"
+        }
+      ],
+      "confidence": 0.72,
+      "rationale": "図13〜図14の実装指示と表1/表2の部品情報に基づき、実装条件と測定項目を推定。写真は図14のPCBと図13の回路図に対応する想定。",
+      "evidence": [
+        "図13",
+        "図14",
+        "表1",
+        "表2",
+        "部品リスト",
+        "実装写真"
+      ],
+      "candidates": []
+    }
+  ],
+  "report": {
+    "hints": [
+      {
+        "exp_key": "4.1",
+        "title": "回路の製作",
+        "result_hint": "図13の回路が図14のPCB上で正しく実装され、動作に問題がないことを示す。測定項目: 入力/出力波形とゲイン、±15V供給の安定性、部品値・極性の確認、接地が1点に集中していること、実装写真と部品リストの一致を報告。"
+      }
+    ]
+  },
+  "past_report_hints": [],
+  "past_report_heading": [],
+  "excel_files": [
+    {
+      "excel_id": "ac",
+      "filename": "OPアンプ AC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_ac.xlsx"
+    },
+    {
+      "excel_id": "dc",
+      "filename": "OPアンプ DC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_dc.xlsx"
+    }
+  ],
+  "excel_sheets": [],
+  "theory_formulas": [],
+  "excel_images": []
+}

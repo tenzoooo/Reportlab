@@ -1,0 +1,402 @@
+[
+  {
+    "exp_key": "4.1",
+    "title": "回路の製作",
+    "excel_id": "excel:ac",
+    "excel_filename": "OPアンプ AC特性.xlsx",
+    "sheet": "周東いる班(反転増幅回路の交流)",
+    "a1_range": "A25:I48",
+    "has_graph": true,
+    "graph_axes": {
+      "x_name": "入力電圧",
+      "x_unit": "V",
+      "y_name": "出力電圧",
+      "y_unit": "V",
+      "series_names": [
+        "反転増幅回路（交流データ）"
+      ],
+      "condition_names": []
+    },
+    "result": {
+      "exp_key": "4.1",
+      "title": "回路の製作",
+      "table_range": {
+        "excel_id": "excel:ac",
+        "sheet": "周東いる班(反転増幅回路の交流)",
+        "a1_range": "A25:I48"
+      },
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "入力電圧",
+        "x_unit": "V",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "反転増幅回路（交流データ）"
+        ],
+        "condition_names": []
+      }
+    }
+  },
+  {
+    "exp_key": "4.2.1",
+    "title": "反転増幅回路",
+    "excel_id": "excel:dc",
+    "excel_filename": "OPアンプ DC特性.xlsx",
+    "sheet": "周東いる班(反転増幅回路)",
+    "a1_range": "B1:E12",
+    "has_graph": true,
+    "graph_axes": {
+      "x_name": "入力電圧",
+      "x_unit": "V",
+      "y_name": "出力電圧",
+      "y_unit": "V",
+      "series_names": [
+        "無負荷"
+      ],
+      "condition_names": []
+    },
+    "result": {
+      "exp_key": "4.2.1",
+      "title": "反転増幅回路",
+      "table_range": {
+        "excel_id": "excel:dc",
+        "sheet": "周東いる班(反転増幅回路)",
+        "a1_range": "B1:E12"
+      },
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "入力電圧",
+        "x_unit": "V",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "無負荷"
+        ],
+        "condition_names": []
+      }
+    }
+  },
+  {
+    "exp_key": "4.2.2",
+    "title": "非反転増幅回路",
+    "excel_id": "excel:dc",
+    "excel_filename": "OPアンプ DC特性.xlsx",
+    "sheet": "周東いる班(非反転増幅回路)",
+    "a1_range": "B1:E20",
+    "has_graph": true,
+    "graph_axes": {
+      "x_name": "Vin",
+      "x_unit": "V",
+      "y_name": "Vout",
+      "y_unit": "V",
+      "series_names": [
+        "Vout vs Vin（非反転増幅回路）"
+      ],
+      "condition_names": []
+    },
+    "result": {
+      "exp_key": "4.2.2",
+      "title": "非反転増幅回路",
+      "table_range": {
+        "excel_id": "excel:dc",
+        "sheet": "周東いる班(非反転増幅回路)",
+        "a1_range": "B1:E20"
+      },
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "Vin",
+        "x_unit": "V",
+        "y_name": "Vout",
+        "y_unit": "V",
+        "series_names": [
+          "Vout vs Vin（非反転増幅回路）"
+        ],
+        "condition_names": []
+      }
+    }
+  },
+  {
+    "exp_key": "4.2.3",
+    "title": "ボルテージフォロワ",
+    "excel_id": "excel:dc",
+    "excel_filename": "OPアンプ DC特性.xlsx",
+    "sheet": "周東いる班(ボルテージフォロワ) ",
+    "a1_range": "B1:E22",
+    "has_graph": true,
+    "graph_axes": {
+      "x_name": "入力電圧",
+      "x_unit": "V",
+      "y_name": "出力電圧",
+      "y_unit": "V",
+      "series_names": [
+        "無負荷"
+      ],
+      "condition_names": []
+    },
+    "result": {
+      "exp_key": "4.2.3",
+      "title": "ボルテージフォロワ",
+      "table_range": {
+        "excel_id": "excel:dc",
+        "sheet": "周東いる班(ボルテージフォロワ) ",
+        "a1_range": "B1:E22"
+      },
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "入力電圧",
+        "x_unit": "V",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "無負荷"
+        ],
+        "condition_names": []
+      }
+    }
+  },
+  {
+    "exp_key": "4.2.4",
+    "title": "加算回路",
+    "excel_id": "excel:dc",
+    "excel_filename": "OPアンプ DC特性.xlsx",
+    "sheet": "周東いる班(加算回路)",
+    "a1_range": "N1:Q12",
+    "has_graph": true,
+    "graph_axes": {
+      "x_name": "入力電圧",
+      "x_unit": "V",
+      "y_name": "出力電圧",
+      "y_unit": "V",
+      "series_names": [
+        "Eb2 (固定)"
+      ],
+      "condition_names": []
+    },
+    "result": {
+      "exp_key": "4.2.4",
+      "title": "加算回路",
+      "table_range": {
+        "excel_id": "excel:dc",
+        "sheet": "周東いる班(加算回路)",
+        "a1_range": "N1:Q12"
+      },
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "入力電圧",
+        "x_unit": "V",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "Eb2 (固定)"
+        ],
+        "condition_names": []
+      }
+    }
+  },
+  {
+    "exp_key": "4.2.5",
+    "title": "減算回路",
+    "excel_id": "excel:dc",
+    "excel_filename": "OPアンプ DC特性.xlsx",
+    "sheet": "周東いる班(減算回路)",
+    "a1_range": "B1:F20",
+    "has_graph": true,
+    "graph_axes": {
+      "x_name": "入力電圧",
+      "x_unit": "V",
+      "y_name": "出力電圧",
+      "y_unit": "V",
+      "series_names": [
+        "ケース1",
+        "ケース2"
+      ],
+      "condition_names": []
+    },
+    "result": {
+      "exp_key": "4.2.5",
+      "title": "減算回路",
+      "table_range": {
+        "excel_id": "excel:dc",
+        "sheet": "周東いる班(減算回路)",
+        "a1_range": "B1:F20"
+      },
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "入力電圧",
+        "x_unit": "V",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "ケース1",
+          "ケース2"
+        ],
+        "condition_names": []
+      }
+    }
+  },
+  {
+    "exp_key": "4.3.1",
+    "title": "積分回路",
+    "excel_id": "excel:ac",
+    "excel_filename": "OPアンプ AC特性.xlsx",
+    "sheet": "周東いる班(積分回路)",
+    "a1_range": "A25:K48",
+    "has_graph": true,
+    "graph_axes": {
+      "x_name": "周波数",
+      "x_unit": "Hz",
+      "y_name": "位相差",
+      "y_unit": "°",
+      "series_names": [
+        "位相差",
+        "位相差理論値[°]"
+      ],
+      "condition_names": []
+    },
+    "result": {
+      "exp_key": "4.3.1",
+      "title": "積分回路",
+      "table_range": {
+        "excel_id": "excel:ac",
+        "sheet": "周東いる班(積分回路)",
+        "a1_range": "A25:K48"
+      },
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "周波数",
+        "x_unit": "Hz",
+        "y_name": "位相差",
+        "y_unit": "°",
+        "series_names": [
+          "位相差",
+          "位相差理論値[°]"
+        ],
+        "condition_names": []
+      }
+    }
+  },
+  {
+    "exp_key": "4.3.2",
+    "title": "反転増幅回路の交流特性",
+    "excel_id": "excel:ac",
+    "excel_filename": "OPアンプ AC特性.xlsx",
+    "sheet": "周東いる班(反転増幅回路の交流)",
+    "a1_range": "A25:I48",
+    "has_graph": true,
+    "graph_axes": {
+      "x_name": "周波数",
+      "x_unit": "Hz",
+      "y_name": "",
+      "y_unit": "",
+      "series_names": [
+        "Gain",
+        "Phase"
+      ],
+      "condition_names": [
+        "Vin_ppを一定に保つよう入力振幅を調整"
+      ]
+    },
+    "result": {
+      "exp_key": "4.3.2",
+      "title": "反転増幅回路の交流特性",
+      "table_range": {
+        "excel_id": "excel:ac",
+        "sheet": "周東いる班(反転増幅回路の交流)",
+        "a1_range": "A25:I48"
+      },
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "周波数",
+        "x_unit": "Hz",
+        "y_name": "",
+        "y_unit": "",
+        "series_names": [
+          "Gain",
+          "Phase"
+        ],
+        "condition_names": [
+          "Vin_ppを一定に保つよう入力振幅を調整"
+        ]
+      }
+    }
+  },
+  {
+    "exp_key": "4.3.3",
+    "title": "加算回路の交流特性",
+    "excel_id": "excel:dc",
+    "excel_filename": "OPアンプ DC特性.xlsx",
+    "sheet": "周東いる班(加算回路)",
+    "a1_range": "N1:Q12",
+    "has_graph": false,
+    "graph_axes": {
+      "x_name": "",
+      "x_unit": "",
+      "y_name": "",
+      "y_unit": "",
+      "series_names": [],
+      "condition_names": []
+    },
+    "result": {
+      "exp_key": "4.3.3",
+      "title": "加算回路の交流特性",
+      "table_range": {
+        "excel_id": "excel:dc",
+        "sheet": "周東いる班(加算回路)",
+        "a1_range": "N1:Q12"
+      },
+      "has_graph": false,
+      "graph_axes": {
+        "x_name": "",
+        "x_unit": "",
+        "y_name": "",
+        "y_unit": "",
+        "series_names": [],
+        "condition_names": []
+      }
+    }
+  },
+  {
+    "exp_key": "4.3.4",
+    "title": "減算回路の交流特性",
+    "excel_id": "excel:dc",
+    "excel_filename": "OPアンプ DC特性.xlsx",
+    "sheet": "周東いる班(減算回路)",
+    "a1_range": "B1:F16",
+    "has_graph": true,
+    "graph_axes": {
+      "x_name": "時間",
+      "x_unit": "ms",
+      "y_name": "電圧",
+      "y_unit": "V",
+      "series_names": [
+        "V1",
+        "V2",
+        "Vout"
+      ],
+      "condition_names": []
+    },
+    "result": {
+      "exp_key": "4.3.4",
+      "title": "減算回路の交流特性",
+      "table_range": {
+        "excel_id": "excel:dc",
+        "sheet": "周東いる班(減算回路)",
+        "a1_range": "B1:F16"
+      },
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "時間",
+        "x_unit": "ms",
+        "y_name": "電圧",
+        "y_unit": "V",
+        "series_names": [
+          "V1",
+          "V2",
+          "Vout"
+        ],
+        "condition_names": []
+      }
+    }
+  }
+]

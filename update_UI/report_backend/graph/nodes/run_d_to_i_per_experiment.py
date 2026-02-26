@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from typing import Any
+
 from graph.nodes.assemble_results_page import assemble_results_page
 from graph.nodes.bind_insert_assets import bind_insert_assets
 from graph.nodes.build_result_hints_from_method import build_result_hints_from_method
@@ -13,7 +18,6 @@ from graph.nodes.sheet_selection_ambiguity_gate import sheet_selection_ambiguity
 from graph.nodes.column_unit_ambiguity_gate import column_unit_ambiguity_gate
 from graph.nodes.bind_table_columns_and_units import bind_table_columns_and_units
 from graph.nodes.quant_comment_assets import generate_quant_comments_from_assets
-from graph.update_mvp.I_reiya.build_experiment_page import build_experiment_page
 from graph.state import (
     AgentState,
     AxisHitl,
@@ -34,6 +38,21 @@ from graph.state import (
 from llm.client import LLMClient
 from models.contracts import Experiment
 from core.storage import Storage
+from graph.hitl import hitl_disabled
+from graph.nodes.ui_progress import set_ui_progress
+
+
+_DEFAULT_EXPERIMENT_PARALLELISM = 4
+
+
+@dataclass(frozen=True)
+class _ExperimentTaskResult:
+    index: int
+    exp_key: str
+    result_no: str
+    experiments: list[Experiment]
+    result_groups: list[Any]
+    hitl_entry: ExperimentHitlEntry | None
 
 
 def _split_experiment_number(exp_key: str) -> tuple[str, str]:
@@ -124,7 +143,20 @@ def _clear_outputs(state: AgentState) -> None:
     state.slope_extreme_results = []
 
 
+def _has_excel_inputs(state: AgentState) -> bool:
+    if str(state.excel.storage_key or "").strip():
+        return True
+    for item in state.excel_files or []:
+        if str(item.storage_key or "").strip():
+            return True
+    return False
+
+
 def _hitl_entry_from_state(state: AgentState, *, exp_key: str) -> ExperimentHitlEntry | None:
+    # Dev/diagnostics mode: never stop for HITL. We still allow the pipeline to fail fast via
+    # state.status==failed, but we don't convert ambiguity into a HITL queue entry.
+    if hitl_disabled():
+        return None
     if state.required_outputs_hitl.enabled:
         return ExperimentHitlEntry(
             exp_key=exp_key,
@@ -370,6 +402,134 @@ def _write_experiment_payload(
         pass
 
 
+def _build_experiment_page_node(state: AgentState) -> AgentState:
+    # Lazy import to avoid update_mvp package import cycle during module initialization.
+    from graph.update_mvp.I_reiya.build_experiment_page import build_experiment_page
+
+    return build_experiment_page(state)
+
+
+def _resolve_experiment_parallelism(total_units: int) -> int:
+    if total_units <= 1:
+        return 1
+    raw = (os.environ.get("REPORT_AGENT_EXPERIMENT_PARALLELISM") or "").strip()
+    if raw:
+        try:
+            workers = int(raw)
+        except Exception:
+            workers = _DEFAULT_EXPERIMENT_PARALLELISM
+    else:
+        workers = _DEFAULT_EXPERIMENT_PARALLELISM
+    workers = max(1, workers)
+    return min(total_units, workers)
+
+
+def _run_unit_pipeline(
+    *,
+    index: int,
+    unit: ExperimentUnit,
+    base: AgentState,
+    storage: Storage,
+    llm: LLMClient,
+) -> _ExperimentTaskResult:
+    scoped = _scoped_state(base, unit)
+    exp_key = str(unit.exp_key or "").strip()
+    has_excel_inputs = _has_excel_inputs(scoped)
+    if not exp_key:
+        return _ExperimentTaskResult(
+            index=index,
+            exp_key="",
+            result_no="",
+            experiments=[],
+            result_groups=[],
+            hitl_entry=None,
+        )
+
+    scoped = build_result_hints_from_method(scoped, llm=llm)
+    scoped = infer_required_outputs(scoped, llm=llm)
+    scoped = required_outputs_ambiguity_gate(scoped)
+    entry = _hitl_entry_from_state(scoped, exp_key=exp_key)
+    if entry:
+        _write_experiment_payload(state=scoped, exp_key=exp_key, unit=unit, hitl_entry=entry)
+        return _ExperimentTaskResult(
+            index=index,
+            exp_key=exp_key,
+            result_no="",
+            experiments=[],
+            result_groups=[],
+            hitl_entry=entry,
+        )
+
+    if has_excel_inputs:
+        scoped = inspect_excel(scoped, storage=storage)
+        scoped = select_excel_sheet_per_required_outputs(scoped, llm=llm)
+        scoped = sheet_selection_ambiguity_gate(scoped)
+        entry = _hitl_entry_from_state(scoped, exp_key=exp_key)
+        if entry:
+            _write_experiment_payload(state=scoped, exp_key=exp_key, unit=unit, hitl_entry=entry)
+            return _ExperimentTaskResult(
+                index=index,
+                exp_key=exp_key,
+                result_no="",
+                experiments=[],
+                result_groups=[],
+                hitl_entry=entry,
+            )
+
+        scoped = select_excel_ranges(scoped, storage=storage, llm=llm)
+        scoped = bind_table_columns_and_units(scoped, llm=llm)
+        scoped = column_unit_ambiguity_gate(scoped)
+        entry = _hitl_entry_from_state(scoped, exp_key=exp_key)
+        if entry:
+            _write_experiment_payload(state=scoped, exp_key=exp_key, unit=unit, hitl_entry=entry)
+            return _ExperimentTaskResult(
+                index=index,
+                exp_key=exp_key,
+                result_no="",
+                experiments=[],
+                result_groups=[],
+                hitl_entry=entry,
+            )
+    else:
+        # No workbook input: skip Excel-dependent extraction/binding stages.
+        # Also drop table/graph requirements to avoid false HITL due to missing Excel assets.
+        for req in scoped.required_outputs or []:
+            req.tables_count = 0
+            req.graphs_count = 0
+        scoped.excel_inventory = []
+        scoped.excel_sheet_selections = []
+        scoped.table_column_bindings = []
+
+    scoped = bind_insert_assets(scoped, storage=storage)
+    entry = _hitl_entry_from_state(scoped, exp_key=exp_key)
+    if entry:
+        _write_experiment_payload(state=scoped, exp_key=exp_key, unit=unit, hitl_entry=entry)
+        return _ExperimentTaskResult(
+            index=index,
+            exp_key=exp_key,
+            result_no="",
+            experiments=[],
+            result_groups=[],
+            hitl_entry=entry,
+        )
+
+    if has_excel_inputs:
+        scoped = generate_graphs(scoped, storage=storage)
+    scoped = generate_quant_comments_from_assets(scoped, storage=storage, llm=llm)
+    scoped = _build_experiment_page_node(scoped)
+
+    result_no = str(scoped.pdf.result_number_map.get(exp_key, "") or "")
+    _write_experiment_payload(state=scoped, exp_key=exp_key, unit=unit, hitl_entry=None)
+    return _ExperimentTaskResult(
+        index=index,
+        exp_key=exp_key,
+        result_no=result_no,
+        experiments=list(scoped.experiments or []),
+        result_groups=list(scoped.result_groups or []),
+        hitl_entry=None,
+    )
+
+
 def run_d_to_i_per_experiment(
     state: AgentState,
     *,
@@ -400,66 +560,94 @@ def run_d_to_i_per_experiment(
 
     base = state.model_copy(deep=True)
     merged = state
+    # ノード開始直後に「実験数」を明示（UIの"処理中"に出す）
+    set_ui_progress(
+        merged,
+        storage=storage,
+        phase="D-Iレイヤー",
+        detail=f"実験処理: 0/{len(units)}",
+        current_experiment="",
+    )
     hitl_queue: list[ExperimentHitlEntry] = list(state.experiment_hitl_queue or [])
     accumulated_experiments: list[Experiment] = []
     accumulated_groups: list = []
+    workers = _resolve_experiment_parallelism(len(units))
+    task_results: list[_ExperimentTaskResult] = []
+    if workers <= 1:
+        for index, unit in enumerate(units):
+            exp_label = f"{unit.exp_key} {unit.title}".strip()
+            set_ui_progress(
+                merged,
+                storage=storage,
+                phase="D-Iレイヤー",
+                detail=f"実験処理: {index}/{len(units)}",
+                current_experiment=exp_label,
+            )
+            task_results.append(
+                _run_unit_pipeline(
+                    index=index,
+                    unit=unit,
+                    base=base,
+                    storage=storage,
+                    llm=llm,
+                )
+            )
+    else:
+        indexed_results: list[_ExperimentTaskResult | None] = [None] * len(units)
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="exp-path") as executor:
+            future_map = {
+                executor.submit(
+                    _run_unit_pipeline,
+                    index=index,
+                    unit=unit,
+                    base=base,
+                    storage=storage,
+                    llm=llm,
+                ): index
+                for index, unit in enumerate(units)
+            }
+            done_count = 0
+            for future in as_completed(future_map):
+                index = future_map[future]
+                indexed_results[index] = future.result()
+                done_count += 1
+                # 並列時は順序が前後するため、完了数ベースで可視化する
+                completed = indexed_results[index]
+                exp_label = ""
+                if completed and completed.exp_key:
+                    unit = units[index]
+                    exp_label = f"{unit.exp_key} {unit.title}".strip()
+                set_ui_progress(
+                    merged,
+                    storage=storage,
+                    phase="D-Iレイヤー",
+                    detail=f"実験処理: {done_count}/{len(units)}",
+                    current_experiment=exp_label,
+                )
+        task_results = [r for r in indexed_results if r is not None]
 
-    for unit in units:
-        scoped = _scoped_state(base, unit)
-        exp_key = str(unit.exp_key or "").strip()
-        if not exp_key:
+    for task in task_results:
+        if not task.exp_key:
             continue
-
-        scoped = build_result_hints_from_method(scoped, llm=llm)
-        scoped = infer_required_outputs(scoped, llm=llm)
-        scoped = required_outputs_ambiguity_gate(scoped)
-        entry = _hitl_entry_from_state(scoped, exp_key=exp_key)
-        if entry:
-            hitl_queue.append(entry)
-            _write_experiment_payload(state=scoped, exp_key=exp_key, unit=unit, hitl_entry=entry)
+        if task.hitl_entry:
+            hitl_queue.append(task.hitl_entry)
             continue
-
-        scoped = inspect_excel(scoped, storage=storage)
-        scoped = select_excel_sheet_per_required_outputs(scoped, llm=llm)
-        scoped = sheet_selection_ambiguity_gate(scoped)
-        entry = _hitl_entry_from_state(scoped, exp_key=exp_key)
-        if entry:
-            hitl_queue.append(entry)
-            _write_experiment_payload(state=scoped, exp_key=exp_key, unit=unit, hitl_entry=entry)
-            continue
-
-        scoped = select_excel_ranges(scoped, storage=storage, llm=llm)
-        scoped = bind_table_columns_and_units(scoped, llm=llm)
-        scoped = column_unit_ambiguity_gate(scoped)
-        entry = _hitl_entry_from_state(scoped, exp_key=exp_key)
-        if entry:
-            hitl_queue.append(entry)
-            _write_experiment_payload(state=scoped, exp_key=exp_key, unit=unit, hitl_entry=entry)
-            continue
-
-        scoped = bind_insert_assets(scoped, storage=storage)
-        entry = _hitl_entry_from_state(scoped, exp_key=exp_key)
-        if entry:
-            hitl_queue.append(entry)
-            _write_experiment_payload(state=scoped, exp_key=exp_key, unit=unit, hitl_entry=entry)
-            continue
-
-        scoped = generate_graphs(scoped, storage=storage)
-        scoped = generate_quant_comments_from_assets(scoped, storage=storage, llm=llm)
-        scoped = build_experiment_page(scoped)
-
-        result_no = str(scoped.pdf.result_number_map.get(exp_key, "") or "")
-        accumulated_experiments = _merge_experiments(accumulated_experiments, scoped.experiments, exp_key)
-        if result_no:
-            accumulated_groups = _merge_result_groups(accumulated_groups, scoped.result_groups, result_no)
-
-        _write_experiment_payload(state=scoped, exp_key=exp_key, unit=unit, hitl_entry=None)
+        accumulated_experiments = _merge_experiments(accumulated_experiments, task.experiments, task.exp_key)
+        if task.result_no:
+            accumulated_groups = _merge_result_groups(accumulated_groups, task.result_groups, task.result_no)
 
     merged.experiments = accumulated_experiments
     merged.result_groups = accumulated_groups
     merged.experiment_hitl_queue = hitl_queue
     _reset_hitl_flags(merged)
     merged = assemble_results_page(merged)
+    set_ui_progress(
+        merged,
+        storage=storage,
+        phase="D-Iレイヤー",
+        detail=f"実験処理: {len(units)}/{len(units)}",
+        current_experiment="",
+    )
     merged.job_meta.updated_at = now_iso()
     return merged
 

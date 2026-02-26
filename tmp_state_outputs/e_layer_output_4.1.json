@@ -1,0 +1,6389 @@
+{
+  "exp_key": "4.1",
+  "required_outputs": [
+    {
+      "exp_key": "4.1",
+      "title": "回路の製作",
+      "method_summary": "OPアンプ回路の実装手順を図13-図15に対応付け、図14のPCB上で正しく実装・動作することを確認する。測定項目は入力/出力波形とゲイン、±15V供給安定性、部品値・極性・接続の確認、1点接地、部品リストとの一致、実装写真の報告。",
+      "tables_count": 2,
+      "graphs_count": 1,
+      "photos_count": 2,
+      "table_expectations": [
+        {
+          "name": "部品リストと実装状態の対応表",
+          "hint": "表1の部品一覧と実際の実装位置・極性・値の一致を確認。単位・列名を明示し、部品ごとに現物と照合すること。",
+          "x_axis_label": "部品名",
+          "y_axis_label": "仕様/実測値"
+        },
+        {
+          "name": "抵抗値のカラーコードと実測値の対比表",
+          "hint": "表2のカラーコードと実際の抵抗値の一致を確認。誤差範囲 ±1～±10%程度までを記録し、同じ場所に異なる値が混入していないことを検証。",
+          "x_axis_label": "部品コード/場所",
+          "y_axis_label": "抵抗値 [Ω]"
+        }
+      ],
+      "graph_expectations": [
+        {
+          "name": "Vin-Vout特性グラフ",
+          "hint": "直線領域と飽和領域を示す。回路の増幅特性を表し、入力電圧と出力電圧の関係を確認する。",
+          "x_axis_label": "入力電圧 [V]",
+          "y_axis_label": "出力電圧 [V]"
+        }
+      ],
+      "confidence": 0.72,
+      "rationale": "図13〜図14の実装指示と表1/表2の部品情報に基づき、実装条件と測定項目を推定。写真は図14のPCBと図13の回路図に対応する想定。",
+      "evidence": [
+        "図13",
+        "図14",
+        "表1",
+        "表2",
+        "部品リスト",
+        "実装写真"
+      ],
+      "candidates": []
+    }
+  ],
+  "excel_sheet_selections": [
+    {
+      "exp_key": "4.1",
+      "result_no": "",
+      "title": "回路の製作",
+      "selected_excel_id": "dc",
+      "selected_sheet": "周東いる班(ボルテージフォロワ100kΩ)",
+      "confidence": 0.6,
+      "rationale": "sheet_name:token:1; header:token:1; excel_name:token:OP; numeric_density",
+      "evidence": [
+        "sheet_name:token:1",
+        "header:token:1",
+        "excel_name:token:OP",
+        "numeric_density"
+      ],
+      "candidates": [
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+          "confidence": 0.6,
+          "rationale": "sheet_name:token:1; header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "sheet_name:token:1",
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+          "confidence": 0.6,
+          "rationale": "sheet_name:token:1; header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "sheet_name:token:1",
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "コピー元",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(反転増幅回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(非反転増幅回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(ボルテージフォロワ) ",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(加算回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(減算回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(反転増幅回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(非反転増幅回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(ボルテージフォロワ)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(加算回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "　いない班(減算回路) ",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "コピー元",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "Sheet1",
+          "confidence": 0.35,
+          "rationale": "sheet_name:token:1; excel_name:token:OP",
+          "evidence": [
+            "sheet_name:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "周東いる班(積分回路)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "周東いる班(反転増幅回路の交流)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "周東いる班(加算・減算回路の交流)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "いない班(積分回路)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "いない班(反転増幅回路の交流)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "　いない班(加算・減算回路の交流) ",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        }
+      ],
+      "used_llm": false
+    }
+  ],
+  "excel_range_selections": [
+    {
+      "exp_key": "4.1",
+      "title": "回路の製作",
+      "excel_id": "excel:ac",
+      "excel_filename": "OPアンプ AC特性.xlsx",
+      "sheet": "周東いる班(積分回路)",
+      "a1_range": "A25:K48",
+      "has_graph": false,
+      "graph_axes": {
+        "x_name": "",
+        "x_unit": "",
+        "y_name": "",
+        "y_unit": "",
+        "series_names": [],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.1",
+        "title": "回路の製作",
+        "table_id": "excel:ac:周東いる班(積分回路):A25:K48",
+        "table_range": {
+          "excel_id": "excel:ac",
+          "sheet": "周東いる班(積分回路)",
+          "a1_range": "A25:K48"
+        },
+        "has_graph": false,
+        "graph_axes": {
+          "x_name": "",
+          "x_unit": "",
+          "y_name": "",
+          "y_unit": "",
+          "series_names": [],
+          "condition_names": []
+        },
+        "table_expectations": [
+          {
+            "name": "部品リストと実装状態の対応表",
+            "hint": "表1の部品一覧と実際の実装位置・極性・値の一致を確認。単位・列名を明示し、部品ごとに現物と照合すること。",
+            "x_axis_label": "部品名",
+            "y_axis_label": "仕様/実測値"
+          },
+          {
+            "name": "抵抗値のカラーコードと実測値の対比表",
+            "hint": "表2のカラーコードと実際の抵抗値の一致を確認。誤差範囲 ±1～±10%程度までを記録し、同じ場所に異なる値が混入していないことを検証。",
+            "x_axis_label": "部品コード/場所",
+            "y_axis_label": "抵抗値 [Ω]"
+          }
+        ],
+        "graph_expectations": [
+          {
+            "name": "Vin-Vout特性グラフ",
+            "hint": "直線領域と飽和領域を示す。回路の増幅特性を表し、入力電圧と出力電圧の関係を確認する。",
+            "x_axis_label": "入力電圧 [V]",
+            "y_axis_label": "出力電圧 [V]"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.1",
+      "title": "回路の製作",
+      "excel_id": "excel:ac",
+      "excel_filename": "OPアンプ AC特性.xlsx",
+      "sheet": "周東いる班(反転増幅回路の交流)",
+      "a1_range": "A25:I48",
+      "has_graph": false,
+      "graph_axes": {
+        "x_name": "",
+        "x_unit": "",
+        "y_name": "",
+        "y_unit": "",
+        "series_names": [],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.1",
+        "title": "回路の製作",
+        "table_id": "excel:ac:周東いる班(反転増幅回路の交流):A25:I48",
+        "table_range": {
+          "excel_id": "excel:ac",
+          "sheet": "周東いる班(反転増幅回路の交流)",
+          "a1_range": "A25:I48"
+        },
+        "has_graph": false,
+        "graph_axes": {
+          "x_name": "",
+          "x_unit": "",
+          "y_name": "",
+          "y_unit": "",
+          "series_names": [],
+          "condition_names": []
+        },
+        "table_expectations": [
+          {
+            "name": "部品リストと実装状態の対応表",
+            "hint": "表1の部品一覧と実際の実装位置・極性・値の一致を確認。単位・列名を明示し、部品ごとに現物と照合すること。",
+            "x_axis_label": "部品名",
+            "y_axis_label": "仕様/実測値"
+          },
+          {
+            "name": "抵抗値のカラーコードと実測値の対比表",
+            "hint": "表2のカラーコードと実際の抵抗値の一致を確認。誤差範囲 ±1～±10%程度までを記録し、同じ場所に異なる値が混入していないことを検証。",
+            "x_axis_label": "部品コード/場所",
+            "y_axis_label": "抵抗値 [Ω]"
+          }
+        ],
+        "graph_expectations": [
+          {
+            "name": "Vin-Vout特性グラフ",
+            "hint": "直線領域と飽和領域を示す。回路の増幅特性を表し、入力電圧と出力電圧の関係を確認する。",
+            "x_axis_label": "入力電圧 [V]",
+            "y_axis_label": "出力電圧 [V]"
+          }
+        ]
+      }
+    }
+  ],
+  "excel_files": [
+    {
+      "excel_id": "ac",
+      "asset_id": "",
+      "filename": "OPアンプ AC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_ac.xlsx",
+      "upload_index": 0,
+      "sheet_names": []
+    },
+    {
+      "excel_id": "dc",
+      "asset_id": "",
+      "filename": "OPアンプ DC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_dc.xlsx",
+      "upload_index": 0,
+      "sheet_names": []
+    }
+  ],
+  "excel_inventory": [
+    {
+      "excel_id": "ac",
+      "filename": "OPアンプ AC特性.xlsx",
+      "sheet_names": [
+        "周東いる班(積分回路)",
+        "周東いる班(反転増幅回路の交流)",
+        "周東いる班(加算・減算回路の交流)",
+        "いない班(積分回路)",
+        "いない班(反転増幅回路の交流)",
+        "　いない班(加算・減算回路の交流) ",
+        "コピー元"
+      ],
+      "sheets": [
+        {
+          "sheet_name": "周東いる班(積分回路)",
+          "preview_rows": [
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "4-3.1-1",
+              "",
+              "",
+              "",
+              "4-3.3-1",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "300kHz",
+              "",
+              "",
+              "",
+              "10kH",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 4,
+          "headers": [
+            "4-3.1-1",
+            "4-3.3-1"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-3.1-1",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 2,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "4-3.3-1",
+              "sample_values": [
+                "300kHz"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [
+                "10kH"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.0
+        },
+        {
+          "sheet_name": "周東いる班(反転増幅回路の交流)",
+          "preview_rows": [
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "4-3.2.1-1",
+              "",
+              "",
+              "",
+              "4-3.2.2-1",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 4,
+          "headers": [
+            "4-3.2.1-1",
+            "4-3.2.2-1"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-3.2.1-1",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 2,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "4-3.2.2-1",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.0
+        },
+        {
+          "sheet_name": "周東いる班(加算・減算回路の交流)",
+          "preview_rows": [
+            [
+              "加算回路",
+              "",
+              "",
+              "",
+              "4-3.3.2-1",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "4-3.3.1-1",
+              "",
+              "",
+              "",
+              "図16",
+              "",
+              "",
+              "",
+              "図17(方形波)",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 2,
+          "headers": [
+            "4-3.3.1-1",
+            "図16",
+            "図17(方形波)"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-3.3.1-1",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 2,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "図16",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "図17(方形波)",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.0
+        },
+        {
+          "sheet_name": "いない班(積分回路)",
+          "preview_rows": [
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "4-3.1-1",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "4-3.3-1",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "10kHz",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 4,
+          "headers": [
+            "4-3.1-1",
+            "4-3.3-1"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-3.1-1",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 2,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "4-3.3-1",
+              "sample_values": [
+                "10kHz"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.0
+        },
+        {
+          "sheet_name": "いない班(反転増幅回路の交流)",
+          "preview_rows": [
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "4-3.1-1",
+              "",
+              "",
+              "",
+              "4-3.3-1",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "300kHz",
+              "",
+              "",
+              "",
+              "10kH",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 4,
+          "headers": [
+            "4-3.1-1",
+            "4-3.3-1"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-3.1-1",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 2,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "4-3.3-1",
+              "sample_values": [
+                "300kHz"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [
+                "10kH"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.0
+        },
+        {
+          "sheet_name": "　いない班(加算・減算回路の交流) ",
+          "preview_rows": [
+            [
+              "加算回路",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "4.3.3.(1-1)",
+              "",
+              "↓正弦と正弦",
+              "",
+              "",
+              "",
+              "↓三角と方形",
+              "",
+              "",
+              "",
+              "",
+              "(2-1)"
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 2,
+          "headers": [
+            "4.3.3.(1-1)",
+            "↓正弦と正弦",
+            "↓三角と方形",
+            "(2-1)"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4.3.3.(1-1)",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 2,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "↓正弦と正弦",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "↓三角と方形",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "(2-1)",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.0
+        },
+        {
+          "sheet_name": "コピー元",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "入力電圧[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "反転増幅回路",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "入力電圧[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "反転増幅回路"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "入力電圧[V]",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9411764705882353
+        }
+      ]
+    },
+    {
+      "excel_id": "dc",
+      "filename": "OPアンプ DC特性.xlsx",
+      "sheet_names": [
+        "周東いる班(反転増幅回路)",
+        "周東いる班(非反転増幅回路)",
+        "周東いる班(ボルテージフォロワ) ",
+        "周東いる班(ボルテージフォロワ100kΩ)",
+        "周東いる班(加算回路)",
+        "周東いる班(減算回路)",
+        "いない班(反転増幅回路)",
+        "いない班(非反転増幅回路)",
+        "いない班(ボルテージフォロワ)",
+        "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "いない班(加算回路)",
+        "　いない班(減算回路) ",
+        "Sheet1",
+        "コピー元"
+      ],
+      "sheets": [
+        {
+          "sheet_name": "周東いる班(反転増幅回路)",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "入力電圧[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "反転増幅回路",
+              "-5",
+              "9.966",
+              "-0.0113333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "7.975",
+              "-0.0083333333",
+              "0",
+              "0.0018787879",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "5.983",
+              "-0.0056666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "3.991",
+              "-0.003",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1",
+              "1.998",
+              "-0.0006666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "0",
+              "0.006",
+              "0.002",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "1",
+              "-1.987",
+              "0.0043333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "2",
+              "-3.979",
+              "0.007",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "3",
+              "-5.971",
+              "0.0096666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "4",
+              "-7.964",
+              "0.012",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "5",
+              "-9.956",
+              "0.0146666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "入力電圧[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "反転増幅回路"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "入力電圧[V]",
+              "sample_values": [
+                "-5",
+                "-4",
+                "-3",
+                "-2"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "9.966",
+                "7.975",
+                "5.983",
+                "3.991"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "-0.0113333333",
+                "-0.0083333333",
+                "-0.0056666667",
+                "-0.003"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [
+                "0.0018787879"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9705882352941176
+        },
+        {
+          "sheet_name": "周東いる班(非反転増幅回路)",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "入力電圧[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "相対誤差[%]",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "非反転増幅回路",
+              "-5",
+              "-14.17",
+              "-4.7233333333",
+              "5.5333333333",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.8",
+              "-14.069",
+              "-4.6896666667",
+              "2.2986111111",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.6",
+              "-13.761",
+              "-4.587",
+              "0.2826086957",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.4",
+              "-13.162",
+              "-4.3873333333",
+              "0.2878787879",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.2",
+              "-12.564",
+              "-4.188",
+              "0.2857142857",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "-11.969",
+              "-3.9896666667",
+              "0.2583333333",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "-8.976",
+              "-2.992",
+              "0.2666666667",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "-5.982",
+              "-1.994",
+              "0.3",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1",
+              "-2.988",
+              "-0.996",
+              "0.4",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "0",
+              "0.006",
+              "0.002",
+              "なし",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "1",
+              "3",
+              "1",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "入力電圧[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "相対誤差[%]"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "非反転増幅回路"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "入力電圧[V]",
+              "sample_values": [
+                "-5",
+                "-4.8",
+                "-4.6",
+                "-4.4"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "-14.17",
+                "-14.069",
+                "-13.761",
+                "-13.162"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "-4.7233333333",
+                "-4.6896666667",
+                "-4.587",
+                "-4.3873333333"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "相対誤差[%]",
+              "sample_values": [
+                "5.5333333333",
+                "2.2986111111",
+                "0.2826086957",
+                "0.2878787879"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9696969696969697
+        },
+        {
+          "sheet_name": "周東いる班(ボルテージフォロワ) ",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "入力電圧[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "反転増幅回路",
+              "-10",
+              "-10",
+              "-10",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-9",
+              "-9",
+              "-9",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-8",
+              "-8",
+              "-8",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-7",
+              "-7",
+              "-7",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-6",
+              "-5.999",
+              "-5.9996666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-5",
+              "-4.999",
+              "-4.9996666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "-3.999",
+              "-3.9996666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "-2.999",
+              "-2.9996666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "-1.998",
+              "-1.9993333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1",
+              "-0.998",
+              "-0.9993333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "0",
+              "0.002",
+              "0.0006666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "入力電圧[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "反転増幅回路"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "入力電圧[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9696969696969697
+        },
+        {
+          "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "入力電圧[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "RL1とRL2"
+            ],
+            [
+              "反転増幅回路",
+              "-10",
+              "-10",
+              "-10",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-9",
+              "-9",
+              "-9",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-8",
+              "-8",
+              "-8",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-7",
+              "-7",
+              "-7",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-6",
+              "-5.999",
+              "-5.9996666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-5",
+              "-4.999",
+              "-4.9996666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "-3.999",
+              "-3.9996666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "-2.999",
+              "-2.9996666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "-1.998",
+              "-1.9993333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1",
+              "-0.998",
+              "-0.9993333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "0",
+              "0.002",
+              "0.0006666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "入力電圧[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]",
+            "RL1とRL2"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "反転増幅回路"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "入力電圧[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "RL1とRL2",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9696969696969697
+        },
+        {
+          "sheet_name": "周東いる班(加算回路)",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "Eb2[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "Eb1",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "Eb1固定時",
+              "-5",
+              "-3.863",
+              "#REF!",
+              "0",
+              "3",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "-4.285",
+              "#REF!",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "-4.707",
+              "-3.569",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "-5.129",
+              "-3.043",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1",
+              "-5.55",
+              "-2.5166666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "0",
+              "-5.972",
+              "-1.9906666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "1",
+              "-6.394",
+              "-1.4646666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "2",
+              "-6.816",
+              "-0.9386666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "3",
+              "-7.237",
+              "-0.4123333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "4",
+              "-7.659",
+              "0.1136666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "5",
+              "-8.081",
+              "0.6396666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "Eb2[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]",
+            "Eb1"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "Eb1固定時"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "Eb2[V]",
+              "sample_values": [
+                "-5",
+                "-4",
+                "-3",
+                "-2"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "-3.863",
+                "-4.285",
+                "-4.707",
+                "-5.129"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "#REF!",
+                "#REF!",
+                "-3.569",
+                "-3.043"
+              ],
+              "numeric_ratio": 0.75,
+              "text_ratio": 0.25
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "Eb1",
+              "sample_values": [
+                "3"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9117647058823529
+        },
+        {
+          "sheet_name": "周東いる班(減算回路)",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "Eb1[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "Ea1",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "Ea1を3Vで固定時",
+              "-5",
+              "13.407",
+              "1.1356666667",
+              "0",
+              "3",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.8",
+              "13.407",
+              "1.803",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.6",
+              "13.408",
+              "1.9833333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.4",
+              "13.408",
+              "1.9856666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.2",
+              "13.408",
+              "1.988",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "13.409",
+              "1.9903333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3.8",
+              "13.408",
+              "1.9926666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3.6",
+              "13.143",
+              "1.995",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3.4",
+              "12.746",
+              "2.0026666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3.2",
+              "12.347",
+              "1.9996666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "11.95",
+              "2.002",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "Eb1[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]",
+            "Ea1"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "Ea1を3Vで固定時"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "Eb1[V]",
+              "sample_values": [
+                "-5",
+                "-4.8",
+                "-4.6",
+                "-4.4"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "13.407",
+                "13.407",
+                "13.408",
+                "13.408"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "1.1356666667",
+                "1.803",
+                "1.9833333333",
+                "1.9856666667"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "Ea1",
+              "sample_values": [
+                "3"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9705882352941176
+        },
+        {
+          "sheet_name": "いない班(反転増幅回路)",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "入力電圧[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "反転増幅回路",
+              "-5",
+              "9.971",
+              "-0.0096666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "7.978",
+              "-0.0073333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "5.985",
+              "-0.005",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "3.992",
+              "-0.0026666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1",
+              "1.999",
+              "-0.0003333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "0",
+              "0.006",
+              "0.002",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "1",
+              "-1.987",
+              "0.0043333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "2",
+              "-3.98",
+              "0.0066666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "3",
+              "-5.973",
+              "0.009",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "4",
+              "-7.966",
+              "0.0113333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "5",
+              "-9.959",
+              "0.0136666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "入力電圧[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "反転増幅回路"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "入力電圧[V]",
+              "sample_values": [
+                "-5",
+                "-4",
+                "-3",
+                "-2"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "9.971",
+                "7.978",
+                "5.985",
+                "3.992"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "-0.0096666667",
+                "-0.0073333333",
+                "-0.005",
+                "-0.0026666667"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9696969696969697
+        },
+        {
+          "sheet_name": "いない班(非反転増幅回路)",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "入力電圧[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "反転増幅回路",
+              "-5",
+              "-14.197",
+              "-4.7323333333",
+              "-5",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.8",
+              "-14.094",
+              "-4.698",
+              "-4.8",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.6",
+              "-13.806",
+              "-4.602",
+              "-4.6",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.4",
+              "-13.206",
+              "-4.402",
+              "-4.4",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4.2",
+              "-12.606",
+              "-4.202",
+              "-4.2",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "-12.005",
+              "-4.0016666667",
+              "-4",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3.8",
+              "-11.405",
+              "-3.8016666667",
+              "-3.8",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3.6",
+              "-10.805",
+              "-3.6016666667",
+              "-3.6",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3.4",
+              "-10.204",
+              "-3.4013333333",
+              "-3.4",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "-9.004",
+              "-3.0013333333",
+              "-3",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "-6.002",
+              "-2.0006666667",
+              "-2",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "入力電圧[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "反転増幅回路"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "入力電圧[V]",
+              "sample_values": [
+                "-5",
+                "-4.8",
+                "-4.6",
+                "-4.4"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "-14.197",
+                "-14.094",
+                "-13.806",
+                "-13.206"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "-4.7323333333",
+                "-4.698",
+                "-4.602",
+                "-4.402"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "-5",
+                "-4.8",
+                "-4.6",
+                "-4.4"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9696969696969697
+        },
+        {
+          "sheet_name": "いない班(ボルテージフォロワ)",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "入力電圧[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "反転増幅回路",
+              "-10",
+              "-10",
+              "-10",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-9",
+              "-9",
+              "-9",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-8",
+              "-8",
+              "-8",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-7",
+              "-7",
+              "-7",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-6",
+              "-6",
+              "-6",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-5",
+              "-5",
+              "-5",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "-4",
+              "-4",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "-3",
+              "-3",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "-2",
+              "-2",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1",
+              "-0.994",
+              "-0.998",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "0",
+              "0.000626",
+              "0.0002086667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "入力電圧[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "反転増幅回路"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "入力電圧[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9696969696969697
+        },
+        {
+          "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "入力電圧[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "反転増幅回路",
+              "-10",
+              "-10",
+              "-10",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-9",
+              "-9",
+              "-9",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-8",
+              "-8",
+              "-8",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-7",
+              "-7",
+              "-7",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-6",
+              "-6",
+              "-6",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-5",
+              "-5",
+              "-5",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "-4",
+              "-4",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "-3",
+              "-3",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "-2",
+              "-2",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1",
+              "-0.9998",
+              "-0.9999333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "0",
+              "0.000196",
+              "0.0000653333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "入力電圧[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "反転増幅回路"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "入力電圧[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "-10",
+                "-9",
+                "-8",
+                "-7"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9696969696969697
+        },
+        {
+          "sheet_name": "いない班(加算回路)",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "Eb2[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "Eb1",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "Eb1固定時",
+              "-5",
+              "-7.876",
+              "#REF!",
+              "0",
+              "5",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "-8.302",
+              "-5.434",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "-8.728",
+              "-4.9093333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "-9.154",
+              "-4.3846666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1",
+              "-9.58",
+              "-3.86",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "0",
+              "-10.005",
+              "-3.335",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "1",
+              "-10.432",
+              "-2.8106666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "2",
+              "-10.858",
+              "-2.286",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "3",
+              "-11.283",
+              "-1.761",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "4",
+              "-11.709",
+              "-1.2363333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "5",
+              "-12.135",
+              "-0.7116666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "Eb2[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]",
+            "Eb1"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "Eb1固定時"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "Eb2[V]",
+              "sample_values": [
+                "-5",
+                "-4",
+                "-3",
+                "-2"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "-7.876",
+                "-8.302",
+                "-8.728",
+                "-9.154"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "#REF!",
+                "-5.434",
+                "-4.9093333333",
+                "-4.3846666667"
+              ],
+              "numeric_ratio": 0.875,
+              "text_ratio": 0.125
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "Eb1",
+              "sample_values": [
+                "5"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9411764705882353
+        },
+        {
+          "sheet_name": "　いない班(減算回路) ",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "Eb2[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "Ea1",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "Ea1固定時",
+              "-5",
+              "13.418",
+              "1.1393333333",
+              "0",
+              "5",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-4",
+              "13.42",
+              "1.8066666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-3",
+              "13.422",
+              "2.474",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-2",
+              "13.423",
+              "3.141",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1.8",
+              "13.424",
+              "3.3256666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1.6",
+              "13.176",
+              "3.3253333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1.4",
+              "12.776",
+              "3.3246666667",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1.2",
+              "12.376",
+              "3.324",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "-1",
+              "11.977",
+              "3.3233333333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "0",
+              "9.976",
+              "3.323",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "1",
+              "7.974",
+              "3.3224733333",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "Eb2[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]",
+            "Ea1"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "Ea1固定時"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "Eb2[V]",
+              "sample_values": [
+                "-5",
+                "-4",
+                "-3",
+                "-2"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [
+                "13.418",
+                "13.42",
+                "13.422",
+                "13.423"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "1.1393333333",
+                "1.8066666667",
+                "2.474",
+                "3.141"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "Ea1",
+              "sample_values": [
+                "5"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9705882352941176
+        },
+        {
+          "sheet_name": "Sheet1",
+          "preview_rows": [
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 0,
+          "headers": [],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 2,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.0
+        },
+        {
+          "sheet_name": "コピー元",
+          "preview_rows": [
+            [
+              "4-2.1",
+              "入力電圧[V]",
+              "出力電圧[V]",
+              "反転入力端子電圧計算値[V]",
+              "理論値[V]",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "反転増幅回路",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              "0",
+              "0",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "header_row_index": 1,
+          "headers": [
+            "4-2.1",
+            "入力電圧[V]",
+            "出力電圧[V]",
+            "反転入力端子電圧計算値[V]",
+            "理論値[V]"
+          ],
+          "columns": [
+            {
+              "column_index": 1,
+              "header": "4-2.1",
+              "sample_values": [
+                "反転増幅回路"
+              ],
+              "numeric_ratio": 0.0,
+              "text_ratio": 1.0
+            },
+            {
+              "column_index": 2,
+              "header": "入力電圧[V]",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 3,
+              "header": "出力電圧[V]",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 4,
+              "header": "反転入力端子電圧計算値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 5,
+              "header": "理論値[V]",
+              "sample_values": [
+                "0",
+                "0",
+                "0",
+                "0"
+              ],
+              "numeric_ratio": 1.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 6,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 7,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 8,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 9,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 10,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 11,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            },
+            {
+              "column_index": 12,
+              "header": "",
+              "sample_values": [],
+              "numeric_ratio": 0.0,
+              "text_ratio": 0.0
+            }
+          ],
+          "numeric_density": 0.9411764705882353
+        }
+      ]
+    }
+  ],
+  "theory_formulas": [],
+  "excel_images": []
+}

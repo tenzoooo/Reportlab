@@ -3,14 +3,17 @@ from __future__ import annotations
 import base64
 import os
 import re
+import threading
 from typing import Any
 
 import fitz  # PyMuPDF
 
-from core.text import clean_pdf_text_for_llm, is_bad_pdf_page_text, normalize_pdf_text
+from core.past_report import clip_past_report_text, ext_from_filename, extract_past_report_images, extract_past_report_text
+from core.text import clean_pdf_text_for_llm, is_bad_pdf_page_text, normalize_pdf_text, pdf_text_to_markdown
 from core.storage import Storage
-from graph.state import AgentState
+from graph.state import AgentState, PdfTextBlock
 from llm.client import LLMClient
+from models.contracts import PastReportExperimentHint, PastReportSummary, empty_past_report_summary
 
 
 _METHOD_CHAPTER_RE = re.compile(r"(?m)^\s*(\d+)[.．]\s*実験方法\b")
@@ -60,8 +63,80 @@ def _extract_prompts(discussion_text: str) -> list[str]:
     return prompts
 
 
-def pdf_parse(state: AgentState, *, storage: Storage, llm: LLMClient | None = None) -> AgentState:
+def _store_page_texts(state: AgentState, *, storage: Storage) -> None:
+    if not state.pdf.page_texts:
+        return
     if not state.pdf.storage_key:
+        return
+    key = f"{state.pdf.storage_key}.page_texts.json"
+    storage.put_json(key, [block.model_dump() for block in state.pdf.page_texts])
+    state.pdf.page_texts_key = key
+
+
+def pdf_parse(state: AgentState, *, storage: Storage, llm: LLMClient | None = None) -> AgentState:
+    def _ensure_past_report_list() -> list[tuple[int, str, str]]:
+        if not state.past_reports and state.past_report.storage_key:
+            state.past_report.report_id = state.past_report.report_id or "legacy"
+            state.past_reports = [state.past_report]
+        jobs: list[tuple[int, str, str]] = []
+        for idx, report in enumerate(state.past_reports):
+            if not report.storage_key or report.hints_ready:
+                continue
+            jobs.append((idx, report.storage_key, report.filename))
+        return jobs
+
+    past_report_jobs = []
+    past_report_results: list[tuple[int, list[PastReportExperimentHint], PastReportSummary, str]] = []
+    past_report_thread: threading.Thread | None = None
+    if (
+        state.job_meta.run_mode in {"mvp", "update_mvp"}
+        and llm is not None
+        and not llm.mock
+    ):
+        past_report_jobs = _ensure_past_report_list()
+
+    def _apply_past_report_results() -> None:
+        if not past_report_thread:
+            return
+        past_report_thread.join()
+        for idx, experiments, summary, error in past_report_results:
+            if idx < 0 or idx >= len(state.past_reports):
+                continue
+            report = state.past_reports[idx]
+            report.hints = experiments
+            report.report_summary = summary
+            report.hints_ready = True
+            report.hints_error = error
+
+    if past_report_jobs:
+        def _run_past_report_extract():
+            for idx, storage_key, filename in past_report_jobs:
+                try:
+                    raw = storage.get_bytes(storage_key)
+                    ext = ext_from_filename(filename or storage_key)
+                    text = extract_past_report_text(raw, ext=ext)
+                    text = clip_past_report_text(text)
+                    if not text:
+                        past_report_results.append((idx, [], empty_past_report_summary(), "past_report_text_empty"))
+                        continue
+                    image_urls: list[str] = []
+                    for mime, data in extract_past_report_images(raw, ext=ext):
+                        try:
+                            image_urls.append(_to_data_url(mime, data))
+                        except Exception:
+                            continue
+                    out = llm.extract_past_report_hints(text, image_b64_urls=image_urls) if llm is not None else None
+                    experiments = out.experiments if out is not None else []
+                    summary = out.report_summary if out is not None else empty_past_report_summary()
+                    past_report_results.append((idx, experiments, summary, ""))
+                except Exception as exc:
+                    past_report_results.append((idx, [], empty_past_report_summary(), str(exc)))
+
+        past_report_thread = threading.Thread(target=_run_past_report_extract, daemon=True)
+        past_report_thread.start()
+
+    if not state.pdf.storage_key:
+        _apply_past_report_results()
         return state
 
     pdf_bytes = storage.get_bytes(state.pdf.storage_key)
@@ -79,6 +154,14 @@ def pdf_parse(state: AgentState, *, storage: Storage, llm: LLMClient | None = No
             text = clean_pdf_text_for_llm(normalize_pdf_text(ocr.text))
             state.pdf.pages = ocr.pages
             state.pdf.text = text
+            state.pdf.markdown_text = pdf_text_to_markdown(text)
+            state.pdf.page_texts = [
+                PdfTextBlock(page=idx + 1, text=clean_pdf_text_for_llm(normalize_pdf_text(page_text)))
+                for idx, page_text in enumerate(ocr.page_texts or [])
+                if page_text is not None
+            ]
+            _store_page_texts(state, storage=storage)
+            state.pdf.page_texts = []
             # Continue with heading/section parsing below.
         except Exception:
             # Fall back to text extraction.
@@ -115,6 +198,7 @@ def pdf_parse(state: AgentState, *, storage: Storage, llm: LLMClient | None = No
 
     if not use_full_ocr and doc is not None:
         chunks: list[str] = []
+        page_texts: list[PdfTextBlock] = []
         for page in doc:
             page_lines: list[dict[str, Any]] = []
             try:
@@ -158,6 +242,12 @@ def pdf_parse(state: AgentState, *, storage: Storage, llm: LLMClient | None = No
                             hybrid_ocr_used += 1
                     except Exception:
                         pass
+                page_texts.append(
+                    PdfTextBlock(
+                        page=page.number + 1,
+                        text=clean_pdf_text_for_llm(normalize_pdf_text(page_text)),
+                    )
+                )
                 chunks.append(page_text)
                 continue
 
@@ -207,22 +297,23 @@ def pdf_parse(state: AgentState, *, storage: Storage, llm: LLMClient | None = No
                         hybrid_ocr_used += 1
                 except Exception:
                     pass
+            page_texts.append(
+                PdfTextBlock(
+                    page=page.number + 1,
+                    text=clean_pdf_text_for_llm(normalize_pdf_text(page_text)),
+                )
+            )
             chunks.append(page_text)
 
         text = clean_pdf_text_for_llm(normalize_pdf_text("\n".join([c for c in chunks if c])))
         state.pdf.pages = doc.page_count
-        state.pdf.text = text
+    state.pdf.text = text
+    state.pdf.markdown_text = pdf_text_to_markdown(text)
+    state.pdf.page_texts = page_texts
+    _store_page_texts(state, storage=storage)
+    state.pdf.page_texts = []
 
-    headings: list[dict[str, Any]] = []
-    for line in (state.pdf.text or "").splitlines():
-        match = _HEADING_RE.match(line.strip())
-        if not match:
-            continue
-        section_raw = match.group(1)
-        section = section_raw.replace("\uFF0E", ".").replace("．", ".")
-        section = section.translate(str.maketrans("０１２３４５６７８９", "0123456789"))
-        headings.append({"section": section, "title": match.group(2).strip()})
-    state.pdf.headings = headings
+    _apply_past_report_results()
 
     text = state.pdf.text or ""
     method_match = _METHOD_CHAPTER_RE.search(text)
@@ -243,6 +334,8 @@ def pdf_parse(state: AgentState, *, storage: Storage, llm: LLMClient | None = No
             state.pdf.discussion_text = "\n\n".join([_slice_section(text, start_match=m) for m in matches[:3]]).strip()
         else:
             state.pdf.discussion_text = ""
+    state.pdf.method_markdown_text = pdf_text_to_markdown(state.pdf.method_text)
+    state.pdf.discussion_markdown_text = pdf_text_to_markdown(state.pdf.discussion_text)
 
     # Prompts extraction is handled by the dedicated LLM-based node `discussion_extract`.
     # Keep this empty here so "LLM-first" behavior is consistent.

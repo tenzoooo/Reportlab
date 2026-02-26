@@ -84,6 +84,33 @@ def build_xy_observations(
                 "values": vals2,
             }
 
+    term_guidance: dict[str, Any] = {"allowed_terms": [], "notes": []}
+    x_key = x_name_s.lower()
+    y_key = y_name_s.lower()
+    driver_name = str(driver_out.get("name") or "").strip().lower()
+    if x_key in {"vce", "v_ce"} and y_key in {"ic", "i_c"} and driver_name in {"ib", "i_b"}:
+        term_guidance = {
+            "allowed_terms": ["能動領域", "アーリー効果"],
+            "notes": [
+                "高x領域でyがほぼ一定の説明は「能動領域（定電流性）」を用いる。",
+                "飽和領域は低xの立ち上がりを指すため混同しない。",
+            ],
+        }
+
+    forbidden_terms = [
+        "飽和領域",
+        "線形性",
+        "カットオフ",
+        "結果表",
+        "hFE",
+        "β",
+        "α",
+    ]
+    if term_guidance.get("allowed_terms"):
+        forbidden_terms.extend(["飽和", "線形領域"])
+    else:
+        forbidden_terms.extend(["能動領域", "Early効果", "アーリー効果"])
+
     payload: dict[str, Any] = {
         "experiment": {"exp_key": str(experiment_key or "").strip(), "title": str(experiment_title or "").strip()},
         "variables": {
@@ -95,17 +122,8 @@ def build_xy_observations(
         "series": [],
         "missing_data": {"has_missing": False, "total_missing_points": 0, "examples": []},
         "allowed_scope": ["numerical_observation", "variation_degree", "missing_data_note", "limited_evaluation"],
-        "forbidden_terms": [
-            "能動領域",
-            "飽和領域",
-            "Early効果",
-            "アーリー効果",
-            "線形性",
-            "カットオフ",
-            "hFE",
-            "β",
-            "α",
-        ],
+        "term_guidance": term_guidance,
+        "forbidden_terms": forbidden_terms,
     }
 
     missing_examples: list[str] = []

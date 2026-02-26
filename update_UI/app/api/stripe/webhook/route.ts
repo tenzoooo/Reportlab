@@ -1,27 +1,109 @@
 import { getStripeClient } from "@/lib/stripe/client"
-import { createClient } from "@supabase/supabase-js"
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+
 const premiumPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM
+const premiumLegacyPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM_LEGACY
 const creditsPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD
 
+const isPremiumPriceId = (id: string): boolean => {
+  if (premiumPriceId && id === premiumPriceId) return true
+  if (premiumLegacyPriceId && id === premiumLegacyPriceId) return true
+  return false
+}
+
+const toIsoFromStripeUnixSeconds = (unixSeconds: number | null | undefined): string | null => {
+  if (typeof unixSeconds !== "number" || !Number.isFinite(unixSeconds) || unixSeconds <= 0) return null
+  return new Date(unixSeconds * 1000).toISOString()
+}
+
 const getCreditsForPrice = (id: string) => {
-  if (premiumPriceId && id === premiumPriceId) return 400 // Premium: 400/month
+  if (isPremiumPriceId(id)) return 400 // Premium: 400/month
   if (creditsPriceId && id === creditsPriceId) return 400 // Credit Only: 400/month (adjust if needed)
   return 0
 }
 
+type EnsureProfileReadyResult = {
+  created: boolean
+  repairedNullCredits: boolean
+}
+
+async function ensureProfileReady(params: {
+  supabase: SupabaseClient
+  userId: string
+  email: string | null
+}): Promise<EnsureProfileReadyResult> {
+  const { supabase, userId, email } = params
+
+  const { data: existing, error: selectError } = await supabase
+    .from("profiles")
+    .select("id, credits")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (selectError) {
+    // Safety-first: if we can't read profile existence, fail hard so Stripe retries.
+    console.error("[WEBHOOK] Failed to select profile:", selectError)
+    throw selectError
+  }
+
+  if (!existing) {
+    // Important: do NOT rely on DB defaults here (e.g. initial free credits),
+    // because this code path is a repair path for webhook credit granting.
+    const { error: upsertError } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: userId,
+          email: email ?? undefined,
+          credits: 0,
+        },
+        { onConflict: "id", ignoreDuplicates: true }
+      )
+
+    if (upsertError) {
+      console.error("[WEBHOOK] Failed to upsert missing profile:", upsertError)
+      throw upsertError
+    }
+
+    return { created: true, repairedNullCredits: false }
+  }
+
+  if (existing.credits === null) {
+    // credits=NULL would make "credits = credits + amount" become NULL forever.
+    const { error: repairError } = await supabase.from("profiles").update({ credits: 0 }).eq("id", userId)
+    if (repairError) {
+      console.error("[WEBHOOK] Failed to repair NULL credits:", repairError)
+      throw repairError
+    }
+    return { created: false, repairedNullCredits: true }
+  }
+
+  return { created: false, repairedNullCredits: false }
+}
+
 export async function POST(req: Request) {
   const body = await req.text()
-  const signature = (await headers()).get("Stripe-Signature") as string
+  const signature = (await headers()).get("Stripe-Signature")
   console.log("[WEBHOOK] Received webhook")
 
   const stripe = getStripeClient()
   let event: Stripe.Event
 
-  const secret = process.env.STRIPE_WEBHOOK_SECRET!
+  const secret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!secret) {
+    console.error("[WEBHOOK] Missing STRIPE_WEBHOOK_SECRET")
+    return new NextResponse("Internal Server Error: Missing STRIPE_WEBHOOK_SECRET", { status: 500 })
+  }
+  if (!signature) {
+    console.error("[WEBHOOK] Missing Stripe-Signature header")
+    return new NextResponse("Bad Request: Missing Stripe-Signature", { status: 400 })
+  }
   console.log("***** [WEBHOOK] STARTING *****")
   console.log("***** [WEBHOOK] Secret length:", secret?.length)
   console.log("***** [WEBHOOK] Secret first 5 chars:", secret?.substring(0, 5))
@@ -45,7 +127,7 @@ export async function POST(req: Request) {
   }
   console.log("[WEBHOOK] Event type:", event.type)
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !supabaseServiceKey) {
@@ -101,41 +183,70 @@ export async function POST(req: Request) {
 
         if (!userId) {
           console.error("[WEBHOOK] Missing userId in metadata")
-          break
+          // Do not silently acknowledge. Prefer Stripe retry so we don't lose credits/subscription linkage.
+          return new NextResponse("Internal Error: Missing userId metadata", { status: 500 })
         }
 
         // One-time credit purchase (mode=payment)
         if (session.mode === "payment") {
+          const email = session.customer_details?.email ?? session.customer_email ?? null
           const creditsPurchased = Number(session.metadata?.creditsPurchased ?? NaN)
           if (!Number.isFinite(creditsPurchased) || creditsPurchased <= 0) {
             console.error("[WEBHOOK] Invalid creditsPurchased metadata:", session.metadata?.creditsPurchased)
-            break
+            return new NextResponse("Internal Error: Invalid creditsPurchased metadata", { status: 500 })
           }
 
           const description = `Stripe checkout (${session.id})`
           const { data: existing } = await supabase
             .from("credit_transactions")
-            .select("id")
+            .select("id, amount")
             .eq("user_id", userId)
             .eq("description", description)
             .maybeSingle()
 
           if (existing) {
             console.log("[WEBHOOK] Credit transaction already recorded, skipping duplicate:", existing.id)
+            // Repair path:
+            // If the transaction exists but profiles row was missing or credits was NULL,
+            // the prior increment could have been a no-op (0 rows updated or NULL math).
+            const ensured = await ensureProfileReady({ supabase, userId, email })
+            if (ensured.created || ensured.repairedNullCredits) {
+              console.warn("[WEBHOOK] Re-applying credits due to profile repair. amount=", existing.amount, "user=", userId)
+              const { error: incrementError } = await supabase.rpc("increment_credits", {
+                user_id_arg: userId,
+                amount_arg: existing.amount,
+              })
+              if (incrementError) {
+                console.error("[WEBHOOK] Failed to increment credits during repair:", incrementError)
+                return new NextResponse("Internal Error: Failed to increment credits (repair)", { status: 500 })
+              }
+            }
             break
           }
 
+          await ensureProfileReady({ supabase, userId, email })
+
           console.log("[WEBHOOK] Adding credits:", creditsPurchased, "to user:", userId)
-          await supabase.rpc("increment_credits", {
+          const { error: incrementError } = await supabase.rpc("increment_credits", {
             user_id_arg: userId,
             amount_arg: creditsPurchased,
           })
+          if (incrementError) {
+            console.error("[WEBHOOK] Failed to increment credits:", incrementError)
+            // Return non-2xx to trigger Stripe retry. We prefer at-least-once delivery over silently losing credits.
+            return new NextResponse("Internal Error: Failed to increment credits", { status: 500 })
+          }
 
-          await supabase.from("credit_transactions").insert({
+          const { error: insertTxError } = await supabase.from("credit_transactions").insert({
             user_id: userId,
             amount: creditsPurchased,
             description,
           })
+          if (insertTxError) {
+            console.error("[WEBHOOK] Failed to insert credit transaction:", insertTxError)
+            // Return non-2xx so Stripe retries, but keep idempotency via (description, session.id) check above.
+            return new NextResponse("Internal Error: Failed to record credit transaction", { status: 500 })
+          }
 
           // Ensure Stripe sends receipts by attaching customer email to the PaymentIntent
           await setReceiptEmailOnPaymentIntent(session)
@@ -144,7 +255,7 @@ export async function POST(req: Request) {
 
         if (!subscriptionId) {
           console.error("[WEBHOOK] Missing subscriptionId for subscription checkout")
-          break
+          return new NextResponse("Internal Error: Missing subscriptionId", { status: 500 })
         }
 
         // Retrieve subscription to get status and price
@@ -154,10 +265,11 @@ export async function POST(req: Request) {
         const priceId = subscription.items.data[0].price.id
         console.log("[WEBHOOK] Received Price ID:", priceId)
         console.log("[WEBHOOK] Expected Premium ID:", premiumPriceId)
+        console.log("[WEBHOOK] Expected Premium Legacy ID:", premiumLegacyPriceId)
         console.log("[WEBHOOK] Expected Credits ID:", creditsPriceId)
 
         let planName = 'free'
-        if (priceId === premiumPriceId) {
+        if (isPremiumPriceId(priceId)) {
           planName = 'premium'
         } else if (priceId === creditsPriceId) {
           planName = 'standard' // legacy: credit_only -> standard
@@ -186,6 +298,7 @@ export async function POST(req: Request) {
           status: subscription.status,
           price_id: priceId,
           cancel_at_period_end: subscription.cancel_at_period_end,
+          current_period_end: toIsoFromStripeUnixSeconds(subscription.current_period_end),
         })
         if (upsertError) {
           console.error("[WEBHOOK] Subscription upsert failed:", upsertError)
@@ -262,17 +375,16 @@ export async function POST(req: Request) {
         const subscription = event.data.object as Stripe.Subscription
         const priceId = subscription.items.data[0].price.id
         let planName = 'free'
-        if (subscription.status === 'active') {
-          if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM) {
-            planName = 'premium'
-          } else if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STANDARD) {
-            planName = 'standard'
-          }
+        if (subscription.status === 'active' || subscription.status === 'trialing' || subscription.status === 'past_due') {
+          if (isPremiumPriceId(priceId)) planName = 'premium'
+          else if (priceId === creditsPriceId) planName = 'standard'
         }
 
         await supabase.from("subscriptions").update({
           status: subscription.status,
+          price_id: priceId,
           cancel_at_period_end: subscription.cancel_at_period_end,
+          current_period_end: toIsoFromStripeUnixSeconds(subscription.current_period_end),
         }).eq("id", subscription.id)
 
         // Find user_id from subscription to update profile
@@ -287,6 +399,7 @@ export async function POST(req: Request) {
         const subscription = event.data.object as Stripe.Subscription
         await supabase.from("subscriptions").update({
           status: subscription.status,
+          current_period_end: toIsoFromStripeUnixSeconds(subscription.current_period_end),
         }).eq("id", subscription.id)
 
         const { data: sub } = await supabase.from("subscriptions").select("user_id").eq("id", subscription.id).single()

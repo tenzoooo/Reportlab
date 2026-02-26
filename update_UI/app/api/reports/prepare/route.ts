@@ -1,31 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 
+import { getUserIdFromRequest } from "@/app/api/reports/_shared/access"
 import { logError, logRequest } from "@/lib/server/logger"
-import { createClient, createServiceClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/server"
 import { prepareReportAgentFromSupabaseReport, ReportAlreadyProcessingError, ReportUserError } from "@/lib/server/report-agent"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
+export const maxDuration = 300
 
 type Body = {
   reportId?: string
-}
-
-const getUserId = async (request: NextRequest) => {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (user) return user.id
-
-  const auth = request.headers.get("authorization") || ""
-  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : ""
-  if (!token) return null
-
-  const admin = createServiceClient()
-  const { data, error } = await admin.auth.getUser(token)
-  if (error || !data.user) return null
-  return data.user.id
 }
 
 export async function POST(request: NextRequest) {
@@ -43,7 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "reportId is required" }, { status: 400 })
   }
 
-  const userId = await getUserId(request)
+  const userId = await getUserIdFromRequest(request)
   if (!userId) {
     return NextResponse.json({ error: "ログインが必要です" }, { status: 401 })
   }

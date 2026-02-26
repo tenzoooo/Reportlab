@@ -1,0 +1,87 @@
+## 2) エッジ一覧（どのノードとどのノードを繋ぐか／条件付き）
+
+ここでは「矢印＝エッジ」として記述します。条件がある場合は【条件】で明記します。
+
+### 2.1 直線メインフロー（基本）
+
+* START → Ingest
+
+* Ingest → NormalizeInputs
+
+* NormalizeInputs → ClassifyAssets
+
+* NormalizeInputs → ExtractManualText
+
+* ExtractManualText → ParseManualStructure
+
+* ParseManualStructure → ExtractMethodNumbers
+
+* ExtractMethodNumbers → MapResultNumbers
+
+* ParseManualStructure → LocateDiscussionSection
+
+* ParseManualStructure → ExtractTheoryCandidates
+
+* ExtractTheoryCandidates → NormalizeAndOMMLifyFormula
+
+* NormalizeInputs → InspectExcel
+
+* InspectExcel → InferRequiredOutputs
+
+* 【過去レポートあり】NormalizeInputs → ExtractPastReportStructureHints → InferRequiredOutputs（ヒントを合流）
+
+* InferRequiredOutputs → RequiredOutputsAmbiguityGate
+
+* RequiredOutputsAmbiguityGate → SelectExcelSheetPerExperiyCompareToggle → ComputeTheoryValue 【ON】
+
+* ComputeTheoryValue → BindTheorySubstitutionParams
+
+* BindTheorySubstitutionParams → ComputeDeltaAndAbsError
+
+* DecideTheoryCompareToggle → ComputeSlopeAndExtreme 【OFF】
+
+* ResolveAxesAndUnits → ComputeSlopeAndExtreme 【OFF時に必要】
+
+* （計算結果確定後）→ GenerateQuantCommentText
+
+* ExtractManualText/ParseManualStructure → SummarizeMethodToOverview
+
+* （図表確定後）→ GenerateCaptions
+
+* （図表番号確定後）→ GenerateResultDescription
+
+* SummarizeMethodToOverview → AssembleExperimentResultGroup
+
+* GenerateResultDescription → AssembleExperimentResultGroup
+
+* GenerateCaptions → AssembleExperimentResultGroup
+
+* GenerateQuantCommentText → AssembleExperimentResultGroup
+
+* AssembleExperimentResultGroup（各実験分ループ）→ AssembleResultsPage
+
+* LocateDiscussionSection → BuildDiscussionPage
+
+* AssembleResultsPage → BuildSummaryPage
+
+* BuildReferencesPage（テンプレ）→ ComposeMarkdownDocument
+
+* ComposeMarkdownDocument → StyleTransform
+
+* StyleTransform → OMMLPlacementAndSanity
+
+* OMMLPlacementAndSanity → ValidatePreformat
+
+* ValidatePreformat → AutoFixPreformat
+
+* AutoFixPreformat → ValidatePreformat（再検査）
+
+* 【Preformat合格】ValidatePreformat → RenderDOCX
+
+* RenderDOCX → ValidateFinal
+
+* ValidateFinal → AutoFixFinal
+
+* AutoFixFinal → RenderDOCX（再レンダリングが必要な場合）
+
+* 【Final合格】ValidateFinal → EmitOutputs

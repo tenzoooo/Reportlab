@@ -32,9 +32,10 @@ def unit_init(state: AgentState) -> AgentState:
     experiments: list[Experiment] = []
 
     headings_by_section: dict[str, str] = {}
-    for h in state.pdf.headings:
-        section = str(h.get("section") or "").strip()
-        title = str(h.get("title") or "").strip()
+    headings_source = state.pdf.heading_positions_cleaned or state.pdf.heading_positions
+    for h in headings_source:
+        section = str(h.section or "").strip()
+        title = str(h.title or "").strip()
         if section and title:
             headings_by_section[section] = title
     for item in state.method_tree:
@@ -50,6 +51,7 @@ def unit_init(state: AgentState) -> AgentState:
                 subidx=subidx,
                 name=title,
                 source_idx=exp_key,
+                method_no=exp_key,
                 method_summary=method_summary,
                 result_brief="",
                 description_brief=method_summary,
@@ -94,6 +96,7 @@ def unit_init(state: AgentState) -> AgentState:
                 subidx="",
                 name=parent_title or (parent_source or f"{idx}"),
                 source_idx=parent_source,
+                method_no=parent_source or None,
                 method_summary="",
                 result_brief="",
                 description_brief="",

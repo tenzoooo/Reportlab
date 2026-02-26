@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { createClient } from "@/lib/supabase/client"
 import { useEffect } from "react"
+import DashboardPageShell from "@/components/dashboard-page-shell"
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
@@ -149,23 +150,18 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <DashboardPageShell title="プロフィール" subtitle="アカウント情報と利用統計" icon={<User className="h-6 w-6" />}>
       <motion.div
         initial="hidden"
         animate="visible"
         variants={containerVariants}
-        className="max-w-6xl mx-auto p-4 sm:p-6 space-y-8"
+        className="space-y-8"
       >
-        {/* Header */}
-        <motion.div variants={itemVariants}>
-          <h1 className="text-3xl font-bold text-foreground">プロフィール</h1>
-          <p className="text-muted-foreground mt-2">アカウント情報と利用統計</p>
-        </motion.div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left Column - Profile Card */}
           <motion.div variants={itemVariants} className="lg:col-span-1">
-            <Card>
+            <Card className="bg-white/5 border-white/10">
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center space-y-4">
                   {/* Avatar */}
@@ -214,7 +210,7 @@ export default function ProfilePage() {
 
             {/* Storage Card */}
             <motion.div variants={itemVariants} className="mt-6">
-              <Card>
+              <Card className="bg-white/5 border-white/10">
                 <CardHeader>
                   <CardTitle className="text-lg">ストレージ使用量</CardTitle>
                 </CardHeader>
@@ -235,7 +231,7 @@ export default function ProfilePage() {
           {/* Right Column - Details */}
           <div className="lg:col-span-2 space-y-6">
             <motion.div variants={itemVariants}>
-              <Card>
+              <Card className="bg-white/5 border-white/10">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle>プロフィール情報</CardTitle>
@@ -383,6 +379,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </motion.div>
-    </div>
+    </DashboardPageShell>
   )
 }

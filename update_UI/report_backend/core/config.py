@@ -34,6 +34,7 @@ def _load_openai_env_from_dotenv_files() -> None:
         "LANGSMITH_TRACING",
         "LANGSMITH_PROJECT",
         "LANGSMITH_ENDPOINT",
+        "REPORT_AGENT_ENABLE_LANGSMITH",
         "LANGCHAIN_API_KEY",
         "LANGCHAIN_TRACING_V2",
         "LANGCHAIN_PROJECT",
@@ -41,12 +42,19 @@ def _load_openai_env_from_dotenv_files() -> None:
     }
 
     update_ui_dir = Path(__file__).resolve().parents[2]
-    candidates = [
-        update_ui_dir / ".env.local",
-        update_ui_dir / ".env",
-        Path.cwd() / ".env.local",
-        Path.cwd() / ".env",
-    ]
+    # Why: ユーザー要件として「ローカルは .env.local」「本番は .env」のみを見る。
+    # 混在させると、意図しないキー（古いAPIキー/プロジェクト名）が拾われて原因追跡が困難になる。
+    is_production = (os.environ.get("VERCEL") == "1") or ((os.environ.get("NODE_ENV") or "").strip().lower() == "production")
+    if is_production:
+        candidates = [
+            update_ui_dir / ".env",
+            Path.cwd() / ".env",
+        ]
+    else:
+        candidates = [
+            update_ui_dir / ".env.local",
+            Path.cwd() / ".env.local",
+        ]
 
     for path in candidates:
         try:
@@ -102,7 +110,7 @@ class Settings:
     # Compatibility / debug flags
     python_debug: bool
     docx_debug: bool
-    enable_dify_debug_log: bool
+    enable_ai_debug_log: bool
     use_remote_python: bool
 
     # Storage
@@ -142,7 +150,7 @@ def load_settings() -> Settings:
 
     python_debug = _env_flag_1("PYTHON_DEBUG")
     docx_debug = _env_flag_1("DOCX_DEBUG")
-    enable_dify_debug_log = _env_bool("ENABLE_DIFY_DEBUG_LOG")
+    enable_ai_debug_log = _env_bool("ENABLE_AI_DEBUG_LOG")
     use_remote_python = _env_bool("USE_REMOTE_PYTHON")
 
     storage_backend = (_env("STORAGE_BACKEND") or "local").lower()
@@ -205,7 +213,7 @@ def load_settings() -> Settings:
         enable_image_grouping_with_method_context=enable_image_grouping,
         python_debug=python_debug,
         docx_debug=docx_debug,
-        enable_dify_debug_log=enable_dify_debug_log,
+        enable_ai_debug_log=enable_ai_debug_log,
         use_remote_python=use_remote_python,
         storage_backend=storage_backend,  # type: ignore[arg-type]
         storage_dir=storage_dir,

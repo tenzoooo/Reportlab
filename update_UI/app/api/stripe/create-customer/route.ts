@@ -20,14 +20,7 @@ const ensureAdminClient = () => {
 
 type AdminClient = ReturnType<typeof ensureAdminClient>
 
-const upsertStripeCustomer = async (admin: AdminClient, userId: string, customerId: string) => {
-  const { error } = await admin
-    .from("stripe_customers")
-    .upsert({ user_id: userId, stripe_customer_id: customerId, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
-  if (error) throw error
-}
-
-const upsertPublicUserStripeCustomer = async (
+const upsertProfileStripeCustomer = async (
   admin: AdminClient,
   userId: string,
   customerId: string,
@@ -38,12 +31,15 @@ const upsertPublicUserStripeCustomer = async (
     throw new Error("Missing email for public.users upsert")
   }
 
-  const { error } = await admin
-    .from("users")
-    .upsert(
-      { id: userId, email: ensuredEmail, stripe_customer_id: customerId, updated_at: new Date().toISOString() },
-      { onConflict: "id" }
-    )
+  const { error } = await admin.from("profiles").upsert(
+    {
+      id: userId,
+      email: ensuredEmail,
+      stripe_customer_id: customerId,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" }
+  )
   if (error) throw error
 }
 
@@ -89,8 +85,7 @@ export async function POST(request: NextRequest) {
 
   try {
     if (existingCustomerId) {
-      await upsertStripeCustomer(admin, user.id, existingCustomerId)
-      await upsertPublicUserStripeCustomer(admin, user.id, existingCustomerId, user.email)
+      await upsertProfileStripeCustomer(admin, user.id, existingCustomerId, user.email)
       return NextResponse.json({ stripeCustomerId: existingCustomerId })
     }
 
@@ -120,8 +115,7 @@ export async function POST(request: NextRequest) {
       throw updateError
     }
 
-    await upsertStripeCustomer(admin, user.id, customer.id)
-    await upsertPublicUserStripeCustomer(admin, user.id, customer.id, authUser.email)
+    await upsertProfileStripeCustomer(admin, user.id, customer.id, authUser.email)
 
     return NextResponse.json({ stripeCustomerId: customer.id })
   } catch (err) {

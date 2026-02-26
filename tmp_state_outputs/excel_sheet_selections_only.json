@@ -1,0 +1,1975 @@
+[
+  {
+    "exp_key": "4.1",
+    "result_no": "",
+    "title": "回路の製作",
+    "selected_excel_id": "ac",
+    "selected_sheet": "コピー元",
+    "confidence": 0.25,
+    "rationale": "excel_name:token:OP; numeric_density",
+    "evidence": [
+      "excel_name:token:OP",
+      "numeric_density"
+    ],
+    "candidates": [
+      {
+        "excel_id": "ac",
+        "sheet_name": "コピー元",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(反転増幅回路)",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(非反転増幅回路)",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ) ",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(加算回路)",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(減算回路)",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(反転増幅回路)",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(非反転増幅回路)",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ)",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(加算回路)",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "　いない班(減算回路) ",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "コピー元",
+        "confidence": 0.25,
+        "rationale": "excel_name:token:OP; numeric_density",
+        "evidence": [
+          "excel_name:token:OP",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(積分回路)",
+        "confidence": 0.15,
+        "rationale": "excel_name:token:OP",
+        "evidence": [
+          "excel_name:token:OP"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(反転増幅回路の交流)",
+        "confidence": 0.15,
+        "rationale": "excel_name:token:OP",
+        "evidence": [
+          "excel_name:token:OP"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(加算・減算回路の交流)",
+        "confidence": 0.15,
+        "rationale": "excel_name:token:OP",
+        "evidence": [
+          "excel_name:token:OP"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(積分回路)",
+        "confidence": 0.15,
+        "rationale": "excel_name:token:OP",
+        "evidence": [
+          "excel_name:token:OP"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(反転増幅回路の交流)",
+        "confidence": 0.15,
+        "rationale": "excel_name:token:OP",
+        "evidence": [
+          "excel_name:token:OP"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "　いない班(加算・減算回路の交流) ",
+        "confidence": 0.15,
+        "rationale": "excel_name:token:OP",
+        "evidence": [
+          "excel_name:token:OP"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "Sheet1",
+        "confidence": 0.15,
+        "rationale": "excel_name:token:OP",
+        "evidence": [
+          "excel_name:token:OP"
+        ]
+      }
+    ],
+    "used_llm": false
+  },
+  {
+    "exp_key": "4.2.1",
+    "result_no": "",
+    "title": "反転増幅回路",
+    "selected_excel_id": "dc",
+    "selected_sheet": "周東いる班(反転増幅回路)",
+    "confidence": 0.30000000000000004,
+    "rationale": "sheet_name:token:反転増幅回路; numeric_density",
+    "evidence": [
+      "sheet_name:token:反転増幅回路",
+      "numeric_density"
+    ],
+    "candidates": [
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(反転増幅回路)",
+        "confidence": 0.30000000000000004,
+        "rationale": "sheet_name:token:反転増幅回路; numeric_density",
+        "evidence": [
+          "sheet_name:token:反転増幅回路",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(非反転増幅回路)",
+        "confidence": 0.30000000000000004,
+        "rationale": "sheet_name:token:反転増幅回路; numeric_density",
+        "evidence": [
+          "sheet_name:token:反転増幅回路",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(反転増幅回路)",
+        "confidence": 0.30000000000000004,
+        "rationale": "sheet_name:token:反転増幅回路; numeric_density",
+        "evidence": [
+          "sheet_name:token:反転増幅回路",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(非反転増幅回路)",
+        "confidence": 0.30000000000000004,
+        "rationale": "sheet_name:token:反転増幅回路; numeric_density",
+        "evidence": [
+          "sheet_name:token:反転増幅回路",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(反転増幅回路の交流)",
+        "confidence": 0.2,
+        "rationale": "sheet_name:token:反転増幅回路",
+        "evidence": [
+          "sheet_name:token:反転増幅回路"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(反転増幅回路の交流)",
+        "confidence": 0.2,
+        "rationale": "sheet_name:token:反転増幅回路",
+        "evidence": [
+          "sheet_name:token:反転増幅回路"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(加算・減算回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "　いない班(加算・減算回路の交流) ",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(減算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "　いない班(減算回路) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "Sheet1",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      }
+    ],
+    "used_llm": false
+  },
+  {
+    "exp_key": "4.2.2",
+    "result_no": "",
+    "title": "非反転増幅回路",
+    "selected_excel_id": "dc",
+    "selected_sheet": "周東いる班(非反転増幅回路)",
+    "confidence": 0.30000000000000004,
+    "rationale": "sheet_name:token:非反転増幅回路; numeric_density",
+    "evidence": [
+      "sheet_name:token:非反転増幅回路",
+      "numeric_density"
+    ],
+    "candidates": [
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(非反転増幅回路)",
+        "confidence": 0.30000000000000004,
+        "rationale": "sheet_name:token:非反転増幅回路; numeric_density",
+        "evidence": [
+          "sheet_name:token:非反転増幅回路",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(非反転増幅回路)",
+        "confidence": 0.30000000000000004,
+        "rationale": "sheet_name:token:非反転増幅回路; numeric_density",
+        "evidence": [
+          "sheet_name:token:非反転増幅回路",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(加算・減算回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "　いない班(加算・減算回路の交流) ",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(減算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "　いない班(減算回路) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "Sheet1",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      }
+    ],
+    "used_llm": false
+  },
+  {
+    "exp_key": "4.2.3",
+    "result_no": "",
+    "title": "ボルテージフォロワ",
+    "selected_excel_id": "dc",
+    "selected_sheet": "周東いる班(ボルテージフォロワ) ",
+    "confidence": 0.44999999999999996,
+    "rationale": "sheet_name:token:ボルテ; header:token:2; numeric_density",
+    "evidence": [
+      "sheet_name:token:ボルテ",
+      "header:token:2",
+      "numeric_density"
+    ],
+    "candidates": [
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ) ",
+        "confidence": 0.44999999999999996,
+        "rationale": "sheet_name:token:ボルテ; header:token:2; numeric_density",
+        "evidence": [
+          "sheet_name:token:ボルテ",
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+        "confidence": 0.44999999999999996,
+        "rationale": "sheet_name:token:ボルテ; header:token:2; numeric_density",
+        "evidence": [
+          "sheet_name:token:ボルテ",
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ)",
+        "confidence": 0.44999999999999996,
+        "rationale": "sheet_name:token:ボルテ; header:token:2; numeric_density",
+        "evidence": [
+          "sheet_name:token:ボルテ",
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "confidence": 0.44999999999999996,
+        "rationale": "sheet_name:token:ボルテ; header:token:2; numeric_density",
+        "evidence": [
+          "sheet_name:token:ボルテ",
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "コピー元",
+        "confidence": 0.25,
+        "rationale": "header:token:2; numeric_density",
+        "evidence": [
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(反転増幅回路)",
+        "confidence": 0.25,
+        "rationale": "header:token:2; numeric_density",
+        "evidence": [
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(非反転増幅回路)",
+        "confidence": 0.25,
+        "rationale": "header:token:2; numeric_density",
+        "evidence": [
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(加算回路)",
+        "confidence": 0.25,
+        "rationale": "header:token:2; numeric_density",
+        "evidence": [
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(減算回路)",
+        "confidence": 0.25,
+        "rationale": "header:token:2; numeric_density",
+        "evidence": [
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(反転増幅回路)",
+        "confidence": 0.25,
+        "rationale": "header:token:2; numeric_density",
+        "evidence": [
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(非反転増幅回路)",
+        "confidence": 0.25,
+        "rationale": "header:token:2; numeric_density",
+        "evidence": [
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(加算回路)",
+        "confidence": 0.25,
+        "rationale": "header:token:2; numeric_density",
+        "evidence": [
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "　いない班(減算回路) ",
+        "confidence": 0.25,
+        "rationale": "header:token:2; numeric_density",
+        "evidence": [
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "コピー元",
+        "confidence": 0.25,
+        "rationale": "header:token:2; numeric_density",
+        "evidence": [
+          "header:token:2",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(反転増幅回路の交流)",
+        "confidence": 0.15,
+        "rationale": "header:token:2",
+        "evidence": [
+          "header:token:2"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "　いない班(加算・減算回路の交流) ",
+        "confidence": 0.15,
+        "rationale": "header:token:2",
+        "evidence": [
+          "header:token:2"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(加算・減算回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "Sheet1",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      }
+    ],
+    "used_llm": false
+  },
+  {
+    "exp_key": "4.2.4",
+    "result_no": "",
+    "title": "加算回路",
+    "selected_excel_id": "dc",
+    "selected_sheet": "周東いる班(加算回路)",
+    "confidence": 0.30000000000000004,
+    "rationale": "sheet_name:token:加算回路; numeric_density",
+    "evidence": [
+      "sheet_name:token:加算回路",
+      "numeric_density"
+    ],
+    "candidates": [
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(加算回路)",
+        "confidence": 0.30000000000000004,
+        "rationale": "sheet_name:token:加算回路; numeric_density",
+        "evidence": [
+          "sheet_name:token:加算回路",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(加算回路)",
+        "confidence": 0.30000000000000004,
+        "rationale": "sheet_name:token:加算回路; numeric_density",
+        "evidence": [
+          "sheet_name:token:加算回路",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(加算・減算回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "　いない班(加算・減算回路の交流) ",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(減算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "　いない班(減算回路) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "Sheet1",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      }
+    ],
+    "used_llm": false
+  },
+  {
+    "exp_key": "4.2.5",
+    "result_no": "",
+    "title": "減算回路",
+    "selected_excel_id": "dc",
+    "selected_sheet": "周東いる班(減算回路)",
+    "confidence": 0.30000000000000004,
+    "rationale": "sheet_name:token:減算回路; numeric_density",
+    "evidence": [
+      "sheet_name:token:減算回路",
+      "numeric_density"
+    ],
+    "candidates": [
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(減算回路)",
+        "confidence": 0.30000000000000004,
+        "rationale": "sheet_name:token:減算回路; numeric_density",
+        "evidence": [
+          "sheet_name:token:減算回路",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "　いない班(減算回路) ",
+        "confidence": 0.30000000000000004,
+        "rationale": "sheet_name:token:減算回路; numeric_density",
+        "evidence": [
+          "sheet_name:token:減算回路",
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(加算・減算回路の交流)",
+        "confidence": 0.2,
+        "rationale": "sheet_name:token:減算回路",
+        "evidence": [
+          "sheet_name:token:減算回路"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "　いない班(加算・減算回路の交流) ",
+        "confidence": 0.2,
+        "rationale": "sheet_name:token:減算回路",
+        "evidence": [
+          "sheet_name:token:減算回路"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "Sheet1",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      }
+    ],
+    "used_llm": false
+  },
+  {
+    "exp_key": "4.3.1",
+    "result_no": "",
+    "title": "積分回路",
+    "selected_excel_id": "ac",
+    "selected_sheet": "周東いる班(積分回路)",
+    "confidence": 0.2,
+    "rationale": "sheet_name:token:積分回路",
+    "evidence": [
+      "sheet_name:token:積分回路"
+    ],
+    "candidates": [
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(積分回路)",
+        "confidence": 0.2,
+        "rationale": "sheet_name:token:積分回路",
+        "evidence": [
+          "sheet_name:token:積分回路"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(積分回路)",
+        "confidence": 0.2,
+        "rationale": "sheet_name:token:積分回路",
+        "evidence": [
+          "sheet_name:token:積分回路"
+        ]
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(加算・減算回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "　いない班(加算・減算回路の交流) ",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(減算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "　いない班(減算回路) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "Sheet1",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      }
+    ],
+    "used_llm": false
+  },
+  {
+    "exp_key": "4.3.2",
+    "result_no": "",
+    "title": "反転増幅回路の交流特性",
+    "selected_excel_id": "ac",
+    "selected_sheet": "周東いる班(積分回路)",
+    "confidence": 0.1,
+    "rationale": "",
+    "evidence": [],
+    "candidates": [
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(加算・減算回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "　いない班(加算・減算回路の交流) ",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(減算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "　いない班(減算回路) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "Sheet1",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      }
+    ],
+    "used_llm": false
+  },
+  {
+    "exp_key": "4.3.3",
+    "result_no": "",
+    "title": "加算回路の交流特性",
+    "selected_excel_id": "ac",
+    "selected_sheet": "周東いる班(積分回路)",
+    "confidence": 0.1,
+    "rationale": "",
+    "evidence": [],
+    "candidates": [
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(加算・減算回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "　いない班(加算・減算回路の交流) ",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(減算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "　いない班(減算回路) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "Sheet1",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      }
+    ],
+    "used_llm": false
+  },
+  {
+    "exp_key": "4.3.4",
+    "result_no": "",
+    "title": "減算回路の交流特性",
+    "selected_excel_id": "ac",
+    "selected_sheet": "周東いる班(積分回路)",
+    "confidence": 0.1,
+    "rationale": "",
+    "evidence": [],
+    "candidates": [
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "周東いる班(加算・減算回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(積分回路)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "いない班(反転増幅回路の交流)",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "　いない班(加算・減算回路の交流) ",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "ac",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "周東いる班(減算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(非反転増幅回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "いない班(加算回路)",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "　いない班(減算回路) ",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "Sheet1",
+        "confidence": 0.1,
+        "rationale": "",
+        "evidence": []
+      },
+      {
+        "excel_id": "dc",
+        "sheet_name": "コピー元",
+        "confidence": 0.1,
+        "rationale": "numeric_density",
+        "evidence": [
+          "numeric_density"
+        ]
+      }
+    ],
+    "used_llm": false
+  }
+]

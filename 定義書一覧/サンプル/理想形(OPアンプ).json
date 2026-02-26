@@ -1,0 +1,815 @@
+{
+  "status": "b_layer_done",
+  "job_meta": {
+    "run_mode": "update_mvp",
+    "text_model": "gpt-5.x",
+    "vision_model": "gpt-5.x",
+    "assets_uploaded": [
+      {
+        "asset_id": "pdf:manual",
+        "filename": "manual.pdf",
+        "source_path": "/mnt/data/manual.pdf",
+        "kind": "manual_pdf"
+      },
+      {
+        "asset_id": "xlsx:dc",
+        "filename": "OPアンプ DC特性.xlsx",
+        "source_path": "/mnt/data/OPアンプ DC特性.xlsx",
+        "kind": "measurement_xlsx"
+      },
+      {
+        "asset_id": "xlsx:ac",
+        "filename": "OPアンプ AC特性.xlsx",
+        "source_path": "/mnt/data/OPアンプ AC特性.xlsx",
+        "kind": "measurement_xlsx"
+      },
+      {
+        "asset_id": "docx:draft",
+        "filename": "4234090_谷口天眞_OPアンプ.docx",
+        "source_path": "/mnt/data/4234090_谷口天眞_OPアンプ.docx",
+        "kind": "user_report_docx"
+      }
+    ]
+  },
+  "pdf": {
+    "asset_id": "pdf:manual",
+    "filename": "manual.pdf",
+    "pages": 18,
+    "text": {
+      "storage_key": "jobs/<job_id>/parsed/manual_text.txt",
+      "has_full_text": true,
+      "excerpt": "電気工学実験1-A 実験手順書\nOP アンプ\n1. 実験の目的\n..."
+    },
+    "page_texts": {
+      "storage_key": "jobs/<job_id>/parsed/manual_page_texts.json",
+      "line_semantics": "splitlines()",
+      "has_full_text": true
+    },
+    "heading_positions": {
+      "storage_key": "jobs/<job_id>/b_layer/heading_positions_raw.json",
+      "preserved": true
+    },
+    "heading_positions_cleaned": {
+      "storage_key": "jobs/<job_id>/b_layer/heading_positions_cleaned.json",
+      "preserved": true,
+      "policy": {
+        "keep_only_structural_headings": true,
+        "drop_body_list_items": true,
+        "drop_math_axis_labels_tables": true,
+        "drop_numeric_only_lines": true,
+        "normalize_numbering": "1. / 1： / 1) / 1-1 -> canonical",
+        "normalize_punctuation": "。/．/. -> .",
+        "normalize_spaces": "full/half -> half, collapse"
+      },
+      "items": [
+        {
+          "section": "1",
+          "title": "実験の目的",
+          "level": 1,
+          "page": 1,
+          "line_index": 2,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "2",
+          "title": "基本的なOP アンプ回路と動作原理の概要",
+          "level": 1,
+          "page": 1,
+          "line_index": 8,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "2.1",
+          "title": "理想OP アンプ",
+          "level": 2,
+          "page": 1,
+          "line_index": 9,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "2.2",
+          "title": "仮想短絡，仮想接地",
+          "level": 2,
+          "page": 1,
+          "line_index": 53,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "2.3",
+          "title": "反転増幅回路",
+          "level": 2,
+          "page": 2,
+          "line_index": 30,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "2.4",
+          "title": "非反転増幅回路",
+          "level": 2,
+          "page": 3,
+          "line_index": 130,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "2.5",
+          "title": "ボルテージフォロワ",
+          "level": 2,
+          "page": 4,
+          "line_index": 0,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "2.6",
+          "title": "加算回路",
+          "level": 2,
+          "page": 4,
+          "line_index": 29,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "2.7",
+          "title": "減算回路",
+          "level": 2,
+          "page": 5,
+          "line_index": 0,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "2.8",
+          "title": "積分回路",
+          "level": 2,
+          "page": 5,
+          "line_index": 63,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "3",
+          "title": "使用器具",
+          "level": 1,
+          "page": 7,
+          "line_index": 0,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "3.1",
+          "title": "回路の製作",
+          "level": 2,
+          "page": 7,
+          "line_index": 1,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "3.2",
+          "title": "直流特性の測定",
+          "level": 2,
+          "page": 7,
+          "line_index": 3,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "3.3",
+          "title": "交流特性の測定",
+          "level": 2,
+          "page": 7,
+          "line_index": 7,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4",
+          "title": "実験",
+          "level": 1,
+          "page": 7,
+          "line_index": 11,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.1",
+          "title": "回路の製作",
+          "level": 2,
+          "page": 7,
+          "line_index": 12,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.2",
+          "title": "直流特性の測定",
+          "level": 2,
+          "page": 9,
+          "line_index": 48,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.2.1",
+          "title": "反転増幅回路",
+          "level": 3,
+          "page": 9,
+          "line_index": 56,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.2.2",
+          "title": "非反転増幅回路",
+          "level": 3,
+          "page": 10,
+          "line_index": 10,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.2.3",
+          "title": "ボルテージフォロワ",
+          "level": 3,
+          "page": 10,
+          "line_index": 25,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.2.4",
+          "title": "加算回路",
+          "level": 3,
+          "page": 11,
+          "line_index": 0,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.2.5",
+          "title": "減算回路",
+          "level": 3,
+          "page": 11,
+          "line_index": 8,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.3",
+          "title": "交流特性の測定",
+          "level": 2,
+          "page": 11,
+          "line_index": 16,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.3.1",
+          "title": "積分回路",
+          "level": 3,
+          "page": 11,
+          "line_index": 19,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.3.2",
+          "title": "反転増幅回路の交流特性",
+          "level": 3,
+          "page": 12,
+          "line_index": 3,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.3.3",
+          "title": "加算回路の交流特性",
+          "level": 3,
+          "page": 12,
+          "line_index": 23,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "4.3.4",
+          "title": "減算回路の交流特性",
+          "level": 3,
+          "page": 13,
+          "line_index": 13,
+          "heading_kind": "doc_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "5",
+          "title": "考察",
+          "level": 1,
+          "page": 13,
+          "line_index": 18,
+          "heading_kind": "discussion_heading",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "5.1",
+          "title": "オペアンプの利用用途について具体的かつ簡潔に説明せよ。",
+          "level": 2,
+          "page": 13,
+          "line_index": 19,
+          "heading_kind": "discussion_prompt",
+          "clean_confidence": 0.9,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "5.2",
+          "title": "製作した回路において，電解コンデンサ及び表面実装のセラミックコンデンサを配置した理由について述べよ。",
+          "level": 2,
+          "page": 13,
+          "line_index": 20,
+          "heading_kind": "discussion_prompt",
+          "clean_confidence": 0.9,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "6",
+          "title": "プレゼンテーション(DC 特性)について",
+          "level": 1,
+          "page": 14,
+          "line_index": 0,
+          "heading_kind": "appendix_like",
+          "clean_confidence": 0.9,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "6.1",
+          "title": "担当考察: 指定する考察について一つ選びプレゼンテーションを用いて説明せよ",
+          "level": 2,
+          "page": 14,
+          "line_index": 1,
+          "heading_kind": "appendix_like",
+          "clean_confidence": 0.9,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "6.2",
+          "title": "注意事項や作り方のアドバイス",
+          "level": 2,
+          "page": 14,
+          "line_index": 8,
+          "heading_kind": "appendix_like",
+          "clean_confidence": 0.9,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "6.3",
+          "title": "必要内容",
+          "level": 2,
+          "page": 14,
+          "line_index": 14,
+          "heading_kind": "appendix_like",
+          "clean_confidence": 0.9,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "6.4",
+          "title": "提出について",
+          "level": 2,
+          "page": 14,
+          "line_index": 32,
+          "heading_kind": "appendix_like",
+          "clean_confidence": 0.9,
+          "clean_reason": "numbered_heading"
+        },
+        {
+          "section": "7",
+          "title": "レポートについて",
+          "level": 1,
+          "page": 15,
+          "line_index": 0,
+          "heading_kind": "report_requirements",
+          "clean_confidence": 0.95,
+          "clean_reason": "numbered_heading"
+        }
+      ],
+      "dropped_as_noise_examples": [
+        {
+          "raw_line": "1. Open loop gain 𝐺= ∞",
+          "reason": "body_list_item_under_2.1_not_a_section"
+        },
+        {
+          "raw_line": "20 log | 𝐸o",
+          "reason": "equation_axis_label_not_a_heading"
+        },
+        {
+          "raw_line": "0.01 mF",
+          "reason": "table_cell_not_a_heading"
+        },
+        {
+          "raw_line": "14",
+          "reason": "page_number_not_a_heading"
+        }
+      ]
+    }
+  },
+  "section_candidates": {
+    "toc_tree": {
+      "storage_key": "jobs/<job_id>/b_layer/manual_toc_tree.json",
+      "root": "doc",
+      "nodes": [
+        {
+          "id": "1",
+          "title": "実験の目的",
+          "children": []
+        },
+        {
+          "id": "2",
+          "title": "基本的なOP アンプ回路と動作原理の概要",
+          "children": [
+            "2.1",
+            "2.2",
+            "2.3",
+            "2.4",
+            "2.5",
+            "2.6",
+            "2.7",
+            "2.8"
+          ]
+        },
+        {
+          "id": "3",
+          "title": "使用器具",
+          "children": [
+            "3.1",
+            "3.2",
+            "3.3"
+          ]
+        },
+        {
+          "id": "4",
+          "title": "実験",
+          "children": [
+            "4.1",
+            "4.2",
+            "4.3"
+          ]
+        },
+        {
+          "id": "5",
+          "title": "考察",
+          "children": [
+            "5.1",
+            "5.2"
+          ]
+        },
+        {
+          "id": "6",
+          "title": "プレゼンテーション(DC 特性)について",
+          "children": [
+            "6.1",
+            "6.2",
+            "6.3",
+            "6.4"
+          ]
+        },
+        {
+          "id": "7",
+          "title": "レポートについて",
+          "children": []
+        }
+      ]
+    },
+    "method_section": {
+      "start_section": "4",
+      "end_before_section": "5"
+    },
+    "results_section": {
+      "start_section": "4.2",
+      "end_before_section": "5",
+      "note": "結果は4.2/4.3の測定指示＋Excelデータから生成"
+    },
+    "discussion_section": {
+      "start_section": "5",
+      "end_before_section": "6"
+    },
+    "constraints_section": {
+      "start_section": "7",
+      "end_section": "7"
+    }
+  },
+  "excel_sources": [
+    {
+      "asset_id": "xlsx:dc",
+      "filename": "OPアンプ DC特性.xlsx",
+      "source_path": "/mnt/data/OPアンプ DC特性.xlsx",
+      "workbook_meta": {
+        "sheetnames": [
+          "周東いる班(反転増幅回路)",
+          "周東いる班(非反転増幅回路)",
+          "周東いる班(ボルテージフォロワ)",
+          "周東いる班(加算回路)",
+          "周東いる班(減算回路)",
+          "sample(反転増幅回路)",
+          "sample(非反転増幅回路)",
+          "sample(ボルテージフォロワ)",
+          "sample(加算回路)",
+          "sample(減算回路)",
+          "Sheet1",
+          "Sheet2",
+          "Sheet3"
+        ]
+      },
+      "selected_sheets": [
+        "周東いる班(反転増幅回路)",
+        "周東いる班(非反転増幅回路)",
+        "周東いる班(ボルテージフォロワ)",
+        "周東いる班(加算回路)",
+        "周東いる班(減算回路)"
+      ],
+      "tables_index": [
+        {
+          "table_id": "dc_inverting_vin_vout",
+          "sheet": "周東いる班(反転増幅回路)",
+          "blocks": [
+            {
+              "block_id": "no_load",
+              "columns": [
+                "入力電圧[V]",
+                "出力電圧[V]"
+              ],
+              "row_count": "<auto>",
+              "notes": "無負荷"
+            },
+            {
+              "block_id": "rl1",
+              "columns": [
+                "入力電圧[V]",
+                "出力電圧[V]"
+              ],
+              "row_count": "<auto>",
+              "notes": "RL1=3kΩ"
+            },
+            {
+              "block_id": "rl2",
+              "columns": [
+                "入力電圧[V]",
+                "出力電圧[V]"
+              ],
+              "row_count": "<auto>",
+              "notes": "RL2=1kΩ"
+            },
+            {
+              "block_id": "parallel",
+              "columns": [
+                "入力電圧[V]",
+                "出力電圧[V]"
+              ],
+              "row_count": "<auto>",
+              "notes": "RL1||RL2=750Ω"
+            }
+          ],
+          "storage_key": "jobs/<job_id>/b_layer/xlsx_dc/tables/dc_inverting_vin_vout.json"
+        },
+        {
+          "table_id": "dc_non_inverting_vin_vout",
+          "sheet": "周東いる班(非反転増幅回路)",
+          "blocks": [
+            {
+              "block_id": "no_load",
+              "columns": [
+                "入力電圧[V]",
+                "出力電圧[V]"
+              ],
+              "row_count": "<auto>"
+            },
+            {
+              "block_id": "rl1",
+              "columns": [
+                "入力電圧[V]",
+                "出力電圧[V]"
+              ],
+              "row_count": "<auto>"
+            },
+            {
+              "block_id": "rl2",
+              "columns": [
+                "入力電圧[V]",
+                "出力電圧[V]"
+              ],
+              "row_count": "<auto>"
+            },
+            {
+              "block_id": "parallel",
+              "columns": [
+                "入力電圧[V]",
+                "出力電圧[V]"
+              ],
+              "row_count": "<auto>"
+            }
+          ],
+          "storage_key": "jobs/<job_id>/b_layer/xlsx_dc/tables/dc_non_inverting_vin_vout.json"
+        }
+      ]
+    },
+    {
+      "asset_id": "xlsx:ac",
+      "filename": "OPアンプ AC特性.xlsx",
+      "source_path": "/mnt/data/OPアンプ AC特性.xlsx",
+      "workbook_meta": {
+        "sheetnames": [
+          "周東いる班(積分回路)",
+          "周東いる班(反転増幅回路)",
+          "周東いる班(加算回路)",
+          "周東いる班(減算回路)",
+          "sample(積分回路)",
+          "sample(反転増幅回路)",
+          "sample(加算回路)",
+          "sample(減算回路)",
+          "Sheet1"
+        ]
+      },
+      "selected_sheets": [
+        "周東いる班(積分回路)",
+        "周東いる班(反転増幅回路)",
+        "周東いる班(加算回路)",
+        "周東いる班(減算回路)"
+      ],
+      "tables_index": [
+        {
+          "table_id": "ac_integrator_phase_check",
+          "sheet": "周東いる班(積分回路)",
+          "block_header_cell": "A18",
+          "block_title": "実験4-3.1-2",
+          "columns": [
+            "Δt[µs]",
+            "f[kHz]",
+            "θ[°]",
+            "位相差",
+            "相対誤差[%]"
+          ],
+          "row_count": 1,
+          "storage_key": "jobs/<job_id>/b_layer/xlsx_ac/tables/ac_integrator_phase_check.json"
+        },
+        {
+          "table_id": "ac_integrator_bode_like",
+          "sheet": "周東いる班(積分回路)",
+          "block_header_cell": "A24",
+          "block_title": "4-3.2-1",
+          "columns": [
+            "Δt[s]",
+            "f[Hz]",
+            "θ[°]",
+            "位相差",
+            "Vin[V]",
+            "Vout[V]",
+            "電圧利得",
+            "位相差理論値[°]",
+            "電圧利得理論値",
+            "位相差相対誤差[%]"
+          ],
+          "row_count": 23,
+          "storage_key": "jobs/<job_id>/b_layer/xlsx_ac/tables/ac_integrator_bode_like.json"
+        }
+      ]
+    }
+  ],
+  "docx_reference": {
+    "asset_id": "docx:draft",
+    "filename": "4234090_谷口天眞_OPアンプ.docx",
+    "source_path": "/mnt/data/4234090_谷口天眞_OPアンプ.docx",
+    "parse_summary": {
+      "has_report_like_structure": true,
+      "detected_sections_hint": [
+        "目的",
+        "理論",
+        "実験方法",
+        "結果",
+        "考察",
+        "まとめ",
+        "参考文献"
+      ],
+      "storage_key_full_text": "jobs/<job_id>/b_layer/docx_draft/paragraphs.json"
+    }
+  },
+  "experiment_index": {
+    "experiments": [
+      {
+        "experiment_id": "dc_inverting",
+        "manual_sections": [
+          "4.2.1"
+        ],
+        "data_refs": [
+          {
+            "asset_id": "xlsx:dc",
+            "table_id": "dc_inverting_vin_vout"
+          }
+        ],
+        "expected_outputs": {
+          "tables": [
+            "vin_vout_table"
+          ],
+          "figures": [
+            "vin_vout_plot"
+          ],
+          "photos": [
+            "circuit_photo_optional"
+          ]
+        }
+      },
+      {
+        "experiment_id": "dc_non_inverting",
+        "manual_sections": [
+          "4.2.2"
+        ],
+        "data_refs": [
+          {
+            "asset_id": "xlsx:dc",
+            "table_id": "dc_non_inverting_vin_vout"
+          }
+        ],
+        "expected_outputs": {
+          "tables": [
+            "vin_vout_table"
+          ],
+          "figures": [
+            "vin_vout_plot"
+          ]
+        }
+      },
+      {
+        "experiment_id": "ac_integrator",
+        "manual_sections": [
+          "4.3.1"
+        ],
+        "data_refs": [
+          {
+            "asset_id": "xlsx:ac",
+            "table_id": "ac_integrator_phase_check"
+          },
+          {
+            "asset_id": "xlsx:ac",
+            "table_id": "ac_integrator_bode_like"
+          }
+        ],
+        "expected_outputs": {
+          "tables": [
+            "phase_table",
+            "frequency_response_table"
+          ],
+          "figures": [
+            "gain_vs_f_plot",
+            "phase_vs_f_plot"
+          ],
+          "artifacts": [
+            "scope_screenshot_optional"
+          ]
+        }
+      }
+    ]
+  },
+  "quality": {
+    "issues": [
+      {
+        "stage": "b_layer",
+        "code": "RAW_HEADINGS_NOISY",
+        "severity": "warn",
+        "message": "heading_positions_rawに本文箇条書き/式/表セルが混入する可能性があるためcleanedのみを下流で使用すること"
+      }
+    ],
+    "gates": {
+      "blocker": false,
+      "hitl_required": false
+    }
+  }
+}

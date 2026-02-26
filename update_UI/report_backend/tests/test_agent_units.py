@@ -9,10 +9,10 @@ from openpyxl import Workbook
 from core.config import load_settings
 from core.storage import build_storage
 from graph.build_graph import build_graph
-from graph.nodes.image_assign import image_assign
-from graph.nodes.table_assign import table_assign
+from graph.nodes_legacy.image_assign import image_assign
+from graph.nodes_legacy.table_assign import table_assign
 from graph.nodes.unit_init import unit_init
-from graph.nodes.validate import validate
+from graph.nodes_legacy.validate import validate
 from graph.state import AgentState, JobMeta
 from llm.client import LLMClient
 from llm.client import _repair_mvp_quant_comment_digits_each_sentence

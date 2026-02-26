@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 METHOD_EXTRACT_SYSTEM = """
 あなたは理工系大学の実験レポート作成を支援する専門AIである。
 以下に与えられるテキストは、大学の実験書PDFから抽出された実験方法章の全文テキストである。

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import re
 from typing import Final
+from io import BytesIO
+import zipfile
+import xml.etree.ElementTree as ET
 
 
 _WS_RE = re.compile(r"\s+")
@@ -215,6 +218,52 @@ def clean_pdf_text_for_llm(text: str) -> str:
     return "\n".join(cleaned)
 
 
+_MD_HEADING_RE = re.compile(r"^\s*([0-9]+(?:[.\uFF0E．][0-9]+){0,3})\s+(.+)$")
+_MD_BULLET_RE = re.compile(r"^\s*[・•\-]\s+(.+)$")
+
+
+def pdf_text_to_markdown(text: str) -> str:
+    """
+    Convert PDF plain text into a simple Markdown representation.
+    - Numbered headings become ##/###/####.
+    - Bullet-like lines become "- ...".
+    """
+    raw = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+    if not raw:
+        return ""
+    lines = raw.splitlines()
+    out: list[str] = []
+    blank_pending = False
+    for line in lines:
+        s = line.strip()
+        if not s:
+            blank_pending = True
+            continue
+        if blank_pending and out:
+            out.append("")
+        blank_pending = False
+
+        m = _MD_HEADING_RE.match(s)
+        if m:
+            section = m.group(1)
+            title = m.group(2).strip()
+            depth = section.count(".") + section.count("．") + section.count("．") + 1
+            level = min(2 + depth - 1, 6)
+            out.append(f"{'#' * level} {section} {title}".strip())
+            continue
+
+        b = _MD_BULLET_RE.match(s)
+        if b:
+            out.append(f"- {b.group(1).strip()}")
+            continue
+
+        out.append(s)
+
+    while out and out[-1] == "":
+        out.pop()
+    return "\n".join(out)
+
+
 def is_bad_pdf_page_text(text: str) -> bool:
     """
     Decide whether a page's extracted text is clearly broken and should fall back to OCR.
@@ -236,3 +285,126 @@ def is_bad_pdf_page_text(text: str) -> bool:
     if _CJK_RE.search(t):
         return True
     return False
+
+
+_DOCX_DOCUMENT_XML = "word/document.xml"
+_PAST_REPORT_HINT_MAX_CHARS: Final[int] = 4000
+_PAST_REPORT_HINT_BACKTRACK: Final[int] = 800
+_PAST_REPORT_HINT_KEYWORDS: Final[tuple[str, ...]] = (
+    "実験結果",
+    "結果",
+    "考察",
+    "検討",
+    "Discussion",
+    "Conclusion",
+    "まとめ",
+    "実験",
+)
+
+
+def extract_docx_text(docx_bytes: bytes) -> str:
+    if not docx_bytes:
+        return ""
+    try:
+        with zipfile.ZipFile(BytesIO(docx_bytes)) as zf:
+            xml = zf.read(_DOCX_DOCUMENT_XML)
+    except Exception:
+        return ""
+    try:
+        root = ET.fromstring(xml)
+    except Exception:
+        return ""
+
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    body = root.find(".//w:body", ns)
+    if body is None:
+        paragraphs: list[str] = []
+        for p in root.findall(".//w:p", ns):
+            parts: list[str] = []
+            for t in p.findall(".//w:t", ns):
+                if t.text:
+                    parts.append(t.text)
+            if parts:
+                paragraphs.append("".join(parts))
+        return "\n".join(paragraphs).strip()
+
+    def _text_from_elem(elem: ET.Element) -> str:
+        parts: list[str] = []
+        for t in elem.findall(".//w:t", ns):
+            if t.text:
+                parts.append(t.text)
+        return "".join(parts).strip()
+
+    def _table_lines(tbl: ET.Element) -> list[str]:
+        lines: list[str] = []
+        rows = tbl.findall("./w:tr", ns)
+        if not rows:
+            rows = tbl.findall(".//w:tr", ns)
+        for tr in rows:
+            cells: list[str] = []
+            cols = tr.findall("./w:tc", ns)
+            if not cols:
+                cols = tr.findall(".//w:tc", ns)
+            for tc in cols:
+                cell_parts: list[str] = []
+                for p in tc.findall(".//w:p", ns):
+                    text = _text_from_elem(p)
+                    if text:
+                        cell_parts.append(text)
+                if not cell_parts:
+                    text = _text_from_elem(tc)
+                    if text:
+                        cell_parts.append(text)
+                cells.append(" / ".join(cell_parts).strip())
+            if any(cells):
+                lines.append(" | ".join(cells))
+        return lines
+
+    parts: list[str] = []
+    for child in list(body):
+        tag = child.tag.rsplit("}", 1)[-1]
+        if tag == "p":
+            text = _text_from_elem(child)
+            if text:
+                parts.append(text)
+        elif tag == "tbl":
+            rows = _table_lines(child)
+            if rows:
+                parts.append("TABLE:")
+                parts.extend(rows)
+
+    return "\n".join(parts).strip()
+
+
+def shrink_text(
+    text: str,
+    *,
+    max_chars: int,
+    keywords: tuple[str, ...] | None = None,
+    backtrack: int = _PAST_REPORT_HINT_BACKTRACK,
+) -> str:
+    t = (text or "").strip()
+    if not t:
+        return ""
+    if len(t) <= max_chars:
+        return t
+    if keywords:
+        for kw in keywords:
+            pos = t.find(kw)
+            if pos != -1:
+                start = max(0, pos - max(0, backtrack))
+                end = min(len(t), start + max_chars)
+                return t[start:end]
+    return t[:max_chars]
+
+
+def extract_report_hint_from_text(text: str) -> str:
+    """
+    Extract a compact hint from past-report text for prompt augmentation.
+    """
+    return shrink_text(
+        text,
+        max_chars=_PAST_REPORT_HINT_MAX_CHARS,
+        keywords=_PAST_REPORT_HINT_KEYWORDS,
+        backtrack=_PAST_REPORT_HINT_BACKTRACK,
+    )

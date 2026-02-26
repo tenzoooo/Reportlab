@@ -1,0 +1,156 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__(<p>__start__</p>)
+	session_start(session_start)
+	ingest(ingest)
+	normalize_inputs(normalize_inputs)
+	classify_assets(classify_assets)
+	extract_manual_text(extract_manual_text)
+	infer_required_outputs(infer_required_outputs)
+	required_outputs_gate(required_outputs_gate)
+	halt_required_outputs(halt_required_outputs)
+	inspect_excel(inspect_excel)
+	select_excel_sheet(select_excel_sheet)
+	sheet_selection_gate(sheet_selection_gate)
+	bind_table_columns(bind_table_columns)
+	column_unit_gate(column_unit_gate)
+	bind_theory_params(bind_theory_params)
+	param_binding_gate(param_binding_gate)
+	halt_excel_binding(halt_excel_binding)
+	halt_text_generation(halt_text_generation)
+	bind_insert_assets(bind_insert_assets)
+	generate_graphs(generate_graphs)
+	resolve_axes(resolve_axes)
+	decide_theory_compare_toggle(decide_theory_compare_toggle)
+	compute_theory_value(compute_theory_value)
+	compute_delta_and_abs_error(compute_delta_and_abs_error)
+	compute_slope_and_extreme(compute_slope_and_extreme)
+	summarize_method_to_overview_1(summarize_method_to_overview_1)
+	generate_result_description_1(generate_result_description_1)
+	generate_captions_1(generate_captions_1)
+	generate_quant_comment_text_1(generate_quant_comment_text_1)
+	summarize_method_to_overview_2(summarize_method_to_overview_2)
+	generate_result_description_2(generate_result_description_2)
+	generate_captions_2(generate_captions_2)
+	generate_quant_comment_text_2(generate_quant_comment_text_2)
+	assemble_experiment_result_group(assemble_experiment_result_group)
+	assemble_results_page(assemble_results_page)
+	build_discussion_page(build_discussion_page)
+	build_summary_page(build_summary_page)
+	build_references_page(build_references_page)
+	compose_markdown_document(compose_markdown_document)
+	compose_json_artifacts(compose_json_artifacts)
+	style_transform(style_transform)
+	omml_placement_and_sanity(omml_placement_and_sanity)
+	validate_preformat(validate_preformat)
+	autofix_preformat(autofix_preformat)
+	validate_final(validate_final)
+	autofix_final(autofix_final)
+	create_hitl_request(create_hitl_request)
+	wait_for_hitl_response(wait_for_hitl_response)
+	apply_hitl_response(apply_hitl_response)
+	resume_from_rewind_target(resume_from_rewind_target)
+	render_docx(render_docx)
+	emit_outputs(emit_outputs)
+	past_report_hints(past_report_hints)
+	parse_manual_structure(parse_manual_structure)
+	extract_method_numbers(extract_method_numbers)
+	map_result_numbers(map_result_numbers)
+	locate_discussion_section(locate_discussion_section)
+	extract_theory_candidates(extract_theory_candidates)
+	normalize_ommlify_formula(normalize_ommlify_formula)
+	__end__(<p>__end__</p>)
+	__start__ --> session_start;
+	assemble_experiment_result_group -. &nbsp;end&nbsp; .-> __end__;
+	assemble_experiment_result_group -.-> assemble_results_page;
+	assemble_experiment_result_group -.-> halt_text_generation;
+	assemble_results_page -. &nbsp;end&nbsp; .-> __end__;
+	assemble_results_page -.-> build_discussion_page;
+	autofix_final -.-> emit_outputs;
+	autofix_final -.-> render_docx;
+	autofix_preformat --> validate_preformat;
+	bind_insert_assets -.-> create_hitl_request;
+	bind_insert_assets -.-> generate_graphs;
+	bind_table_columns --> column_unit_gate;
+	bind_theory_params --> param_binding_gate;
+	build_discussion_page -. &nbsp;end&nbsp; .-> __end__;
+	build_discussion_page -.-> build_summary_page;
+	build_discussion_page -.-> halt_text_generation;
+	build_references_page --> compose_markdown_document;
+	build_summary_page -. &nbsp;end&nbsp; .-> __end__;
+	build_summary_page -.-> build_references_page;
+	classify_assets -.-> extract_manual_text;
+	classify_assets -.-> inspect_excel;
+	column_unit_gate -.-> bind_insert_assets;
+	column_unit_gate -.-> create_hitl_request;
+	compose_json_artifacts --> render_docx;
+	compose_markdown_document --> style_transform;
+	compute_delta_and_abs_error -. &nbsp;end&nbsp; .-> __end__;
+	compute_delta_and_abs_error -.-> halt_excel_binding;
+	compute_delta_and_abs_error -.-> summarize_method_to_overview_1;
+	compute_slope_and_extreme -. &nbsp;end&nbsp; .-> __end__;
+	compute_slope_and_extreme -.-> halt_excel_binding;
+	compute_slope_and_extreme -.-> summarize_method_to_overview_1;
+	compute_theory_value --> compute_delta_and_abs_error;
+	create_hitl_request --> wait_for_hitl_response;
+	decide_theory_compare_toggle -.-> bind_theory_params;
+	decide_theory_compare_toggle -.-> halt_excel_binding;
+	decide_theory_compare_toggle -.-> resolve_axes;
+	extract_manual_text --> past_report_hints;
+	extract_method_numbers -.-> create_hitl_request;
+	extract_method_numbers -.-> map_result_numbers;
+	extract_theory_candidates --> normalize_ommlify_formula;
+	generate_captions_1 --> generate_quant_comment_text_1;
+	generate_captions_2 --> generate_quant_comment_text_2;
+	generate_graphs --> decide_theory_compare_toggle;
+	generate_quant_comment_text_1 -. &nbsp;end&nbsp; .-> __end__;
+	generate_quant_comment_text_1 -.-> halt_text_generation;
+	generate_quant_comment_text_1 -.-> summarize_method_to_overview_2;
+	generate_quant_comment_text_2 -. &nbsp;end&nbsp; .-> __end__;
+	generate_quant_comment_text_2 -.-> assemble_experiment_result_group;
+	generate_quant_comment_text_2 -.-> halt_text_generation;
+	generate_result_description_1 --> generate_captions_1;
+	generate_result_description_2 --> generate_captions_2;
+	infer_required_outputs --> required_outputs_gate;
+	ingest --> normalize_inputs;
+	inspect_excel --> select_excel_sheet;
+	locate_discussion_section -.-> create_hitl_request;
+	locate_discussion_section -.-> extract_method_numbers;
+	map_result_numbers --> extract_theory_candidates;
+	normalize_inputs --> classify_assets;
+	normalize_ommlify_formula -.-> create_hitl_request;
+	normalize_ommlify_formula -.-> infer_required_outputs;
+	omml_placement_and_sanity --> validate_preformat;
+	param_binding_gate -.-> compute_theory_value;
+	param_binding_gate -.-> halt_excel_binding;
+	parse_manual_structure --> locate_discussion_section;
+	past_report_hints --> parse_manual_structure;
+	render_docx --> validate_final;
+	required_outputs_gate -.-> create_hitl_request;
+	required_outputs_gate -.-> inspect_excel;
+	resolve_axes -.-> compute_slope_and_extreme;
+	resolve_axes -.-> create_hitl_request;
+	select_excel_sheet --> sheet_selection_gate;
+	session_start --> ingest;
+	sheet_selection_gate -.-> bind_table_columns;
+	sheet_selection_gate -.-> create_hitl_request;
+	style_transform --> omml_placement_and_sanity;
+	summarize_method_to_overview_1 --> generate_result_description_1;
+	summarize_method_to_overview_2 --> generate_result_description_2;
+	validate_final -.-> autofix_final;
+	validate_final -.-> emit_outputs;
+	validate_preformat -. &nbsp;end&nbsp; .-> __end__;
+	validate_preformat -.-> autofix_preformat;
+	validate_preformat -.-> compose_json_artifacts;
+	validate_preformat -.-> create_hitl_request;
+	emit_outputs --> __end__;
+	halt_excel_binding --> __end__;
+	halt_text_generation --> __end__;
+	wait_for_hitl_response --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

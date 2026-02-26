@@ -1,0 +1,547 @@
+{
+  "selected_exp_keys": [
+    "4.1",
+    "4.2.1",
+    "4.2.2",
+    "4.2.3",
+    "4.2.4",
+    "4.2.5",
+    "4.3.1",
+    "4.3.2",
+    "4.3.3",
+    "4.3.4"
+  ],
+  "excel_ranges": [
+    {
+      "exp_key": "4.2.1",
+      "title": "反転増幅回路",
+      "excel_id": "excel:dc",
+      "excel_filename": "OPアンプ DC特性.xlsx",
+      "sheet": "周東いる班(反転増幅回路)",
+      "a1_range": "B1:E12",
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "入力電圧",
+        "x_unit": "V",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "無負荷"
+        ],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.2.1",
+        "title": "反転増幅回路",
+        "table_range": {
+          "excel_id": "excel:dc",
+          "sheet": "周東いる班(反転増幅回路)",
+          "a1_range": "B1:E12"
+        },
+        "has_graph": true,
+        "graph_axes": {
+          "x_name": "入力電圧",
+          "x_unit": "V",
+          "y_name": "出力電圧",
+          "y_unit": "V",
+          "series_names": [
+            "無負荷"
+          ],
+          "condition_names": []
+        },
+        "table_expectations": [],
+        "graph_expectations": [
+          {
+            "name": "Vin-Vout特性グラフ",
+            "hint": "無負荷時の入出力特性を直線領域を含めて描く"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.2.4",
+      "title": "加算回路",
+      "excel_id": "excel:dc",
+      "excel_filename": "OPアンプ DC特性.xlsx",
+      "sheet": "周東いる班(加算回路)",
+      "a1_range": "N1:Q12",
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "入力電圧",
+        "x_unit": "V",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "Eb2固定"
+        ],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.2.4",
+        "title": "加算回路",
+        "table_range": {
+          "excel_id": "excel:dc",
+          "sheet": "周東いる班(加算回路)",
+          "a1_range": "N1:Q12"
+        },
+        "has_graph": true,
+        "graph_axes": {
+          "x_name": "入力電圧",
+          "x_unit": "V",
+          "y_name": "出力電圧",
+          "y_unit": "V",
+          "series_names": [
+            "Eb2固定"
+          ],
+          "condition_names": []
+        },
+        "table_expectations": [
+          {
+            "name": "入力電圧と出力電圧の対応表",
+            "hint": "Vin-Voutの対応"
+          }
+        ],
+        "graph_expectations": [
+          {
+            "name": "Vin-Vout特性グラフ",
+            "hint": "Eb1, Eb2を固定しての2ケースの直線近似比較"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.2.1",
+      "title": "反転増幅回路（理論比較・負荷変化）",
+      "excel_id": "excel:dc",
+      "excel_filename": "OPアンプ DC特性.xlsx",
+      "sheet": "周東いる班(反転増幅回路)",
+      "a1_range": "B1:E12",
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "入力電圧",
+        "x_unit": "V",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "無負荷"
+        ],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.2.1",
+        "title": "反転増幅回路（理論比較・負荷変化）",
+        "table_range": {
+          "excel_id": "excel:dc",
+          "sheet": "周東いる班(反転増幅回路)",
+          "a1_range": "B1:E12"
+        },
+        "has_graph": true,
+        "graph_axes": {
+          "x_name": "入力電圧",
+          "x_unit": "V",
+          "y_name": "出力電圧",
+          "y_unit": "V",
+          "series_names": [
+            "無負荷"
+          ],
+          "condition_names": []
+        },
+        "table_expectations": [],
+        "graph_expectations": [
+          {
+            "name": "無負荷と負荷時の入出力特性グラフ",
+            "hint": "負荷状態による入出力の変化を比較"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.2.2",
+      "title": "非反転増幅回路",
+      "excel_id": "excel:ac",
+      "excel_filename": "OPアンプ AC特性.xlsx",
+      "sheet": "周東いる班(反転増幅回路の交流)",
+      "a1_range": "A25:I48",
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "Vin",
+        "x_unit": "V",
+        "y_name": "Vout",
+        "y_unit": "V",
+        "series_names": [
+          "Vout vs Vin（状態名）"
+        ],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.2.2",
+        "title": "非反転増幅回路",
+        "table_range": {
+          "excel_id": "excel:ac",
+          "sheet": "周東いる班(反転増幅回路の交流)",
+          "a1_range": "A25:I48"
+        },
+        "has_graph": true,
+        "graph_axes": {
+          "x_name": "Vin",
+          "x_unit": "V",
+          "y_name": "Vout",
+          "y_unit": "V",
+          "series_names": [
+            "Vout vs Vin（状態名）"
+          ],
+          "condition_names": []
+        },
+        "table_expectations": [],
+        "graph_expectations": [
+          {
+            "name": "Vin-Vout特性グラフ",
+            "hint": "無負荷・負荷状態の入出力特性を一次近似と比較"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.1",
+      "title": "回路の製作",
+      "excel_id": "excel:ac",
+      "excel_filename": "OPアンプ AC特性.xlsx",
+      "sheet": "周東いる班(積分回路)",
+      "a1_range": "A25:K48; B92:H114",
+      "has_graph": false,
+      "graph_axes": {
+        "x_name": "",
+        "x_unit": "",
+        "y_name": "",
+        "y_unit": "",
+        "series_names": [],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.1",
+        "title": "回路の製作",
+        "table_range": {
+          "excel_id": "excel:ac",
+          "sheet": "周東いる班(積分回路)",
+          "a1_range": "A25:K48; B92:H114"
+        },
+        "has_graph": false,
+        "graph_axes": {
+          "x_name": "",
+          "x_unit": "",
+          "y_name": "",
+          "y_unit": "",
+          "series_names": [],
+          "condition_names": []
+        },
+        "table_expectations": [
+          {
+            "name": "表1 部品一覧",
+            "hint": "部品の素子値・型番の一覧"
+          },
+          {
+            "name": "表2 抵抗値と許容誤差のカラーコード",
+            "hint": "抵抗のカラーコードと許容誤差"
+          }
+        ],
+        "graph_expectations": []
+      }
+    },
+    {
+      "exp_key": "4.2.3",
+      "title": "ボルテージフォロワ",
+      "excel_id": "excel:dc",
+      "excel_filename": "OPアンプ DC特性.xlsx",
+      "sheet": "周東いる班(ボルテージフォロワ) ",
+      "a1_range": "B1:E22",
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "入力電圧",
+        "x_unit": "V",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "Vo"
+        ],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.2.3",
+        "title": "ボルテージフォロワ",
+        "table_range": {
+          "excel_id": "excel:dc",
+          "sheet": "周東いる班(ボルテージフォロワ) ",
+          "a1_range": "B1:E22"
+        },
+        "has_graph": true,
+        "graph_axes": {
+          "x_name": "入力電圧",
+          "x_unit": "V",
+          "y_name": "出力電圧",
+          "y_unit": "V",
+          "series_names": [
+            "Vo"
+          ],
+          "condition_names": []
+        },
+        "table_expectations": [],
+        "graph_expectations": [
+          {
+            "name": "Vin-Vout特性グラフ",
+            "hint": "無負荷と並列負荷時の挙動を比較"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.3.1",
+      "title": "積分回路",
+      "excel_id": "",
+      "excel_filename": "",
+      "sheet": "",
+      "a1_range": "",
+      "has_graph": false,
+      "graph_axes": {
+        "x_name": "",
+        "x_unit": "",
+        "y_name": "",
+        "y_unit": "",
+        "series_names": [],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.3.1",
+        "title": "積分回路",
+        "table_range": {
+          "excel_id": "",
+          "sheet": "",
+          "a1_range": ""
+        },
+        "has_graph": false,
+        "graph_axes": {
+          "x_name": "",
+          "x_unit": "",
+          "y_name": "",
+          "y_unit": "",
+          "series_names": [],
+          "condition_names": []
+        },
+        "table_expectations": [],
+        "graph_expectations": [
+          {
+            "name": "正弦波入力と出力の波形グラフ",
+            "hint": "周波数10 kHzでの波形"
+          },
+          {
+            "name": "積分回路の周波数特性グラフ",
+            "hint": "10 Hz〜3 MHzの利得と位相"
+          },
+          {
+            "name": "方形波入力時の出力波形",
+            "hint": "10 kHzと300 Hzの比較"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.2.5",
+      "title": "減算回路",
+      "excel_id": "excel:dc",
+      "excel_filename": "OPアンプ DC特性.xlsx",
+      "sheet": "周東いる班(減算回路)",
+      "a1_range": "N1:Q16",
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "入力電圧",
+        "x_unit": "V",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "ケース1",
+          "ケース2"
+        ],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.2.5",
+        "title": "減算回路",
+        "table_range": {
+          "excel_id": "excel:dc",
+          "sheet": "周東いる班(減算回路)",
+          "a1_range": "N1:Q16"
+        },
+        "has_graph": true,
+        "graph_axes": {
+          "x_name": "入力電圧",
+          "x_unit": "V",
+          "y_name": "出力電圧",
+          "y_unit": "V",
+          "series_names": [
+            "ケース1",
+            "ケース2"
+          ],
+          "condition_names": []
+        },
+        "table_expectations": [],
+        "graph_expectations": [
+          {
+            "name": "出力と入力の関係グラフ",
+            "hint": "Ea, Eb1を固定した2ケースの直線近似比較"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.3.2",
+      "title": "反転増幅回路の交流特性",
+      "excel_id": "excel:ac",
+      "excel_filename": "OPアンプ AC特性.xlsx",
+      "sheet": "周東いる班(反転増幅回路の交流)",
+      "a1_range": "A25:I48",
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "周波数",
+        "x_unit": "Hz",
+        "y_name": "",
+        "y_unit": "",
+        "series_names": [
+          "Gain",
+          "Phase"
+        ],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.3.2",
+        "title": "反転増幅回路の交流特性",
+        "table_range": {
+          "excel_id": "excel:ac",
+          "sheet": "周東いる班(反転増幅回路の交流)",
+          "a1_range": "A25:I48"
+        },
+        "has_graph": true,
+        "graph_axes": {
+          "x_name": "周波数",
+          "x_unit": "Hz",
+          "y_name": "",
+          "y_unit": "",
+          "series_names": [
+            "Gain",
+            "Phase"
+          ],
+          "condition_names": []
+        },
+        "table_expectations": [],
+        "graph_expectations": [
+          {
+            "name": "三角波発生条件時の出力波形比較グラフ",
+            "hint": "入力波形と出力波形の関係"
+          },
+          {
+            "name": "反転増幅回路の周波数特性グラフ",
+            "hint": "周波数依存の利得と位相"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.3.4",
+      "title": "減算回路の交流特性",
+      "excel_id": "excel:dc",
+      "excel_filename": "OPアンプ DC特性.xlsx",
+      "sheet": "周東いる班(減算回路)",
+      "a1_range": "B1:F16",
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "時間",
+        "x_unit": "ms",
+        "y_name": "電圧",
+        "y_unit": "V",
+        "series_names": [
+          "V1",
+          "V2",
+          "Vout"
+        ],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.3.4",
+        "title": "減算回路の交流特性",
+        "table_range": {
+          "excel_id": "excel:dc",
+          "sheet": "周東いる班(減算回路)",
+          "a1_range": "B1:F16"
+        },
+        "has_graph": true,
+        "graph_axes": {
+          "x_name": "時間",
+          "x_unit": "ms",
+          "y_name": "電圧",
+          "y_unit": "V",
+          "series_names": [
+            "V1",
+            "V2",
+            "Vout"
+          ],
+          "condition_names": []
+        },
+        "table_expectations": [],
+        "graph_expectations": [
+          {
+            "name": "減算回路の出力波形グラフ",
+            "hint": "2波形の減算結果の観測"
+          }
+        ]
+      }
+    },
+    {
+      "exp_key": "4.3.3",
+      "title": "加算回路の交流特性",
+      "excel_id": "excel:dc",
+      "excel_filename": "OPアンプ DC特性.xlsx",
+      "sheet": "周東いる班(加算回路)",
+      "a1_range": "N1:Q12",
+      "has_graph": true,
+      "graph_axes": {
+        "x_name": "Time",
+        "x_unit": "s",
+        "y_name": "出力電圧",
+        "y_unit": "V",
+        "series_names": [
+          "Vout"
+        ],
+        "condition_names": []
+      },
+      "result": {
+        "exp_key": "4.3.3",
+        "title": "加算回路の交流特性",
+        "table_range": {
+          "excel_id": "excel:dc",
+          "sheet": "周東いる班(加算回路)",
+          "a1_range": "N1:Q12"
+        },
+        "has_graph": true,
+        "graph_axes": {
+          "x_name": "Time",
+          "x_unit": "s",
+          "y_name": "出力電圧",
+          "y_unit": "V",
+          "series_names": [
+            "Vout"
+          ],
+          "condition_names": []
+        },
+        "table_expectations": [],
+        "graph_expectations": [
+          {
+            "name": "加算回路の出力波形比較グラフ1",
+            "hint": "三角波と正弦波の加算出力"
+          },
+          {
+            "name": "周波数条件下の出力波形グラフ",
+            "hint": "Eb1=3kHz, Eb2=1MHzの条件など"
+          }
+        ]
+      }
+    }
+  ]
+}

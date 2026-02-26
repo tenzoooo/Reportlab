@@ -13,6 +13,7 @@ import fitz  # PyMuPDF
 class PdfOcrResult:
     text: str
     pages: int
+    page_texts: list[str]
 
 
 def is_tesseract_available() -> bool:
@@ -78,7 +79,7 @@ def ocr_pdf_bytes(
     - Intended for scanned PDFs or PDFs where text extraction is unreliable.
     """
     if not pdf_bytes:
-        return PdfOcrResult(text="", pages=0)
+        return PdfOcrResult(text="", pages=0, page_texts=[])
     if not is_tesseract_available():
         raise RuntimeError("tesseract is not available on this runtime")
 
@@ -110,4 +111,4 @@ def ocr_pdf_bytes(
             parts.append((text or "").strip())
 
     joined = "\n\n".join([p for p in parts if p])
-    return PdfOcrResult(text=joined, pages=pages_total)
+    return PdfOcrResult(text=joined, pages=pages_total, page_texts=parts)

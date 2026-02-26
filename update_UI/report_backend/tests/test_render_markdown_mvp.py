@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from core.storage import LocalStorage
-from graph.nodes.render_markdown import render_markdown
+from graph.nodes_legacy.render_markdown import render_markdown
 from graph.state import AgentState, JobMeta
 from models.contracts import (
     Consideration,

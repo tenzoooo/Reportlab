@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { FileText, Plus, Search, Download, Trash2, Eye, MoreVertical, Play, RotateCcw, Loader2 } from "lucide-react"
+import { FileText, Plus, Search, Download, Trash2, Eye, MoreVertical, Play, RotateCcw, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase/client"
 import { getFileUrl } from "@/lib/storage/get-file-url"
+import DashboardPageShell from "@/components/dashboard-page-shell"
+import { cn } from "@/lib/utils"
 
 type FilterTab = "all" | "completed" | "processing"
 
@@ -112,22 +114,6 @@ export default function ReportsPage() {
       } = await supabase.auth.getSession()
       if (!session) return
 
-      // Best-effort: delete related files from storage (if policy allows)
-      const { data: expFiles } = await supabase
-        .from("experiment_data")
-        .select("file_url")
-        .eq("report_id", id)
-
-      const report = reports.find((r) => r.id === id)
-      const storagePaths = [
-        ...(expFiles || []).map((f) => (f.file_url || "").replace(/^\/+/, "")).filter(Boolean),
-        ...(report?.file_url ? [report.file_url.replace(/^\/+/, "")] : []),
-      ]
-
-      if (storagePaths.length > 0) {
-        await supabase.storage.from("experiment-files").remove(storagePaths)
-      }
-
       const { error } = await supabase.from("reports").delete().eq("id", id).eq("user_id", session.user.id)
       if (error) throw new Error(error.message)
 
@@ -165,7 +151,7 @@ export default function ReportsPage() {
       setReports((prev) =>
         prev.map((r) => (r.id === id ? { ...r, status: "processing" as const } : r))
       )
-      alert("レポートの再生成を開始しました。処理が完了するとステータスが更新されます。")
+      alert("レポートの再生成を開始しました。")
       fetchReports()
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e))
@@ -175,20 +161,19 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="page-container">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">レポート一覧</h1>
-          <p className="text-muted-foreground mt-2">作成したレポートを管理できます</p>
-        </div>
-        <Button size="lg" className="bg-primary hover:bg-primary/90 gap-2" asChild>
+    <DashboardPageShell
+      title="レポート一覧"
+      subtitle="作成したレポートを管理できます"
+      icon={<FileText className="h-6 w-6" />}
+      actions={
+        <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20" asChild>
           <Link href="/dashboard/reports/new">
             <Plus className="h-5 w-5" />
             新規作成
           </Link>
         </Button>
-      </div>
+      }
+    >
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 mb-6 border-b border-border">
@@ -196,21 +181,27 @@ export default function ReportsPage() {
           <button
             key={tab.id}
             onClick={() => setActiveFilter(tab.id)}
-            className={`px-4 py-3 text-sm font-semibold transition-colors relative ${activeFilter === tab.id
+            className={cn(
+              "px-4 py-3 text-sm font-semibold transition-colors relative",
+              activeFilter === tab.id
                 ? "text-primary border-b-2 border-primary"
                 : "text-muted-foreground hover:text-foreground"
-              }`}
+            )}
           >
             {tab.label}
-            <span className="ml-2 text-xs bg-muted px-2 py-1 rounded-full">{tab.count}</span>
+            {tab.count !== undefined && (
+              <span className="ml-2 text-[10px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground border border-border">
+                {tab.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* Search Bar */}
       <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <Input
             id="reports-search"
             name="q"
@@ -220,20 +211,21 @@ export default function ReportsPage() {
             placeholder="レポートを検索..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 h-12 text-base"
+            className="pl-12 h-12 text-base bg-card border-border focus-visible:ring-primary/20"
             autoComplete="off"
           />
         </div>
       </div>
 
-      {/* Reports Table */}
-      <Card>
+      {/* Reports Table Card */}
+      <Card className="border-border bg-card/50 backdrop-blur-sm shadow-md overflow-hidden">
         <CardContent className="p-0">
           {error && (
-            <div className="px-6 py-3 text-sm text-red-600">{error}</div>
+            <div className="px-6 py-3 text-sm text-destructive bg-destructive/10 border-b border-destructive/20">{error}</div>
           )}
+          
           {/* Table Header */}
-          <div className="hidden md:grid md:grid-cols-12 gap-4 px-6 py-4 bg-muted/50 border-b border-border font-semibold text-sm text-card-foreground">
+          <div className="hidden md:grid md:grid-cols-12 gap-4 px-6 py-4 bg-muted/50 border-b border-border font-bold text-[10px] uppercase tracking-widest text-muted-foreground">
             <div className="col-span-5">タイトル</div>
             <div className="col-span-3">作成日</div>
             <div className="col-span-3">ステータス</div>
@@ -242,46 +234,64 @@ export default function ReportsPage() {
 
           {/* Table Body */}
           <div className="divide-y divide-border">
-            {filteredReports.length === 0 ? (
-              <div className="px-6 py-12 text-center text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-muted" />
-                <p className="text-lg font-medium">レポートが見つかりません</p>
-                <p className="text-sm mt-2">検索条件を変更するか、新しいレポートを作成してください</p>
+            {loading && reports.length === 0 ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredReports.length === 0 ? (
+              <div className="px-6 py-20 text-center space-y-4">
+                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto border border-border">
+                  <FileText className="h-8 w-8 text-muted-foreground opacity-50" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-lg font-bold text-foreground">レポートが見つかりません</p>
+                  <p className="text-sm text-muted-foreground">検索条件を変更するか、新しいレポートを作成してください</p>
+                </div>
               </div>
             ) : (
               filteredReports.map((report) => (
                 <div
                   key={report.id}
-                  className="px-6 py-4 hover:bg-muted/50 transition-colors grid grid-cols-1 md:grid-cols-12 gap-4 items-center"
+                  className="px-6 py-4 hover:bg-muted/30 transition-colors grid grid-cols-1 md:grid-cols-12 gap-4 items-center group"
                 >
                   {/* Title */}
-                  <div className="col-span-1 md:col-span-5 flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    <Link
-                      href={`/dashboard/reports/${report.id}`}
-                      className="font-semibold text-foreground hover:text-primary transition-colors"
-                    >
-                      {report.title}
-                    </Link>
+                  <div className="col-span-1 md:col-span-5 flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <Link
+                        href={`/dashboard/reports/${report.id}`}
+                        className="font-bold text-foreground hover:text-primary transition-colors block truncate text-lg tracking-tight"
+                      >
+                        {report.title}
+                      </Link>
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest md:hidden">
+                        {mounted && report.created_at ? new Date(report.created_at).toLocaleDateString() : "-"}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Date */}
-                  <div className="col-span-1 md:col-span-3 text-sm text-muted-foreground md:text-base">
-                    <span className="md:hidden font-medium text-card-foreground">作成日: </span>
-                    {mounted && report.created_at ? new Date(report.created_at).toLocaleString() : "-"}
+                  {/* Date (Desktop) */}
+                  <div className="hidden md:block col-span-1 md:col-span-3 text-sm text-muted-foreground">
+                    {mounted && report.created_at ? new Date(report.created_at).toLocaleString('ja-JP', { 
+                      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' 
+                    }) : "-"}
                   </div>
 
                   {/* Status */}
                   <div className="col-span-1 md:col-span-3">
                     <span
-                      className={`status-pill ${report.status === "completed"
-                          ? "bg-success/10 text-success"
+                      className={cn(
+                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                        report.status === "completed"
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
                           : report.status === "processing"
-                            ? "bg-primary/10 text-primary"
+                            ? "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400"
                             : report.status === "draft"
-                              ? "bg-muted/20 text-muted-foreground"
-                              : "bg-destructive/10 text-destructive"
-                        }`}
+                              ? "bg-muted text-muted-foreground border-border"
+                              : "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400"
+                      )}
                     >
                       {report.status === "completed"
                         ? "完了"
@@ -298,65 +308,66 @@ export default function ReportsPage() {
                     {mounted ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/reports/${report.id}`} className="flex items-center gap-2">
-                              <Eye className="h-4 w-4" />
-                              詳細を見る
+                        <DropdownMenuContent align="end" className="w-56 p-2 bg-card/95 backdrop-blur-xl border-border shadow-2xl rounded-2xl">
+                          <DropdownMenuItem asChild className="rounded-xl cursor-pointer py-2.5">
+                            <Link href={`/dashboard/reports/${report.id}`} className="flex items-center gap-3">
+                              <Eye className="h-4 w-4 text-primary" />
+                              <span className="font-semibold">詳細を見る</span>
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/reports/${report.id}/edit`} className="flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
-                              編集
-                            </Link>
-                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-border/50 my-1" />
+                          
                           {report.status === "draft" && (
-                            <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/reports/new?reportId=${report.id}`} className="flex items-center gap-2">
-                                <Play className="h-4 w-4" />
-                                下書きを再開
+                            <DropdownMenuItem asChild className="rounded-xl cursor-pointer py-2.5">
+                              <Link href={`/dashboard/reports/new?reportId=${report.id}`} className="flex items-center gap-3">
+                                <Play className="h-4 w-4 text-emerald-500" />
+                                <span className="font-semibold">下書きを再開</span>
                               </Link>
                             </DropdownMenuItem>
                           )}
+                          
                           {report.status !== "draft" && (
                             <DropdownMenuItem
-                              className="flex items-center gap-2"
+                              className="rounded-xl cursor-pointer py-2.5 flex items-center gap-3"
                               disabled={regeneratingId === report.id}
                               onClick={() => handleRegenerate(report.id)}
                             >
                               {regeneratingId === report.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
                               ) : (
-                                <RotateCcw className="h-4 w-4" />
+                                <RotateCcw className="h-4 w-4 text-primary" />
                               )}
-                              再生成
+                              <span className="font-semibold">再生成</span>
                             </DropdownMenuItem>
                           )}
+                          
                           {report.status === "completed" && report.file_url && (
                             <DropdownMenuItem
-                              className="flex items-center gap-2"
+                              className="rounded-xl cursor-pointer py-2.5 flex items-center gap-3"
                               onClick={() => handleDownload(report.id, report.title)}
                             >
-                              <Download className="h-4 w-4" />
-                              ダウンロード
+                              <Download className="h-4 w-4 text-primary" />
+                              <span className="font-semibold">ダウンロード</span>
                             </DropdownMenuItem>
                           )}
+                          
+                          <DropdownMenuSeparator className="bg-border/50 my-1" />
+                          
                           <DropdownMenuItem
-                            className="flex items-center gap-2 text-destructive focus:text-destructive"
+                            className="rounded-xl cursor-pointer py-2.5 flex items-center gap-3 text-destructive focus:text-destructive focus:bg-destructive/10"
                             onClick={() => handleDelete(report.id)}
                           >
                             <Trash2 className="h-4 w-4" />
-                            削除
+                            <span className="font-bold">削除</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     ) : (
-                      <div className="h-8 w-8 rounded-md bg-muted" aria-hidden />
+                      <div className="h-9 w-9 rounded-md bg-muted animate-pulse" aria-hidden />
                     )}
                   </div>
                 </div>
@@ -367,44 +378,53 @@ export default function ReportsPage() {
       </Card>
 
       {/* Pagination */}
-      {filteredReports.length > 0 && (
-        <div className="flex items-center justify-center gap-2 mt-6">
+      {total > pageSize && (
+        <div className="flex items-center justify-center gap-3 mt-10">
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
+            className="rounded-xl border-border bg-card hover:bg-muted"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
           >
-            前へ
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: Math.max(1, Math.ceil(total / pageSize)) })
+          
+          <div className="flex items-center gap-2">
+            {Array.from({ length: Math.ceil(total / pageSize) })
               .slice(0, 5)
               .map((_, index) => {
                 const page = index + 1
                 return (
                   <Button
                     key={page}
-                    variant={currentPage === page ? "default" : "outline"}
+                    variant={currentPage === page ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className="w-10"
+                    className={cn(
+                      "w-10 h-10 rounded-xl font-bold transition-all",
+                      currentPage === page 
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
                   >
                     {page}
                   </Button>
                 )
               })}
           </div>
+          
           <Button
             variant="outline"
-            size="sm"
-            disabled={currentPage >= Math.max(1, Math.ceil(total / pageSize))}
+            size="icon"
+            className="rounded-xl border-border bg-card hover:bg-muted"
+            disabled={currentPage >= Math.ceil(total / pageSize)}
             onClick={() => setCurrentPage((prev) => prev + 1)}
           >
-            次へ
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       )}
-    </div>
+    </DashboardPageShell>
   )
 }

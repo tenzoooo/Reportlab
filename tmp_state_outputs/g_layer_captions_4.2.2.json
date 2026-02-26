@@ -1,0 +1,27 @@
+{
+  "exp_key": "4.2.2",
+  "table_captions": [
+    {
+      "asset_id": "tbl_4.2.2_1",
+      "caption": "各状態の測定点テーブル",
+      "error": ""
+    },
+    {
+      "asset_id": "tbl_4.2.2_2",
+      "caption": "V- 理論値と測定値の比較表",
+      "error": ""
+    },
+    {
+      "asset_id": "tbl_4.2.2_3",
+      "caption": "1次近似の係数テーブル",
+      "error": ""
+    }
+  ],
+  "graph_captions": [
+    {
+      "asset_id": "fig_4.2.2_1",
+      "caption": "Vin-Vout特性グラフ",
+      "error": ""
+    }
+  ]
+}

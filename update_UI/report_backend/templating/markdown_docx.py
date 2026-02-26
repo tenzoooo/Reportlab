@@ -7,6 +7,7 @@ from typing import Iterable
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
+from docx.oxml import parse_xml
 from docx.oxml.ns import qn
 from docx.shared import Mm
 from docx.shared import RGBColor
@@ -23,7 +24,9 @@ _IMG_RE = re.compile(r"^!\[(?P<alt>.*)\]\((?P<src>[^)]+)\)\s*$")
 _HEADING_RE = re.compile(r"^(?P<hashes>#{1,6})\s+(?P<text>.+?)\s*$")
 _CENTER_P_RE = re.compile(r"^<p\\s+align=[\"']center[\"']\\s*>(?P<text>.*?)</p>\\s*$", re.IGNORECASE)
 _CENTER_DIV_RE = re.compile(r"^<div\\s+align=[\"']center[\"']\\s*>(?P<text>.*?)</div>\\s*$", re.IGNORECASE)
-_CAPTIONISH_RE = re.compile(r"^(図|表)\\s+\\d+(?:\\.\\d+){0,3}(?:\\.\\d+)?\\s*[:：].+")
+_CENTER_P_ANY_RE = re.compile(r"<p\\s+align=[\"']center[\"']\\s*>(?P<text>.*?)</p>", re.IGNORECASE)
+_CENTER_DIV_ANY_RE = re.compile(r"<div\\s+align=[\"']center[\"']\\s*>(?P<text>.*?)</div>", re.IGNORECASE)
+_CAPTIONISH_RE = re.compile(r"^(図|表)\\s*\\d+(?:\\.\\d+){0,3}(?:\\.\\d+)?\\s*[:：]?\\s*.+")
 
 
 def _is_table_line(line: str) -> bool:
@@ -66,7 +69,7 @@ def _add_table(doc: Document, rows: list[list[str]]) -> None:
             if c_idx < len(row_list):
                 val = "" if row_list[c_idx] is None else str(row_list[c_idx])
             cell = table.cell(r_idx, c_idx)
-            if r_idx > 0 and _is_missing_cell_value(val):
+            if _is_missing_cell_value(val):
                 cell.text = ""
                 _apply_missing_cell_diagonal(cell)
             else:
@@ -170,11 +173,34 @@ def _resolve_image_bytes(
     return None
 
 
+def _normalize_omml(omml: str) -> str:
+    s = (omml or "").strip()
+    if not s:
+        return ""
+    if "xmlns:m" in s:
+        return s
+    if s.startswith("<m:oMath"):
+        return s.replace("<m:oMath", '<m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"', 1)
+    return s
+
+
+def _append_omml(paragraph, omml: str) -> None:
+    cleaned = _normalize_omml(omml)
+    if not cleaned:
+        return
+    try:
+        omml_xml = parse_xml(cleaned)
+        paragraph._p.append(omml_xml)
+    except Exception:
+        return
+
+
 def render_docx_from_markdown(
     *,
     markdown: str,
     storage: Storage,
     images_by_id: dict[str, ImageAsset] | None = None,
+    omml_by_text: dict[str, list[str]] | None = None,
 ) -> bytes:
     """
     Minimal markdown → DOCX renderer for our agent-generated markdown.
@@ -185,6 +211,7 @@ def render_docx_from_markdown(
     - Images in the form: ![alt](image:<image_id>)
     """
     images_by_id = images_by_id or {}
+    omml_by_text = omml_by_text or {}
 
     doc = Document()
     lines = (markdown or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
@@ -192,12 +219,58 @@ def render_docx_from_markdown(
     i = 0
     while i < len(lines):
         line = lines[i]
+        # Normalize inline HTML captions before any other parsing.
+        if "<p" in line or "<div" in line:
+            mcenter = _CENTER_P_ANY_RE.search(line) or _CENTER_DIV_ANY_RE.search(line)
+            if mcenter:
+                text = (mcenter.group("text") or "").strip()
+                p = doc.add_paragraph(text)
+                try:
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                except Exception:
+                    pass
+                i += 1
+                continue
+            # Strip unknown/unsupported HTML tags to avoid raw tags in output.
+            line = re.sub(r"</?p[^>]*>", "", line, flags=re.IGNORECASE)
+            line = re.sub(r"</?div[^>]*>", "", line, flags=re.IGNORECASE)
         if not line.strip():
             i += 1
             continue
 
+        # Caption-like plain line (e.g., 図5.2.1.2 ... / 表5.2.1.1 ...)
+        if _CAPTIONISH_RE.match(line.strip()):
+            p = doc.add_paragraph(line.strip())
+            try:
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            except Exception:
+                pass
+            i += 1
+            continue
+
         # Centered paragraph (HTML-ish), used for captions.
-        mcenter = _CENTER_P_RE.match(line.strip()) or _CENTER_DIV_RE.match(line.strip())
+        stripped = line.strip()
+        mcenter = None
+        if stripped.lower().startswith("<p align=\"center\">") and stripped.lower().endswith("</p>"):
+            inner = stripped[len("<p align=\"center\">") : -len("</p>")]
+            mcenter = _CENTER_P_ANY_RE.search(f"<p align=\"center\">{inner}</p>")
+        elif stripped.lower().startswith("<p align='center'>") and stripped.lower().endswith("</p>"):
+            inner = stripped[len("<p align='center'>") : -len("</p>")]
+            mcenter = _CENTER_P_ANY_RE.search(f"<p align=\"center\">{inner}</p>")
+        elif stripped.lower().startswith("<div align=\"center\">") and stripped.lower().endswith("</div>"):
+            inner = stripped[len("<div align=\"center\">") : -len("</div>")]
+            mcenter = _CENTER_DIV_ANY_RE.search(f"<div align=\"center\">{inner}</div>")
+        elif stripped.lower().startswith("<div align='center'>") and stripped.lower().endswith("</div>"):
+            inner = stripped[len("<div align='center'>") : -len("</div>")]
+            mcenter = _CENTER_DIV_ANY_RE.search(f"<div align=\"center\">{inner}</div>")
+        if not mcenter:
+            if "<p" in stripped or "<div" in stripped:
+                if "<p" in stripped and "</p>" in stripped:
+                    mcenter = _CENTER_P_ANY_RE.search(stripped)
+                else:
+                    mcenter = _CENTER_DIV_ANY_RE.search(stripped)
+        if not mcenter:
+            mcenter = _CENTER_P_RE.match(stripped) or _CENTER_DIV_RE.match(stripped)
         if mcenter:
             text = (mcenter.group("text") or "").strip()
             p = doc.add_paragraph(text)
@@ -254,7 +327,15 @@ def render_docx_from_markdown(
             buf.append(nxt.strip())
             j += 1
         text = " ".join(buf).strip()
-        p = doc.add_paragraph(text)
+        p = doc.add_paragraph()
+        omml_list = omml_by_text.get(text) or []
+        if omml_list:
+            omml = omml_list.pop(0)
+            _append_omml(p, omml)
+            if not omml_list:
+                omml_by_text.pop(text, None)
+        if text:
+            p.add_run(text)
         if _CAPTIONISH_RE.match(text):
             try:
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER

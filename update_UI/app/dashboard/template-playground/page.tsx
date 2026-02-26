@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { ImageIcon, ArrowUp, ArrowDown, X } from "lucide-react"
+import DashboardPageShell from "@/components/dashboard-page-shell"
 
 const SAMPLE_JSON = JSON.stringify(
   {
@@ -433,20 +434,16 @@ export default function DashboardTemplatePlaygroundPage() {
   }
 
   return (
-    <div className="space-y-6 px-4 py-8 sm:px-8">
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-muted-foreground">テンプレートデバッグ</p>
-        <h1 className="text-3xl font-bold tracking-tight">JSON差し込みプレイグラウンド</h1>
-        <p className="text-base text-muted-foreground">
-          Dify からの result_json を貼り付けると、サーバーの docxtemplater テンプレートに差し込んだ DOCX を即ダウンロードできます。
-          experiment ID が複数存在するパターンの検証に利用してください。
-        </p>
-      </div>
-
-      <Card className="shadow-lg">
+    <DashboardPageShell
+      title="JSON差し込みプレイグラウンド"
+      subtitle="result_json を貼り付けて DOCX 出力を検証できます"
+      icon={<ImageIcon className="h-6 w-6" />}
+    >
+      <div className="space-y-6">
+        <Card className="shadow-lg bg-white/5 border-white/10">
         <CardHeader>
-          <CardTitle>JSON入力とDOCX生成</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-white">JSON入力とDOCX生成</CardTitle>
+          <CardDescription className="text-slate-400">
             JSONを貼り付けるかファイルを読み込み、「DOCXを生成」を押すと /api/reports/generate/mock を呼び出します。
           </CardDescription>
         </CardHeader>
@@ -454,20 +451,21 @@ export default function DashboardTemplatePlaygroundPage() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-foreground">レポートタイトル</span>
+                <span className="text-sm font-semibold text-slate-200">レポートタイトル</span>
                 <Input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="テンプレート検証レポート"
+                  className="bg-slate-950/60 border-white/10 text-white placeholder:text-slate-500"
                 />
               </label>
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-foreground">JSONファイルを読み込む</span>
-                <Input type="file" accept="application/json" onChange={handleFileUpload} />
+                <span className="text-sm font-semibold text-slate-200">JSONファイルを読み込む</span>
+                <Input type="file" accept="application/json" onChange={handleFileUpload} className="bg-slate-950/60 border-white/10 text-white" />
               </label>
             </div>
 
-            <div className="space-y-3 rounded-lg border border-dashed border-muted-foreground/40 p-4">
+            <div className="space-y-3 rounded-lg border border-dashed border-white/20 p-4 text-slate-300">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-foreground">挿入する写真（任意）</p>
@@ -664,5 +662,6 @@ export default function DashboardTemplatePlaygroundPage() {
         </CardContent>
       </Card>
     </div>
+    </DashboardPageShell>
   )
 }

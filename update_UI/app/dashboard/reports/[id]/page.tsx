@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useState, useRef } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { ArrowLeft, Download, Trash2, FileText, ImageIcon, FileSpreadsheet, CheckCircle, Loader2, AlertCircle, RotateCcw, Square } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import { createClient } from "@/lib/supabase/client"
 import { getFileUrl } from "@/lib/storage/get-file-url"
-import { ReportProcessingSteps, type ProcessingStep as ProcessingStatusStep } from "@/components/report-processing-steps"
+import { type ProcessingStep as ProcessingStatusStep } from "@/components/report-processing-steps"
+import { ReportGenerationLiveView } from "@/components/report-generation-live-view"
 
 type ReportStatus = "draft" | "processing" | "completed" | "error"
 
@@ -93,6 +93,8 @@ const stepStatusFromProgress = (progress: AgentProgress | null) => {
 
 export default function ReportDetailPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
+  const processingParam = searchParams.get("processing")
   const reportId = params.id as string
   const isUuid = (v: string) =>
     /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v)
@@ -100,7 +102,7 @@ export default function ReportDetailPage() {
   const [status, setStatus] = useState<ReportStatus>("processing")
   const [title, setTitle] = useState<string>("")
   const [createdAt, setCreatedAt] = useState<string>("")
-  const [files, setFiles] = useState<{ name: string; type: "excel" | "image" | "code" | "word"; uploaded_at?: string }[]>([])
+  const [files, setFiles] = useState<{ name: string; type: "excel" | "image" | "code" | "word"; uploaded_at?: string; file_url?: string }[]>([])
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [progress, setProgress] = useState<number>(0)
   const [error, setError] = useState<string>("")
@@ -111,6 +113,15 @@ export default function ReportDetailPage() {
   const [agentProgress, setAgentProgress] = useState<AgentProgress | null>(null)
   const [agentProgressError, setAgentProgressError] = useState<string>("")
   const [showAgentDetails, setShowAgentDetails] = useState(false)
+  const [regenRequestedAt, setRegenRequestedAt] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (processingParam === "1") {
+      setRegenRequestedAt(Date.now())
+      setStatus("processing")
+      setProgress(0)
+    }
+  }, [processingParam])
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -122,6 +133,24 @@ export default function ReportDetailPage() {
         return <ImageIcon className="h-5 w-5 text-primary" />
       default:
         return <FileText className="h-5 w-5 text-muted-foreground" />
+    }
+  }
+
+  const handleDownloadUploadedFile = async (file: { name: string; file_url?: string }) => {
+    try {
+      if (!file.file_url) return
+      const supabase = createClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) {
+        window.location.href = "/login"
+        return
+      }
+      const url = await getFileUrl(file.file_url, file.name || "uploaded-file")
+      window.location.href = url
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -168,19 +197,25 @@ export default function ReportDetailPage() {
         if (!report) throw new Error("レポートが見つかりません")
         if (cancel) return
         setTitle(report.title || "")
-        setStatus((report.status as ReportStatus) || "processing")
+        const nextStatus = (report.status as ReportStatus) || "processing"
+        const keepProcessingView =
+          regenRequestedAt !== null &&
+          Date.now() - regenRequestedAt < 20000 &&
+          nextStatus !== "error"
+        setStatus(keepProcessingView ? "processing" : nextStatus)
         setCreatedAt(report.created_at || "")
         setFileUrl(report.file_url || null)
 
         const { data: expData, error: eErr } = await supabase
           .from("experiment_data")
-          .select("file_name, file_type, uploaded_at")
+          .select("file_name, file_type, uploaded_at, file_url")
           .eq("report_id", reportId)
         if (eErr) throw new Error(eErr.message)
         const mapped = (expData || []).map((f) => ({
           name: f.file_name as string,
           type: f.file_type as "excel" | "image" | "code" | "word",
           uploaded_at: f.uploaded_at as string | undefined,
+          file_url: f.file_url as string | undefined,
         }))
         setFiles(mapped)
       } catch (e) {
@@ -199,7 +234,7 @@ export default function ReportDetailPage() {
       clearInterval(interval)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportId, status])
+  }, [regenRequestedAt, reportId, status])
 
   useEffect(() => {
     setMounted(true)
@@ -399,10 +434,13 @@ export default function ReportDetailPage() {
       const controller = new AbortController()
       abortControllerRef.current = controller
 
+      setRegenRequestedAt(Date.now())
       setIsRegenerating(true)
+      setStatus("processing")
       setFileUrl(null)
       setProgress(0)
       resetProcessingSteps()
+      window.scrollTo({ top: 0, behavior: "smooth" })
       const supabase = createClient()
       const {
         data: { session },
@@ -452,10 +490,13 @@ export default function ReportDetailPage() {
       const controller = new AbortController()
       abortControllerRef.current = controller
 
+      setRegenRequestedAt(Date.now())
       setIsRegenerating(true)
+      setStatus("processing")
       setFileUrl(null)
       setProgress(0)
       resetProcessingSteps()
+      window.scrollTo({ top: 0, behavior: "smooth" })
       const supabase = createClient()
       const {
         data: { session },
@@ -569,25 +610,7 @@ export default function ReportDetailPage() {
   }, [agentProgress, agentProgressError, showAgentDetails])
 
   return (
-    <div className="page-container">
-      <ReportProcessingSteps
-        open={processingOverlayOpen}
-        onOpenChange={setProcessingOverlayOpen}
-        title={agentProgress ? "AIがレポートを作成中です" : "AIが処理中です"}
-        headerStatusLabel={agentProgress ? "進行中" : "処理中"}
-        steps={stepsForDialog}
-        details={agentDetails}
-        footerNote="再生成中はこの画面を開いたままにしてください。完了すると最新状態で読み込まれます。"
-        onCancel={cancelServerProcessing}
-        cancelLabel="キャンセル"
-      />
-      {status === "processing" && !processingOverlayOpen && (
-        <div className="fixed bottom-6 right-6 z-40">
-          <Button variant="default" className="shadow-lg" onClick={() => setProcessingOverlayOpen(true)}>
-            処理状況を表示
-          </Button>
-        </div>
-      )}
+    <div className="page-container px-4 py-6 sm:px-6 lg:px-8">
       <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}>
         <Link href="/dashboard/reports" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
           <ArrowLeft className="h-4 w-4" /> レポート一覧に戻る
@@ -609,16 +632,19 @@ export default function ReportDetailPage() {
             </div>
 
             {status === "processing" && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-                <p className="text-muted-foreground">AIが実験データを解析し、レポートを生成しています...</p>
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">進捗状況</span>
-                    <span className="text-lg font-bold text-primary">{progress}%</span>
-                  </div>
-                  <Progress value={progress} className="h-3" />
-                  <motion.div className="h-2 w-2 bg-primary rounded-full" animate={{ x: [0, 20, 0] }} transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, ease: "linear" }} />
-                </div>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="mt-4">
+                <ReportGenerationLiveView
+                  title="AIがレポートを作成中です"
+                  reportTitle={title}
+                  percent={progress}
+                  currentLabel={agentProgress?.last_step ? (STEP_LABEL[agentProgress.last_step] || agentProgress.last_step) : "処理中"}
+                  progress={agentProgress}
+                  stepLabels={STEP_LABEL}
+                  fileNames={files.map((f) => f.name)}
+                  note="再生成中でも実行は継続します。処理フローは右側でリアルタイムに更新されます。"
+                  onCancel={handleStop}
+                  cancelLabel="キャンセル"
+                />
               </motion.div>
             )}
 
@@ -630,15 +656,7 @@ export default function ReportDetailPage() {
 
             {status === "draft" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-                <p className="text-muted-foreground">抽出結果を確認・修正してから、DOCXを生成できます。</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button asChild variant="outline" className="gap-2">
-                    <Link href={`/dashboard/reports/${reportId}/edit`}>
-                      <FileText className="h-4 w-4" />
-                      詳細編集
-                    </Link>
-                  </Button>
-                </div>
+                <p className="text-muted-foreground">下書き状態です。再生成ボタンから処理を再開できます。</p>
               </motion.div>
             )}
 
@@ -653,20 +671,48 @@ export default function ReportDetailPage() {
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
         <h2 className="text-xl font-semibold text-foreground mb-4">アップロード済みファイル</h2>
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="p-0">
             <div className="divide-y divide-border">
-              {files.map((file, index) => (
-                <motion.div key={index} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 + index * 0.1 }} whileHover={{ x: 4 }}>
-                  <div className="flex items-center gap-3">
-                    {getFileIcon(file.type)}
-                    <div>
-                      <p className="font-medium text-foreground">{file.name}</p>
-                      {file.uploaded_at && <p className="text-sm text-muted-foreground">{new Date(file.uploaded_at).toLocaleString()}</p>}
+              {files.map((file, index) => {
+                const downloadable = Boolean(file.file_url)
+                return (
+                  <motion.div
+                    key={index}
+                    className={`p-4 flex items-center justify-between transition-colors ${downloadable ? "cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-inset" : ""}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.6 + index * 0.1 }}
+                    role={downloadable ? "button" : undefined}
+                    tabIndex={downloadable ? 0 : -1}
+                    onClick={() => {
+                      if (!downloadable) return
+                      void handleDownloadUploadedFile(file)
+                    }}
+                    onKeyDown={(e) => {
+                      if (!downloadable) return
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        void handleDownloadUploadedFile(file)
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      {getFileIcon(file.type)}
+                      <div>
+                        <p className="font-medium text-foreground">{file.name}</p>
+                        {file.uploaded_at && <p className="text-sm text-muted-foreground">{new Date(file.uploaded_at).toLocaleString()}</p>}
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                    {downloadable ? (
+                      <div className="inline-flex items-center gap-2 text-xs text-primary">
+                        <Download className="h-4 w-4" />
+                        <span>ダウンロード</span>
+                      </div>
+                    ) : null}
+                  </motion.div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>

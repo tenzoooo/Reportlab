@@ -36,3 +36,6 @@ __pycache__/
 
 # Supabase
 update_UI/supabase/.temp/
+
+# LangGraph API
+.langgraph_api

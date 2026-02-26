@@ -1,0 +1,388 @@
+以下は、あなたが確定させた要件（DOCX主、Markdown/JSON中間、HITLはHTMLフォーム、理論比較デフォルトONだがOFF分岐あり、OFF時は傾き＋最大/最小必須、結果説明は「示す」で終止、4.*→5.*写像、単位・軸ラベル必須、Excelから代入パラメータ取得できなければHITL）を満たすために「作るべきノードを全部」列挙したものです。コードは書きません。
+構成は **(1)ノード一覧（役割）** → **(2)エッジ一覧（どことどこを繋ぐか／条件）** の順です。
+
+---
+
+## 1) ノード一覧（役割）
+
+### A. 入力・正規化レイヤ
+
+1. **START / セッション開始**
+   ワークフロー起動、Run ID発行、初期状態作成。
+
+2. **Ingest（ファイル受領）**
+   実験書PDF・Excel・画像・過去レポートを受け取り、ファイルID付与。
+
+3. **NormalizeInputs（入力正規化）**
+   ファイル名/種類/サイズ/ハッシュ、ページ数、シート一覧などのメタを統一形式に整形。
+
+4. **ClassifyAssets（画像の粗分類）**
+   画像を「グラフっぽい / 観測写真っぽい / 不明」に分け、候補リスト化（不明は後段HITLの材料）。
+
+---
+
+### B. 実験書（PDF）解析レイヤ
+
+5. **ExtractManualText（PDFテキスト抽出）**
+   PDFから本文テキストブロック＋ページ/見出し位置（根拠）を抽出。
+
+6. **ParseManualStructure（章構造解析）**
+   見出し階層を推定し、「実験方法 / 原理 / 理論 / 考察（報告事項・検討事項含む）」候補セクションを特定。
+
+7. **ExtractMethodNumbers（4.*抽出）**
+   実験方法番号（4.1, 4.1.1…）を抽出し、タイトル/根拠位置とセットで保持。
+
+8. **MapResultNumbers（4.*→5.*写像）**
+   `4.X(.Y...)` を `5.X(.Y...)` へ写像し、各実験結果グループの結果番号を確定。
+
+9. **LocateDiscussionSection（考察セクション特定）**
+   「考察/報告事項/検討事項/考察事項」を含むセクションを特定（不明ならHITL）。
+
+10. **ExtractTheoryCandidates（理論式候補抽出）**
+    実験方法・原理・理論章から数式候補（文字列/画像断片/周辺文）を集め、根拠付きで候補化。
+
+11. **NormalizeAndOMMLifyFormula（理論式整形＋OMML化）**
+    抽出した理論式を正規化し、OMMLへ変換して保持（失敗時はHITLへ）。
+
+---
+
+### C. 過去レポート解析（構造ヒント限定）
+
+12. **ExtractPastReportStructureHints（過去レポート構造ヒント抽出）** ※任意（入力がある場合のみ）
+    「実験結果グループの並び」「見出しの付け方」「キャプション形式」など“構造”だけ抽出。内容流用は禁止。
+
+---
+
+### D. RequiredOutputs（必要成果物）推定レイヤ
+
+13. **InferRequiredOutputs（必要な表/グラフ/観測写真の推定）**
+    実験方法から、実験ごとに「表いくつ、グラフいくつ、写真いるか」を推定し、confidence付与。
+
+14. **RequiredOutputsAmbiguityGate（曖昧性ゲート）**
+    confidenceが低い、または推定が複数割れる場合に **HITL（HTML）** を発行してユーザーに確定させる。
+
+---
+
+### E. Excel解析・バインディング（ここが品質の心臓部）
+
+15. **InspectExcel（Excel探索）**
+    シート一覧、列名候補、単位っぽい記述、サンプル行を抽出。
+
+16. **SelectExcelSheetPerExperiment（実験ごとのシート選択）**
+    どのシートを使うか決める。確信できなければHITL。
+
+17. **BindTableColumnsAndUnits（表の列対応＋単位確定）**
+    列名と単位を確定（表は「列名＋単位」必須）。単位不明はHITL。
+
+18. **BindTheorySubstitutionParams（理論式の代入パラメータ取得）**
+    理論値算出に必要なパラメータ（抵抗など）をExcelから抽出。無ければHITL。
+
+---
+
+### F. 図・写真・グラフ処理
+
+19. **BindInsertAssets（挿入対象の紐付け）**
+    実験ごとに「どの表・どのグラフ・どの観測写真を挿入するか」を決める。見当たらない/用途不明はHITL。
+
+20. **GenerateGraphs（グラフ生成）** ※任意（画像が足りない/Excelから生成する方針の場合）
+    Excelからグラフ画像を生成し、図として登録。
+
+21. **ResolveAxesAndUnits（軸ラベル＋単位の確定）**
+    グラフのx/yラベルと単位を確定（グラフは「軸ラベル＋単位」必須）。不明はHITL。
+
+---
+
+### G. 理論比較ON/OFF分岐（HITL含む）
+
+22. **DecideTheoryCompareToggle（理論比較 ON/OFF 決定）**
+    デフォルトON。ただしユーザーがOFFを選べる（HITLフォームで選択）。
+
+---
+
+### H. 定量計算（決定論で数値を確定）
+
+23. **ComputeTheoryValue（理論値算出）** ※理論比較ONのとき
+    理論式＋代入値から理論値を算出（単位付き）。
+
+24. **ComputeDeltaAndAbsError（Δと絶対誤差算出）** ※理論比較ONのとき
+
+    * Δ（理論値との差）
+    * 絶対誤差（単位付き）
+      を算出（不足があればHITL）。
+
+25. **ComputeSlopeAndExtreme（傾き＋最大/最小算出）** ※理論比較OFFのとき
+    OFF時の必須：
+
+    * 傾き（Δy/Δx）
+    * 最大値または最小値
+      を算出（軸や単位が不明ならHITL）。
+
+---
+
+### I. 文生成（ただし捏造禁止・数値は上で確定したものを埋め込む）
+
+26. **SummarizeMethodToOverview（実験の説明生成）**
+    実験方法章を要約し、実験の説明文を作る（根拠保持）。
+
+27. **GenerateResultDescription（実験結果の説明生成）**
+    図表参照を含む説明文を作り、**文末は必ず「示す」** で終止。
+
+28. **GenerateCaptions（キャプション生成）**
+    表キャプション・図/写真キャプションを生成。
+
+29. **GenerateQuantCommentText（定量コメント文章化）**
+    ここでは文章だけ生成。必ず上で計算済みの数値（単位付き）を織り込む。曖昧語禁止。
+
+---
+
+### J. 実験結果ページの組み立て
+
+30. **AssembleExperimentResultGroup（グループ組立）**
+    1グループ（番号/実験名/説明/結果説明/表/図/キャプション/定量コメント）を完成させる。
+
+31. **AssembleResultsPage（実験結果ページ組立）**
+    実験数分のグループを結合し、ページとして構造化。
+
+---
+
+### K. 考察・まとめ・参考文献（あなたの定義どおり）
+
+32. **BuildDiscussionPage（考察ページ作成）**
+    実験書の考察セクション抽出→命令形→能動態等へ変換→(1)連番整形。範囲不明ならHITL。
+
+33. **BuildSummaryPage（まとめページ作成）**
+    実験結果・実験書を使って総括文を生成（だ・である調、難語回避、AI頻出表現制御）。
+
+34. **BuildReferencesPage（参考文献ページ作成）**
+    テンプレで生成。
+
+---
+
+### L. 出力用中間成果物の生成
+
+35. **ComposeMarkdownDocument（Markdown構成）**
+    DOCXの元になるMarkdownを構造化して生成。
+
+36. **ComposeJSONArtifacts（JSON生成）**
+    参照、根拠、計算、バインディング、HITL履歴、品質レポートをJSON化。
+
+---
+
+### M. スタイル・規約の決定論変換（品質の最後の砦）
+
+37. **StyleTransform（文体・禁止表現制御）**
+
+    * だ・である調に統一
+    * 曖昧語除去/言い換え
+    * 「示す」終止保証
+    * AI頻出表現の禁止/回避/制御（Hard Banは残さない）
+
+38. **OMMLPlacementAndSanity（OMML配置・整合）**
+    数式・単位のOMML化結果が出力側へ正しく反映されるよう整合チェック。
+
+---
+
+### N. Validator（ゲート）と自動修復
+
+39. **ValidatePreformat（事前ゲート）**
+    DOCX生成前に、構造・参照・必須項目・計算結果・単位・軸ラベルの欠落を検出し、IssueCodeを発行。
+
+40. **AutoFixPreformat（事前自動修復）**
+    自動修復可能（文体統一、終止「示す」、参照表記揺れ等）を適用。
+
+41. **ValidateFinal（最終ゲート）**
+    DOCX生成後に、参照切れ、OMML欠落、禁止語残存などを検出。
+
+42. **AutoFixFinal（最終自動修復）**
+    修正→再レンダリングが必要な事項を適用（必要なら再レンダへ戻す）。
+
+---
+
+### O. HITL（HTMLフォーム）一式（共通）
+
+43. **CreateHITLRequest（HITL要求生成）**
+    IssueCodeに応じたHTMLフォーム定義（選択肢・入力欄・検証）を生成。
+
+44. **WaitForHITLResponse（ユーザー回答待ち）**
+    UI待機状態。
+
+45. **ApplyHITLResponse（回答適用）**
+    ユーザー回答を中間JSONへ反映し、再実行ポイント（rewind_target）を確定。
+
+46. **ResumeFromRewindTarget（差分再実行制御）**
+    rewind_target以降だけを再実行する（全体やり直し禁止）。
+
+---
+
+### P. レンダリング・出力
+
+47. **RenderDOCX（DOCXレンダリング）**
+    Markdown＋構造情報＋OMMLを使ってDOCX生成。
+
+48. **EmitOutputs（成果物出力）**
+    DOCX、Markdown、JSON、QualityReportを出力し完了。
+
+---
+
+## 2) エッジ一覧（どのノードとどのノードを繋ぐか／条件付き）
+
+ここでは「矢印＝エッジ」として記述します。条件がある場合は【条件】で明記します。
+
+### 2.1 直線メインフロー（基本）
+
+* START → Ingest
+
+* Ingest → NormalizeInputs
+
+* NormalizeInputs → ClassifyAssets
+
+* NormalizeInputs → ExtractManualText
+
+* ExtractManualText → ParseManualStructure
+
+* ParseManualStructure → ExtractMethodNumbers
+
+* ExtractMethodNumbers → MapResultNumbers
+
+* ParseManualStructure → LocateDiscussionSection
+
+* ParseManualStructure → ExtractTheoryCandidates
+
+* ExtractTheoryCandidates → NormalizeAndOMMLifyFormula
+
+* NormalizeInputs → InspectExcel
+
+* InspectExcel → InferRequiredOutputs
+
+* 【過去レポートあり】NormalizeInputs → ExtractPastReportStructureHints → InferRequiredOutputs（ヒントを合流）
+
+* InferRequiredOutputs → RequiredOutputsAmbiguityGate
+
+* RequiredOutputsAmbiguityGate → SelectExcelSheetPerExperiment
+
+* SelectExcelSheetPerExperiment → BindTableColumnsAndUnits
+
+* BindTableColumnsAndUnits → BindInsertAssets
+
+* BindInsertAssets → ResolveAxesAndUnits
+
+* NormalizeAndOMMLifyFormula → DecideTheoryCompareToggle
+
+* DecideTheoryCompareToggle → ComputeTheoryValue 【ON】
+
+* ComputeTheoryValue → BindTheorySubstitutionParams
+
+* BindTheorySubstitutionParams → ComputeDeltaAndAbsError
+
+* DecideTheoryCompareToggle → ComputeSlopeAndExtreme 【OFF】
+
+* ResolveAxesAndUnits → ComputeSlopeAndExtreme 【OFF時に必要】
+
+* （計算結果確定後）→ GenerateQuantCommentText
+
+* ExtractManualText/ParseManualStructure → SummarizeMethodToOverview
+
+* （図表確定後）→ GenerateCaptions
+
+* （図表番号確定後）→ GenerateResultDescription
+
+* SummarizeMethodToOverview → AssembleExperimentResultGroup
+
+* GenerateResultDescription → AssembleExperimentResultGroup
+
+* GenerateCaptions → AssembleExperimentResultGroup
+
+* GenerateQuantCommentText → AssembleExperimentResultGroup
+
+* AssembleExperimentResultGroup（各実験分ループ）→ AssembleResultsPage
+
+* LocateDiscussionSection → BuildDiscussionPage
+
+* AssembleResultsPage → BuildSummaryPage
+
+* BuildReferencesPage（テンプレ）→ ComposeMarkdownDocument
+
+* AssembleResultsPage → ComposeMarkdownDocument
+
+* BuildDiscussionPage → ComposeMarkdownDocument
+
+* BuildSummaryPage → ComposeMarkdownDocument
+
+* ComposeMarkdownDocument → StyleTransform
+
+* StyleTransform → OMMLPlacementAndSanity
+
+* OMMLPlacementAndSanity → ValidatePreformat
+
+* ValidatePreformat → AutoFixPreformat
+
+* AutoFixPreformat → ValidatePreformat（再検査）
+
+* 【Preformat合格】ValidatePreformat → RenderDOCX
+
+* RenderDOCX → ValidateFinal
+
+* ValidateFinal → AutoFixFinal
+
+* AutoFixFinal → RenderDOCX（再レンダリングが必要な場合）
+
+* 【Final合格】ValidateFinal → EmitOutputs
+
+---
+
+### 2.2 HITL分岐（共通パターン）
+
+HITLが必要になったら、以下の共通経路に入ります。
+
+* （任意のノード）→ CreateHITLRequest 【IssueCodeがHITLのとき】
+* CreateHITLRequest → WaitForHITLResponse
+* WaitForHITLResponse → ApplyHITLResponse
+* ApplyHITLResponse → ResumeFromRewindTarget
+* ResumeFromRewindTarget →（rewind_targetで指定されたノードへ復帰）
+
+---
+
+### 2.3 HITLが発生する代表エッジ（あなたの仕様に対応）
+
+* LocateDiscussionSection → CreateHITLRequest 【考察セクション不明】
+  復帰先：LocateDiscussionSection または BuildDiscussionPage
+
+* ExtractMethodNumbers → CreateHITLRequest 【方法番号抽出不能】
+  復帰先：ExtractMethodNumbers
+
+* RequiredOutputsAmbiguityGate → CreateHITLRequest 【表/グラフ/写真の必要数が曖昧】
+  復帰先：InferRequiredOutputs（または RequiredOutputsAmbiguityGate）
+
+* SelectExcelSheetPerExperiment → CreateHITLRequest 【Excelシート不明】
+  復帰先：SelectExcelSheetPerExperiment
+
+* BindTableColumnsAndUnits → CreateHITLRequest 【単位不明／列対応不明】
+  復帰先：BindTableColumnsAndUnits
+
+* BindInsertAssets → CreateHITLRequest 【挿入対象不明／不足／用途不明】
+  復帰先：BindInsertAssets
+
+* NormalizeAndOMMLifyFormula → CreateHITLRequest 【理論式抽出不能／OMML化不能】
+  復帰先：ExtractTheoryCandidates または NormalizeAndOMMLifyFormula
+
+* BindTheorySubstitutionParams → CreateHITLRequest 【代入パラメータがExcelから取れない】
+  復帰先：BindTheorySubstitutionParams
+
+* DecideTheoryCompareToggle → CreateHITLRequest 【理論比較ON/OFF選択】
+  復帰先：DecideTheoryCompareToggle
+
+* ResolveAxesAndUnits → CreateHITLRequest 【OFF時に軸ラベル不明】
+  復帰先：ResolveAxesAndUnits（またはComputeSlopeAndExtreme）
+
+---
+
+## 3) 最終的な「全体像」の読み方（重要）
+
+* **Preformat Gate（ValidatePreformat）までは“内容が成立しているか”の検査**
+* **Final Gate（ValidateFinal）は“DOCXとして壊れていないか”の検査**
+* 迷う・不明は例外なく **HITL（HTMLフォーム）** へ逃がし、推測で完走しない
+* 理論比較OFF時は品質が揺れやすいので、**傾き＋最大/最小** を必須にして安定化
+
+---
+
+必要なら、上のノード名をあなたのリポジトリの命名規則（graph/nodes/…の粒度）に合わせて「統合しやすい単位」に再編します。現在のノード一覧、または `graph/` 配下のファイル一覧を貼れば、**この設計をあなたの現行構成にマッピング**して提示できます。

@@ -1,0 +1,213 @@
+{
+  "job_meta": {
+    "job_id": "job",
+    "run_id": "55ae0e9d75954b43b183c108af357bc7",
+    "created_at": "2026-01-28T04:18:44.729973+00:00",
+    "updated_at": "2026-01-31T06:24:49.261912+00:00",
+    "retry_budgets": {
+      "image_analyze": 2,
+      "table_analyze": 1,
+      "table_parse": 1,
+      "discussion": 1,
+      "render": 1
+    },
+    "next_upload_index": 4,
+    "text_model": "dummy",
+    "vision_model": "dummy",
+    "template_path": "",
+    "run_mode": "update_mvp"
+  },
+  "input_assets": [
+    {
+      "asset_id": "pdf:manual",
+      "kind": "pdf",
+      "source_id": "manual",
+      "filename": "manual.pdf",
+      "storage_key": "jobs/job/source/manual.pdf",
+      "upload_index": 0
+    },
+    {
+      "asset_id": "excel:ac",
+      "kind": "excel",
+      "source_id": "ac",
+      "filename": "OPアンプ AC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_ac.xlsx",
+      "upload_index": 1
+    },
+    {
+      "asset_id": "excel:dc",
+      "kind": "excel",
+      "source_id": "dc",
+      "filename": "OPアンプ DC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_dc.xlsx",
+      "upload_index": 2
+    },
+    {
+      "asset_id": "past_report:legacy",
+      "kind": "past_report",
+      "source_id": "legacy",
+      "filename": "4234090_谷口天眞_OPアンプ.docx",
+      "storage_key": "jobs/job/source/report.docx",
+      "upload_index": 3
+    }
+  ],
+  "excel": {
+    "asset_id": "",
+    "filename": "",
+    "storage_key": "",
+    "sheet_names": []
+  },
+  "excel_files": [
+    {
+      "excel_id": "ac",
+      "asset_id": "excel:ac",
+      "filename": "OPアンプ AC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_ac.xlsx",
+      "upload_index": 1,
+      "sheet_names": [
+        "周東いる班(積分回路)",
+        "周東いる班(反転増幅回路の交流)",
+        "周東いる班(加算・減算回路の交流)",
+        "いない班(積分回路)",
+        "いない班(反転増幅回路の交流)",
+        "　いない班(加算・減算回路の交流) ",
+        "コピー元"
+      ]
+    },
+    {
+      "excel_id": "dc",
+      "asset_id": "excel:dc",
+      "filename": "OPアンプ DC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_dc.xlsx",
+      "upload_index": 2,
+      "sheet_names": [
+        "周東いる班(反転増幅回路)",
+        "周東いる班(非反転増幅回路)",
+        "周東いる班(ボルテージフォロワ) ",
+        "周東いる班(ボルテージフォロワ100kΩ)",
+        "周東いる班(加算回路)",
+        "周東いる班(減算回路)",
+        "いない班(反転増幅回路)",
+        "いない班(非反転増幅回路)",
+        "いない班(ボルテージフォロワ)",
+        "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "いない班(加算回路)",
+        "　いない班(減算回路) ",
+        "Sheet1",
+        "コピー元"
+      ]
+    }
+  ],
+  "past_report": {
+    "report_id": "legacy",
+    "asset_id": "past_report:legacy",
+    "filename": "4234090_谷口天眞_OPアンプ.docx",
+    "storage_key": "jobs/job/source/report.docx",
+    "extracted_hint": "",
+    "headings": [],
+    "result_section_headings": [],
+    "hints": [],
+    "report_summary": {
+      "structure": [],
+      "data_points": [],
+      "visual_evidence": [],
+      "logic_audit": {
+        "theoretical_consistency": null,
+        "causal_factors": [],
+        "blind_spots": [],
+        "opportunity_cost": ""
+      }
+    },
+    "hints_ready": false,
+    "hints_error": "",
+    "upload_index": 3
+  },
+  "past_reports": [
+    {
+      "report_id": "legacy",
+      "asset_id": "past_report:legacy",
+      "filename": "4234090_谷口天眞_OPアンプ.docx",
+      "storage_key": "jobs/job/source/report.docx",
+      "extracted_hint": "",
+      "headings": [],
+      "result_section_headings": [],
+      "hints": [],
+      "report_summary": {
+        "structure": [],
+        "data_points": [],
+        "visual_evidence": [],
+        "logic_audit": {
+          "theoretical_consistency": null,
+          "causal_factors": [],
+          "blind_spots": [],
+          "opportunity_cost": ""
+        }
+      },
+      "hints_ready": false,
+      "hints_error": "",
+      "upload_index": 3
+    }
+  ],
+  "b_layer_bundle": {
+    "method": {
+      "chapter": 4,
+      "items": [
+        {
+          "exp_key": "4.2.1",
+          "title": "反転増幅回路",
+          "level": 3,
+          "text": "製作した回路を用いて図2 の反転増幅回路を構成する。\n\n(1-1) 出力Eoを開放した無負荷状態において，入力電圧と出力電圧の関係を測定し，グラフを作成\nせよ。ただし，入力電圧は－5～＋5 V の範囲とし，グラフが直線的となる領域は1 V 刻み，曲\nがる領域では0.2 V 刻みなど，測定点が多くなりすぎないように工夫する。\n\n(1-2) OP アンプの反転入力端子電圧を測定結果から計算し，理論と比較せよ。ただしここでは，反\n転入力端子からOP アンプに流入する電流は零と考えてよい。\n(1-3) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値と比較せよ。ただし，明らかに直線近似で\nきない測定点は除外した上で近似すること。\n\n(1-4) 近似直線の傾きa とy 切片b がもつ理論値との差異について，その要因を考察せよ。同時に，\nこの差異を小さくする手法についても，それぞれ考察せよ。\n\n(2-1) 以下の3 つの負荷状態においても，無負荷状態と同様に，入力電圧と出力電圧の関係をそれぞ\nれ測定せよ。\n・ 出力EoにRL1を接続した3 kW負荷状態\n・ 出力Eoに RL2を接続した1 kW負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(2-2) 無負荷状態の入出力特性と各負荷状態の入出力特性を比較せよ。",
+          "parent_exp_key": "4.2",
+          "child_exp_keys": []
+        }
+      ],
+      "experiment_units": []
+    },
+    "theory_formulas": [
+      {
+        "formula": "E_o = G (E_{i+} - E_{i-})",
+        "context": "OP アンプの開放ループ利得の定義を示す式。差動入力信号を開放ループで増幅した結果として出力が決まることを表す。",
+        "experiments": [
+          "4.2.1 反転増幅回路",
+          "4.2.2 非反転増幅回路",
+          "4.2.3 ボルテージフォロワ",
+          "4.2.4 加算回路",
+          "4.2.5 減算回路",
+          "4.3.1 積分回路",
+          "4.3.2 反転増幅回路の交流特性",
+          "4.3.3 加算回路の交流特性",
+          "4.3.4 減算回路の交流特性"
+        ]
+      },
+      {
+        "formula": "E_o = - \\frac{R_f}{R_{b1}} E_{b1}",
+        "context": "反転増幅回路における出力が入力信号に対して反転して増幅される関係を示す基本式。",
+        "experiments": [
+          "4.2.1 反転増幅回路",
+          "4.3.2 反転増幅回路の交流特性"
+        ]
+      }
+    ]
+  },
+  "report": {
+    "hints": []
+  },
+  "exp_key": "4.2.1",
+  "experiment": {
+    "exp_key": "4.2.1",
+    "title": "反転増幅回路",
+    "method_text": "製作した回路を用いて図2 の反転増幅回路を構成する。\n\n(1-1) 出力Eoを開放した無負荷状態において，入力電圧と出力電圧の関係を測定し，グラフを作成\nせよ。ただし，入力電圧は－5～＋5 V の範囲とし，グラフが直線的となる領域は1 V 刻み，曲\nがる領域では0.2 V 刻みなど，測定点が多くなりすぎないように工夫する。\n\n(1-2) OP アンプの反転入力端子電圧を測定結果から計算し，理論と比較せよ。ただしここでは，反\n転入力端子からOP アンプに流入する電流は零と考えてよい。\n(1-3) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値と比較せよ。ただし，明らかに直線近似で\nきない測定点は除外した上で近似すること。\n\n(1-4) 近似直線の傾きa とy 切片b がもつ理論値との差異について，その要因を考察せよ。同時に，\nこの差異を小さくする手法についても，それぞれ考察せよ。\n\n(2-1) 以下の3 つの負荷状態においても，無負荷状態と同様に，入力電圧と出力電圧の関係をそれぞ\nれ測定せよ。\n・ 出力EoにRL1を接続した3 kW負荷状態\n・ 出力Eoに RL2を接続した1 kW負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(2-2) 無負荷状態の入出力特性と各負荷状態の入出力特性を比較せよ。",
+    "parent": null
+  },
+  "past_report_experiments": [],
+  "excel_sheets": [],
+  "experiment_unit": {
+    "exp_key": "4.2.1",
+    "title": "反転増幅回路",
+    "level": 3,
+    "text": "製作した回路を用いて図2 の反転増幅回路を構成する。\n\n(1-1) 出力Eoを開放した無負荷状態において，入力電圧と出力電圧の関係を測定し，グラフを作成\nせよ。ただし，入力電圧は－5～＋5 V の範囲とし，グラフが直線的となる領域は1 V 刻み，曲\nがる領域では0.2 V 刻みなど，測定点が多くなりすぎないように工夫する。\n\n(1-2) OP アンプの反転入力端子電圧を測定結果から計算し，理論と比較せよ。ただしここでは，反\n転入力端子からOP アンプに流入する電流は零と考えてよい。\n(1-3) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値と比較せよ。ただし，明らかに直線近似で\nきない測定点は除外した上で近似すること。\n\n(1-4) 近似直線の傾きa とy 切片b がもつ理論値との差異について，その要因を考察せよ。同時に，\nこの差異を小さくする手法についても，それぞれ考察せよ。\n\n(2-1) 以下の3 つの負荷状態においても，無負荷状態と同様に，入力電圧と出力電圧の関係をそれぞ\nれ測定せよ。\n・ 出力EoにRL1を接続した3 kW負荷状態\n・ 出力Eoに RL2を接続した1 kW負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(2-2) 無負荷状態の入出力特性と各負荷状態の入出力特性を比較せよ。",
+    "parent_exp_key": "4.2",
+    "child_exp_keys": []
+  },
+  "past_report_heading": []
+}

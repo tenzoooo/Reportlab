@@ -1,0 +1,53 @@
+{
+  "exp_key": "4.2.1",
+  "table_captions": [
+    {
+      "asset_id": "tbl_4.2.1_1",
+      "caption": "Input Voltage vs Output Voltage for an inverting amplifier with nominal gain ≈ -2.0; small offsets evident in inverting input voltage.",
+      "error": ""
+    }
+  ],
+  "graph_captions": [
+    {
+      "asset_id": "fig_4.2.1_1",
+      "caption": "",
+      "error": "Image analysis belongs_to is empty"
+    },
+    {
+      "asset_id": "fig_4.2.1_2",
+      "caption": "直線的な電圧特性",
+      "error": ""
+    },
+    {
+      "asset_id": "fig_4.2.1_3",
+      "caption": "直線的関係のグラフ",
+      "error": ""
+    }
+  ],
+  "quant_comment": [
+    {
+      "asset_id": "tbl_4.2.1_1",
+      "quant_comment": "Quantitative summary: The data indicate a linear relationship y ≈ -2x. Simple linear regression on the valid data points (x from -5 to 5) gives slope close to -1.99 to -2.00 with a near-zero intercept within a few tens of millivolts (the value at x=0 is 0.006 V). Residuals relative to y = -2x range from -0.034 V to +0.044 V, averaging near +0.005 V, indicating a small systematic offset. The inverting input voltage (Calculated) ranges approximately from -0.0113 V to +0.0147 V, consistent with a small input offset and finite bias error. The Theoretical Value is 0 V for all rows, suggesting the ideal reference is zero, while the measured outputs show minor offset and drift. Overall, the data support an approximately ideal -2 gain with minor offset and input bias effects.",
+      "error": "",
+      "kind": "table"
+    },
+    {
+      "asset_id": "fig_4.2.1_1",
+      "quant_comment": "",
+      "error": "Image analysis belongs_to is empty",
+      "kind": "graph"
+    },
+    {
+      "asset_id": "fig_4.2.1_2",
+      "quant_comment": "傾き約-1.8、原点付近で0。測定誤差は±0.5程度。",
+      "error": "",
+      "kind": "graph"
+    },
+    {
+      "asset_id": "fig_4.2.1_3",
+      "quant_comment": "傾き約-2.0、切片約1.0、直線性高い（R^2推定0.9程度）",
+      "error": "",
+      "kind": "graph"
+    }
+  ]
+}

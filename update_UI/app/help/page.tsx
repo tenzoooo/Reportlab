@@ -5,18 +5,17 @@ import { motion } from "framer-motion"
 import {
   BookOpen,
   FileQuestion,
-  MessageCircle,
   Mail,
   ChevronDown,
   ChevronUp,
   PlayCircle,
   Download,
   Search,
-  ArrowLeft,
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import StandalonePageShell from "@/components/standalone-page-shell"
 
 const faqs = [
   {
@@ -138,33 +137,28 @@ export default function HelpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-6">
-          <Button asChild variant="outline" className="gap-2 bg-transparent">
-            <Link href="/dashboard/reports">
-              <ArrowLeft className="h-4 w-4" />
-              レポート一覧に戻る
-            </Link>
-          </Button>
-        </motion.div>
-
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">ヘルプセンター</h1>
-          <p className="text-lg text-gray-600">Reportlabの使い方やよくある質問をご確認いただけます</p>
-        </motion.div>
+    <StandalonePageShell
+      title="ヘルプセンター"
+      subtitle="Reportlabの使い方やよくある質問をご確認いただけます"
+      backHref="/dashboard/reports"
+      backLabel="レポート一覧に戻る"
+      badge="Support"
+    >
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-3">
+        <p className="text-sm uppercase tracking-[0.35em] text-slate-400 font-semibold">Help & Guides</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-white">困りごとをすぐ解決</h2>
+      </motion.div>
 
         {/* Search Bar */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
           <div className="max-w-2xl mx-auto relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-500" />
             <Input
               type="text"
               placeholder="質問を検索..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-6 text-lg border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full pl-12 pr-4 py-6 text-lg border border-white/10 rounded-2xl bg-slate-950/60 text-white placeholder:text-slate-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
             />
           </div>
         </motion.div>
@@ -178,10 +172,10 @@ export default function HelpPage() {
         >
           <motion.div variants={itemVariants}>
             <Link href="/help/email">
-              <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-primary hover:shadow-lg transition-all duration-300 cursor-pointer group">
-                <Mail className="h-10 w-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">メールサポート</h3>
-                <p className="text-gray-600">24時間以内に返信いたします</p>
+              <div className="bg-white/5 p-6 rounded-2xl border border-white/10 hover:border-white/20 hover:shadow-[0_25px_60px_-25px_rgba(59,130,246,0.5)] transition-all duration-300 cursor-pointer group">
+                <Mail className="h-10 w-10 text-blue-400 mb-4 group-hover:scale-110 transition-transform" />
+                <h3 className="text-xl font-bold text-white mb-2">メールサポート</h3>
+                <p className="text-slate-400 text-sm">24時間以内に返信いたします</p>
               </div>
             </Link>
           </motion.div>
@@ -190,10 +184,10 @@ export default function HelpPage() {
 
           <motion.div variants={itemVariants}>
             <Link href="/help/faq">
-              <div className="bg-white p-6 rounded-xl border-2 border-gray-200 hover:border-primary hover:shadow-lg transition-all duration-300 cursor-pointer group">
-                <FileQuestion className="h-10 w-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">FAQ</h3>
-                <p className="text-gray-600">よくある質問を確認</p>
+              <div className="bg-white/5 p-6 rounded-2xl border border-white/10 hover:border-white/20 hover:shadow-[0_25px_60px_-25px_rgba(59,130,246,0.5)] transition-all duration-300 cursor-pointer group">
+                <FileQuestion className="h-10 w-10 text-blue-400 mb-4 group-hover:scale-110 transition-transform" />
+                <h3 className="text-xl font-bold text-white mb-2">FAQ</h3>
+                <p className="text-slate-400 text-sm">よくある質問を確認</p>
               </div>
             </Link>
           </motion.div>
@@ -203,28 +197,28 @@ export default function HelpPage() {
 
         {/* FAQ Section */}
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">よくある質問</h2>
+          <h2 className="text-3xl font-bold text-white mb-6">よくある質問</h2>
           <div className="space-y-8">
             {filteredFAQs.map((category, categoryIndex) => (
               <motion.div key={categoryIndex} variants={itemVariants}>
                 {category.questions.length > 0 && (
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">{category.category}</h3>
+                    <h3 className="text-xl font-bold text-white mb-4">{category.category}</h3>
                     <div className="space-y-3">
                       {category.questions.map((faq, faqIndex) => {
                         const faqId = `${categoryIndex}-${faqIndex}`
                         const isExpanded = expandedFAQ === faqId
                         return (
-                          <div key={faqIndex} className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
+                          <div key={faqIndex} className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
                             <button
                               onClick={() => toggleFAQ(faqId)}
-                              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                              className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors"
                             >
-                              <span className="text-left font-semibold text-gray-900">{faq.q}</span>
+                              <span className="text-left font-semibold text-white">{faq.q}</span>
                               {isExpanded ? (
-                                <ChevronUp className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                                <ChevronUp className="h-5 w-5 text-slate-400 flex-shrink-0" />
                               ) : (
-                                <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                                <ChevronDown className="h-5 w-5 text-slate-400 flex-shrink-0" />
                               )}
                             </button>
                             {isExpanded && (
@@ -233,7 +227,7 @@ export default function HelpPage() {
                                 animate={{ height: "auto", opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
                                 transition={{ duration: 0.3 }}
-                                className="px-6 pb-4 text-gray-600"
+                                className="px-6 pb-4 text-slate-300 text-sm leading-relaxed"
                               >
                                 {faq.a}
                               </motion.div>
@@ -254,17 +248,16 @@ export default function HelpPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-white border-2 border-primary p-8 rounded-xl text-center shadow-lg"
+          className="bg-white/5 border border-white/10 p-8 rounded-3xl text-center shadow-[0_25px_80px_-40px_rgba(59,130,246,0.6)]"
         >
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">解決できない問題がありますか?</h2>
-          <p className="text-lg text-gray-600 mb-6">
+          <h2 className="text-2xl font-bold text-white mb-4">解決できない問題がありますか?</h2>
+          <p className="text-sm text-slate-300 mb-6">
             サポートチームが迅速に対応いたします。お気軽にお問い合わせください。
           </p>
-          <Button asChild size="lg" className="bg-primary text-white hover:bg-primary/90 font-semibold">
+          <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-500 font-semibold">
             <Link href="/help/email">サポートに問い合わせる</Link>
           </Button>
         </motion.div>
-      </div>
-    </div>
+    </StandalonePageShell>
   )
 }

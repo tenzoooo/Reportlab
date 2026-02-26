@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import StandalonePageShell from "@/components/standalone-page-shell"
 
 export const metadata: Metadata = {
     title: "利用規約 | Reportlab",
@@ -7,11 +8,13 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
     return (
-        <div className="min-h-screen bg-background py-20">
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 className="text-3xl font-bold text-foreground mb-8 text-center">利用規約</h1>
-
-                <div className="prose prose-gray dark:prose-invert max-w-none">
+        <StandalonePageShell
+            title="利用規約"
+            subtitle="Reportlabの利用条件と責任範囲について"
+            badge="Legal"
+        >
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 sm:p-10 shadow-[0_30px_90px_-60px_rgba(59,130,246,0.6)]">
+                <div className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-white">
                     <p>
                         この利用規約（以下，「本規約」といいます。）は，Reportlab（以下，「当社」といいます。）がこのウェブサイト上で提供するサービス（以下，「本サービス」といいます。）の利用条件を定めるものです。登録ユーザーの皆さま（以下，「ユーザー」といいます。）には，本規約に従って，本サービスをご利用いただきます。
                     </p>
@@ -149,6 +152,6 @@ export default function TermsPage() {
                     <p className="text-right mt-8">以上</p>
                 </div>
             </div>
-        </div>
+        </StandalonePageShell>
     )
 }

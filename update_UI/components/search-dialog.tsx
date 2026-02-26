@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 interface SearchResult {
   id: string
@@ -50,7 +51,7 @@ export function SearchDialog() {
   return (
     <>
       <Button variant="ghost" size="icon" className="hidden sm:flex" onClick={() => setIsOpen(true)}>
-        <Search className="h-5 w-5 text-gray-600" />
+        <Search className="h-5 w-5 text-muted-foreground" />
       </Button>
 
       <AnimatePresence>
@@ -61,7 +62,7 @@ export function SearchDialog() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-50"
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
               onClick={handleClose}
             />
 
@@ -73,10 +74,10 @@ export function SearchDialog() {
               transition={{ duration: 0.2 }}
               className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4"
             >
-              <div className="bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-200">
+              <div className="bg-card rounded-xl shadow-2xl overflow-hidden border border-border">
                 {/* Search Input */}
-                <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-200">
-                  <Search className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                <div className="flex items-center gap-3 px-4 py-4 border-b border-border">
+                  <Search className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   <Input
                     id="global-search"
                     name="q"
@@ -86,53 +87,54 @@ export function SearchDialog() {
                     placeholder="レポートを検索..."
                     value={searchQuery}
                     onChange={(e) => handleSearch(e.target.value)}
-                    className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-base"
+                    className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-base bg-transparent"
                     autoComplete="off"
                     autoFocus
                   />
                   <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={handleClose}>
-                    <X className="h-5 w-5 text-gray-500" />
+                    <X className="h-5 w-5 text-muted-foreground" />
                   </Button>
                 </div>
 
                 {/* Search Results */}
                 <div className="max-h-96 overflow-y-auto">
                   {searchQuery === "" ? (
-                    <div className="p-8 text-center text-gray-500">
-                      <Search className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <div className="p-8 text-center text-muted-foreground">
+                      <Search className="h-12 w-12 mx-auto mb-3 opacity-20" />
                       <p className="text-sm">レポートを検索してください</p>
                     </div>
                   ) : results.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">
-                      <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <div className="p-8 text-center text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
                       <p className="text-sm">該当するレポートが見つかりませんでした</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-gray-100">
+                    <div className="divide-y divide-border">
                       {results.map((result) => (
                         <Link
                           key={result.id}
                           href={`/dashboard/reports`}
                           onClick={handleClose}
-                          className="block px-4 py-3 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-3 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex items-start gap-3">
-                            <FileText className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <FileText className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-medium text-gray-900 truncate">{result.title}</h4>
+                              <h4 className="text-sm font-medium text-foreground truncate">{result.title}</h4>
                               <div className="flex items-center gap-3 mt-1">
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <Clock className="h-3 w-3" />
                                   <span>{result.date}</span>
                                 </div>
                                 <span
-                                  className={`text-xs px-2 py-0.5 rounded ${
+                                  className={cn(
+                                    "text-xs px-2 py-0.5 rounded",
                                     result.status === "完了"
-                                      ? "bg-green-100 text-green-700"
+                                      ? "bg-green-500/10 text-green-500"
                                       : result.status === "処理中"
-                                        ? "bg-blue-100 text-blue-700"
-                                        : "bg-gray-100 text-gray-700"
-                                  }`}
+                                        ? "bg-primary/10 text-primary"
+                                        : "bg-muted text-muted-foreground"
+                                  )}
                                 >
                                   {result.status}
                                 </span>
@@ -147,11 +149,11 @@ export function SearchDialog() {
 
                 {/* Footer */}
                 {results.length > 0 && (
-                  <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                  <div className="px-4 py-3 bg-muted/30 border-t border-border">
                     <Link
                       href="/dashboard/reports"
                       onClick={handleClose}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-sm text-primary hover:text-primary/80 font-medium"
                     >
                       すべてのレポートを見る →
                     </Link>

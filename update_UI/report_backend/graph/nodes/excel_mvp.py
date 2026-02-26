@@ -14,9 +14,18 @@ from core.excel import (
     table_to_markdown,
     validate_a1_range,
 )
+from core.past_report import name_similarity
 from core.storage import Storage
 from core.observations import build_xy_observations
-from graph.state import AgentState, JobStatus, ValidationIssue, now_iso
+from graph.state import (
+    AgentState,
+    ExcelFile,
+    JobStatus,
+    MVPResultDebuginfo,
+    PastReportData,
+    ValidationIssue,
+    now_iso,
+)
 from llm.client import LLMClient
 from models.contracts import (
     BelongsToCandidate,
@@ -27,6 +36,50 @@ from models.contracts import (
     TableBlock,
     TableContent,
 )
+
+MAX_MVP_CHARTS_PER_EXCEL = 12
+MAX_MVP_CANDIDATES_PER_EXCEL = 16
+# Require HITL confirmation when past-report name match confidence is low.
+PAST_REPORT_MATCH_MIN = 0.25
+
+
+def _iter_past_reports(state: AgentState) -> list[PastReportData]:
+    if state.past_reports:
+        return list(state.past_reports)
+    if state.past_report.storage_key:
+        return [state.past_report]
+    return []
+
+
+def _match_past_report_hint(
+    *,
+    exp_name: str,
+    past_reports: list[PastReportData],
+) -> tuple[dict[str, Any] | None, float]:
+    best_score = 0.0
+    best_payload: dict[str, Any] | None = None
+    for report in past_reports:
+        if not report.hints_ready or not report.hints:
+            continue
+        for hint in report.hints:
+            hint_name = ""
+            if isinstance(hint, dict):
+                hint_name = str(hint.get("name") or "")
+            else:
+                hint_name = str(getattr(hint, "name", "") or "")
+            score = name_similarity(exp_name, hint_name)
+            if score <= best_score:
+                continue
+            try:
+                payload = hint.model_dump()
+            except Exception:
+                payload = dict(hint) if isinstance(hint, dict) else {}
+            payload["match_score"] = score
+            payload["source_report_id"] = report.report_id
+            payload["source_report_filename"] = report.filename
+            best_score = score
+            best_payload = payload
+    return best_payload, best_score
 
 
 def _parse_float(value: str) -> float | None:
@@ -44,6 +97,11 @@ _SETPOINT_LIST_RE = re.compile(
     r"(?P<var>[A-Za-z][A-Za-z0-9_]*)\s*(?:=|を)\s*(?P<vals>[0-9][0-9\s,\.／/、]+?)\s*(?P<unit>μA|uA|mA|A|V|Hz|kHz|Ω|ohm|Ohm)",
     re.IGNORECASE,
 )
+_PREFERRED_FIRST_EXPERIMENT_RE = re.compile(r"^4\.1(?:\.|$)")
+
+
+def _normalize_exp_key(value: str) -> str:
+    return (value or "").strip().replace("．", ".").replace("。", ".")
 
 
 def _extract_driver_setpoints(method_summary: str) -> dict[str, object]:
@@ -216,7 +274,14 @@ def _nearest_point(points: list[tuple[float, float]], x0: float) -> tuple[float,
     return min(points, key=lambda p: abs(p[0] - x0))
 
 
-def _render_plot_png(*, x: list[float], series: list[tuple[str, list[float]]], title: str = "") -> bytes:
+def _render_plot_png(
+    *,
+    x: list[float],
+    series: list[tuple[str, list[float]]],
+    title: str = "",
+    x_label: str = "",
+    y_label: str = "",
+) -> bytes:
     """
     Render a simple plot without NumPy/matplotlib (for portability).
     """
@@ -229,7 +294,7 @@ def _render_plot_png(*, x: list[float], series: list[tuple[str, list[float]]], t
     plot_w = max(1, width - margin_l - margin_r)
     plot_h = max(1, height - margin_t - margin_b)
 
-    img = Image.new("RGB", (width, height), "white")
+    img = Image.new("RGB", (width, height), (255, 255, 255))
     draw = ImageDraw.Draw(img)
     font = None
     font_bold = None
@@ -303,17 +368,16 @@ def _render_plot_png(*, x: list[float], series: list[tuple[str, list[float]]], t
         py = margin_t + int((max_y - yy) / (max_y - min_y) * plot_h)
         return px, py
 
-    # Axes
+    # Axes (no frame)
     axis_color = (30, 30, 30)
     grid_color = (220, 220, 220)
-    draw.rectangle([margin_l, margin_t, margin_l + plot_w, margin_t + plot_h], outline=axis_color, width=2)
 
-    # Grid (5x5)
-    for i in range(1, 5):
-        xg = margin_l + int(plot_w * i / 5)
-        yg = margin_t + int(plot_h * i / 5)
-        draw.line([(xg, margin_t), (xg, margin_t + plot_h)], fill=grid_color, width=1)
-        draw.line([(margin_l, yg), (margin_l + plot_w, yg)], fill=grid_color, width=1)
+    x_axis_y = margin_t + plot_h
+    y_axis_x = margin_l
+    draw.line([(margin_l, x_axis_y), (margin_l + plot_w, x_axis_y)], fill=axis_color, width=2)
+    draw.line([(y_axis_x, margin_t), (y_axis_x, margin_t + plot_h)], fill=axis_color, width=2)
+
+    # No background grid lines
 
     palette = [
         (31, 119, 180),
@@ -324,7 +388,7 @@ def _render_plot_png(*, x: list[float], series: list[tuple[str, list[float]]], t
         (140, 86, 75),
     ]
 
-    # Series lines
+    # Scatter points
     for idx, (name, ys) in enumerate(series[:6]):
         color = palette[idx % len(palette)]
         last = None
@@ -333,18 +397,51 @@ def _render_plot_png(*, x: list[float], series: list[tuple[str, list[float]]], t
                 last = None
                 continue
             pt = to_px(xx, yy)
-            if last is not None:
-                draw.line([last, pt], fill=color, width=3)
             r = 3
             draw.ellipse([pt[0] - r, pt[1] - r, pt[0] + r, pt[1] + r], fill=color, outline=color)
             last = pt
 
-    # Title
-    if title:
-        text = str(title)[:60]
-        tw = draw.textlength(text, font=font_bold) if hasattr(draw, "textlength") else None
-        tx = int((width - (tw or 0)) / 2) if tw else margin_l
-        draw.text((tx, 18), text, fill=axis_color, font=font_bold)
+    # Title removed by request
+
+    # Axis labels
+    if x_label:
+        text = str(x_label)[:60]
+        tw = draw.textlength(text, font=font) if hasattr(draw, "textlength") else None
+        tx = int(margin_l + (plot_w - (tw or 0)) / 2) if tw else margin_l
+        draw.text((tx, margin_t + plot_h + 30), text, fill=axis_color, font=font)
+
+    if y_label:
+        text = str(y_label)[:60]
+        try:
+            label_img = Image.new("RGBA", (200, 28), (255, 255, 255, 0))
+            label_draw = ImageDraw.Draw(label_img)
+            label_draw.text((0, 0), text, fill=axis_color, font=font)
+            rotated = label_img.rotate(90, expand=True)
+            ry = margin_t + int((plot_h - rotated.height) / 2)
+            img.paste(rotated, (14, ry), rotated)
+        except Exception:
+            draw.text((8, margin_t + int(plot_h / 2)), text, fill=axis_color, font=font)
+
+    # Ticks and numeric labels (8 intervals)
+    tick_count = 8
+    for i in range(tick_count + 1):
+        # X axis
+        xt = min_x + (max_x - min_x) * i / float(tick_count)
+        px = margin_l + int(plot_w * i / float(tick_count))
+        draw.line([(px, x_axis_y), (px, x_axis_y + 6)], fill=axis_color, width=2)
+        x_text = str(int(round(xt)))
+        tw = draw.textlength(x_text, font=font) if hasattr(draw, "textlength") else None
+        tx = px - int((tw or 0) / 2)
+        draw.text((tx, x_axis_y + 10), x_text, fill=axis_color, font=font)
+
+        # Y axis
+        yt = min_y + (max_y - min_y) * i / float(tick_count)
+        py = margin_t + int(plot_h * (tick_count - i) / float(tick_count))
+        draw.line([(y_axis_x - 6, py), (y_axis_x, py)], fill=axis_color, width=2)
+        y_text = str(int(round(yt)))
+        tw = draw.textlength(y_text, font=font) if hasattr(draw, "textlength") else None
+        tx = y_axis_x - 10 - int(tw or 0)
+        draw.text((tx, py - 8), y_text, fill=axis_color, font=font)
 
     # Legend
     if len(series) > 1:
@@ -515,224 +612,447 @@ def excel_mvp(state: AgentState, *, storage: Storage, llm: LLMClient) -> AgentSt
     """
     state.job_meta.run_mode = (state.job_meta.run_mode or "mvp").strip() or "mvp"
     state.job_meta.updated_at = now_iso()
+    state.mvp.hitl_required = False
+    state.mvp.hitl_code = ""
+    state.mvp.hitl_message = ""
+    state.mvp.results = []
 
     if not state.experiments:
         state.status = JobStatus.partial
         state.validation_report.errors.append(ValidationIssue(code="missing_experiments", message="No experiments were extracted"))
         return state
 
-    if not state.excel.storage_key:
+    excel_sources: list[ExcelFile] = list(state.excel_files)
+    if not excel_sources and state.excel.storage_key:
+        excel_sources.append(
+            ExcelFile(
+                excel_id="primary",
+                filename=state.excel.filename,
+                storage_key=state.excel.storage_key,
+                upload_index=0,
+            )
+        )
+
+    if not excel_sources:
         state.status = JobStatus.partial
         state.validation_report.errors.append(ValidationIssue(code="missing_excel", message="Excel (.xlsx) was not uploaded"))
         return state
 
-    # 1) Pick "first experiment".
-    exp_payload = [
-        {"exp_key": exp.source_idx or exp.idx, "title": exp.name, "method_summary": exp.method_summary}
-        for exp in state.experiments
-    ]
-    choice = llm.mvp_first_experiment(payload={"experiments": exp_payload})
-    chosen_key = (choice.exp_key or "").strip()
-    chosen = next((e for e in state.experiments if e.source_idx == chosen_key or e.idx == chosen_key), None)
-    if chosen is None:
-        chosen = state.experiments[0]
+    past_reports = _iter_past_reports(state)
 
-    state.mvp.first_experiment_exp_key = chosen.source_idx or chosen.idx
-    state.mvp.first_experiment_rationale = (choice.rationale or "").strip()
+    # 1) Pick "first experiment".
+    preferred = None
+    if len(state.experiments) >= 2:
+        first_key = _normalize_exp_key(str(state.experiments[0].source_idx or ""))
+        second_key = _normalize_exp_key(str(state.experiments[1].source_idx or ""))
+        if first_key == "4.1" and second_key == "4.1.1":
+            preferred = state.experiments[1]
+
+    if preferred is None:
+        preferred = next(
+            (e for e in state.experiments if _PREFERRED_FIRST_EXPERIMENT_RE.match(_normalize_exp_key(str(e.source_idx or "")))),
+            None,
+        )
+
+    if preferred is not None:
+        chosen = preferred
+        state.mvp.first_experiment_exp_key = chosen.source_idx or chosen.idx
+        if _normalize_exp_key(str(chosen.source_idx or "")) == "4.1.1":
+            state.mvp.first_experiment_rationale = "Rule: when ordered 4.1 then 4.1.1, prioritize 4.1.1."
+        else:
+            state.mvp.first_experiment_rationale = "Rule: prioritize 4.1."
+    else:
+        exp_payload = []
+        for exp in state.experiments:
+            item = {"exp_key": exp.source_idx or exp.idx, "title": exp.name, "method_summary": exp.method_summary}
+            if past_reports:
+                hint_payload, _score = _match_past_report_hint(exp_name=exp.name, past_reports=past_reports)
+                if hint_payload:
+                    item["past_report_hint"] = hint_payload
+            exp_payload.append(item)
+        choice = llm.mvp_first_experiment(payload={"experiments": exp_payload})
+        chosen_key = (choice.exp_key or "").strip()
+        chosen = next((e for e in state.experiments if e.source_idx == chosen_key or e.idx == chosen_key), None)
+        if chosen is None:
+            chosen = state.experiments[0]
+
+        state.mvp.first_experiment_exp_key = chosen.source_idx or chosen.idx
+        state.mvp.first_experiment_rationale = (choice.rationale or "").strip()
 
     # MVP scope: only this experiment.
     chosen.blocks = []
     chosen.quant_comment = ""
     state.experiments = [chosen]
 
-    # 2) Parse workbook, gather candidates.
-    xlsx_bytes = storage.get_bytes(state.excel.storage_key)
-    wb = load_workbook_bytes(xlsx_bytes)
+    if past_reports and any(r.hints_ready and r.hints for r in past_reports):
+        _chosen_hint, chosen_score = _match_past_report_hint(exp_name=chosen.name, past_reports=past_reports)
+        if chosen_score < PAST_REPORT_MATCH_MIN:
+            state.mvp.hitl_required = True
+            state.mvp.hitl_code = "hitl_past_report_mismatch"
+            state.mvp.hitl_message = (
+                f"Past report may not match current experiment: '{chosen.name}'. "
+                f"Best match score={chosen_score:.2f}. Confirm past report selection."
+            )
 
-    charts = list_chart_refs(wb)
-    candidates: list[dict[str, Any]] = []
-    for ws in wb.worksheets:
-        for cand in find_numeric_blocks(ws):
-            candidates.append(
+    # 2) Parse workbooks, gather candidates across uploaded Excel files.
+    workbooks_by_id: dict[str, Any] = {}
+    charts_by_excel_id: dict[str, list[Any]] = {}
+    excel_meta_by_id: dict[str, dict[str, str]] = {}
+    candidates_payload: list[dict[str, Any]] = []
+    charts_payload: list[dict[str, Any]] = []
+
+    for excel in excel_sources:
+        excel_id = str(excel.excel_id or "").strip()
+        if not excel_id:
+            continue
+        excel_meta_by_id[excel_id] = {"filename": excel.filename, "storage_key": excel.storage_key}
+        xlsx_bytes = storage.get_bytes(excel.storage_key)
+        wb = load_workbook_bytes(xlsx_bytes)
+        workbooks_by_id[excel_id] = wb
+
+        charts = list_chart_refs(wb)
+        charts_by_excel_id[excel_id] = charts
+        for ch in charts[:MAX_MVP_CHARTS_PER_EXCEL]:
+            charts_payload.append(
                 {
-                    "sheet": cand.sheet,
-                    "a1_range": cand.a1_range,
-                    "numeric_cells": cand.numeric_cells,
-                    "total_cells": cand.total_cells,
-                    "preview_rows": cand.preview_rows,
+                    "excel_id": excel_id,
+                    "excel_filename": excel.filename,
+                    "chart_id": ch.chart_id,
+                    "sheet": ch.sheet,
+                    "chart_type": ch.chart_type,
+                    "title": ch.title,
+                    "series": [
+                        {"sheet": s.sheet, "values_range": s.values_range, "x_range": s.x_range, "title": s.title}
+                        for s in ch.series[:8]
+                    ],
                 }
             )
 
-    charts_payload: list[dict[str, Any]] = []
-    for ch in charts[:12]:
-        charts_payload.append(
-            {
-                "chart_id": ch.chart_id,
-                "sheet": ch.sheet,
-                "chart_type": ch.chart_type,
-                "title": ch.title,
-                "series": [
-                    {"sheet": s.sheet, "values_range": s.values_range, "x_range": s.x_range, "title": s.title}
-                    for s in ch.series[:8]
-                ],
-            }
-        )
+        cand_count = 0
+        for ws in wb.worksheets:
+            for cand in find_numeric_blocks(ws):
+                candidates_payload.append(
+                    {
+                        "excel_id": excel_id,
+                        "excel_filename": excel.filename,
+                        "sheet": cand.sheet,
+                        "a1_range": cand.a1_range,
+                        "numeric_cells": cand.numeric_cells,
+                        "total_cells": cand.total_cells,
+                        "preview_rows": cand.preview_rows,
+                    }
+                )
+                cand_count += 1
+                if cand_count >= MAX_MVP_CANDIDATES_PER_EXCEL:
+                    break
+            if cand_count >= MAX_MVP_CANDIDATES_PER_EXCEL:
+                break
 
-    state.mvp.excel_candidates = candidates[:16]
+    state.mvp.excel_candidates = candidates_payload
     state.mvp.excel_charts = charts_payload
 
     exp_key = chosen.source_idx or chosen.idx
-    selection = llm.excel_select(
-        payload={
+    remaining_candidates = candidates_payload[:]
+    remaining_charts = charts_payload[:]
+    selections: list[dict[str, Any]] = []
+    max_iters = len(remaining_candidates) + len(remaining_charts)
+
+    for _ in range(max_iters):
+        if not remaining_candidates and not remaining_charts:
+            break
+
+        payload = {
             "experiment": {"exp_key": exp_key, "title": chosen.name, "method_summary": chosen.method_summary},
-            "charts": charts_payload,
-            "candidates": candidates[:16],
+            "charts": remaining_charts,
+            "candidates": remaining_candidates,
         }
-    )
+        if past_reports:
+            hint_payload, _score = _match_past_report_hint(exp_name=chosen.name, past_reports=past_reports)
+            if hint_payload:
+                payload["past_report_hint"] = hint_payload
 
-    try:
-        state.mvp.excel_selection = selection.model_dump()
-    except Exception:
-        state.mvp.excel_selection = {}
+        selection = llm.excel_select(payload=payload)
+        if getattr(selection, "stop", False):
+            break
 
-    state.mvp.excel_rationale = (selection.rationale or "").strip()
+        selected_excel_id = str(getattr(selection, "excel_id", "") or "").strip()
+        if not selected_excel_id:
+            if len(workbooks_by_id) == 1:
+                selected_excel_id = next(iter(workbooks_by_id))
+            else:
+                break
+        if selected_excel_id not in workbooks_by_id:
+            break
 
-    table_rows: list[list[str]] = []
-    used_sheet = ""
-    used_range = ""
+        wb = workbooks_by_id[selected_excel_id]
+        excel_filename = excel_meta_by_id.get(selected_excel_id, {}).get("filename", "")
 
-    if (selection.selection_type == "chart") and selection.chart_id:
-        chart = next((c for c in charts if c.chart_id == selection.chart_id), None)
-        if chart is not None:
+        table_rows: list[list[str]] = []
+        used_sheet = ""
+        used_range = ""
+
+        if (selection.selection_type == "chart") and selection.chart_id:
+            charts = charts_by_excel_id.get(selected_excel_id, [])
+            chart = next((c for c in charts if c.chart_id == selection.chart_id), None)
+            if chart is None:
+                break
             table_rows = build_table_from_chart(wb, chart)
             used_sheet = chart.sheet
             used_range = f"(chart) {chart.chart_id}"
+            remaining_charts = [
+                c for c in remaining_charts if not (c.get("excel_id") == selected_excel_id and c.get("chart_id") == selection.chart_id)
+            ]
+        else:
+            sheet = (selection.sheet or "").strip()
+            a1 = (selection.a1_range or "").strip().upper().replace(" ", "")
+            chosen_candidate = None
+            if sheet and a1:
+                chosen_candidate = next(
+                    (
+                        c
+                        for c in remaining_candidates
+                        if c.get("excel_id") == selected_excel_id and c.get("sheet") == sheet and c.get("a1_range") == a1
+                    ),
+                    None,
+                )
+            if chosen_candidate is None and sheet:
+                chosen_candidate = next(
+                    (c for c in remaining_candidates if c.get("excel_id") == selected_excel_id and c.get("sheet") == sheet),
+                    None,
+                )
+            if chosen_candidate is None and remaining_candidates:
+                chosen_candidate = next((c for c in remaining_candidates if c.get("excel_id") == selected_excel_id), None)
 
-    if not table_rows:
-        sheet = (selection.sheet or "").strip()
-        if not sheet or sheet not in wb.sheetnames:
-            sheet = candidates[0]["sheet"] if candidates else wb.sheetnames[0]
-        ws = wb[sheet]
+            if chosen_candidate:
+                sheet = chosen_candidate.get("sheet") or ""
+                a1 = chosen_candidate.get("a1_range") or ""
 
-        a1 = (selection.a1_range or "").strip().upper().replace(" ", "")
-        if not validate_a1_range(a1):
-            a1 = candidates[0]["a1_range"] if candidates else ws.calculate_dimension()
-            a1 = str(a1 or "").strip().upper().replace(" ", "")
-            if a1 and ":" not in a1:
-                a1 = f"{a1}:{a1}"
-        table_rows = extract_a1_range(ws, a1, max_rows=200, max_cols=40)
-        used_sheet = sheet
-        used_range = a1
+            if not sheet or sheet not in wb.sheetnames:
+                sheet = wb.sheetnames[0] if wb.sheetnames else ""
+            if not sheet:
+                break
+            ws = wb[sheet]
 
-    state.mvp.excel_sheet = used_sheet
-    state.mvp.excel_range = used_range
+            a1 = (a1 or "").strip().upper().replace(" ", "")
+            if not validate_a1_range(a1):
+                a1 = str(ws.calculate_dimension() or "").strip().upper().replace(" ", "")
+                if a1 and ":" not in a1:
+                    a1 = f"{a1}:{a1}"
 
-    if not table_rows:
+            table_rows = extract_a1_range(ws, a1, max_rows=200, max_cols=40)
+            used_sheet = sheet
+            used_range = a1
+            remaining_candidates = [
+                c
+                for c in remaining_candidates
+                if not (
+                    c.get("excel_id") == selected_excel_id
+                    and c.get("sheet") == used_sheet
+                    and c.get("a1_range") == used_range
+                )
+            ]
+
+        if not table_rows:
+            break
+
+        selection_dump: dict[str, Any] = {}
+        try:
+            selection_dump = selection.model_dump()
+        except Exception:
+            selection_dump = {}
+
+        selections.append(
+            {
+                "selection": selection,
+                "selection_dump": selection_dump,
+                "table_rows": table_rows,
+                "used_sheet": used_sheet,
+                "used_range": used_range,
+                "excel_id": selected_excel_id,
+                "excel_filename": excel_filename,
+            }
+        )
+
+    if not selections:
         state.status = JobStatus.partial
         state.validation_report.errors.append(
             ValidationIssue(code="excel_extract_failed", message="Could not extract a non-empty table from Excel")
         )
         return state
 
-    # 3) Make markdown/csv for debugging + LLM table analysis.
-    state.mvp.table_rows = table_rows[:60]
-    state.mvp.table_markdown = table_to_markdown(table_rows, max_rows=40, max_cols=16)
-
     driver = _extract_driver_setpoints(chosen.method_summary)
-    meta, xy_series = _infer_xy_series(table_rows, driver=driver or None)
+    manual_images = [img for img in state.assets_images if img.analysis is None and not img.assigned_to]
+    manual_images.sort(key=lambda img: int(getattr(img, "upload_index", 0) or 0))
+    table_blocks: list[TableBlock] = []
+    figure_blocks: list[FigureBlock] = []
 
-    # Always use Japanese captions for report consistency (avoid "generated/copy-paste" suspicion).
-    # Keep them deterministic and aligned with the experiment text.
-    driver_name = str(driver.get("name") or "").strip() if isinstance(driver, dict) else ""
-    x_name = str(meta.get("x_name") or "X").strip()
-    y_name = str(meta.get("y_name") or "Y").strip()
-    table_caption = f"{chosen.name}：{driver_name + '別の' if driver_name else ''}{x_name}と{y_name}の測定結果"
-    # NOTE: ImageAnalysis.caption is constrained (<=15 chars) for UI consistency; keep short & generic.
-    figure_caption = f"{y_name}-{x_name}測定"
+    for idx, picked in enumerate(selections, start=1):
+        table_rows = picked["table_rows"]
+        used_sheet = picked["used_sheet"]
+        used_range = picked["used_range"]
+        selection = picked["selection"]
+        selection_dump = picked["selection_dump"]
+        excel_id = picked.get("excel_id") or ""
+        excel_filename = picked.get("excel_filename") or ""
 
-    # Extract structured (non-natural-language) facts for the MVP quantitative comment node.
-    state.mvp.observations = {}
-    if xy_series:
+        meta, xy_series = _infer_xy_series(table_rows, driver=driver or None)
+
+        # Always use Japanese captions for report consistency (avoid "generated/copy-paste" suspicion).
+        # Keep them deterministic and aligned with the experiment text.
+        driver_name = str(driver.get("name") or "").strip() if isinstance(driver, dict) else ""
         x_name = str(meta.get("x_name") or "X").strip()
-        x_unit = str(meta.get("x_unit") or "").strip()
         y_name = str(meta.get("y_name") or "Y").strip()
-        y_unit = str(meta.get("y_unit") or "").strip()
-        state.mvp.observations = build_xy_observations(
-            experiment_key=exp_key,
-            experiment_title=chosen.name,
-            x_name=x_name,
-            x_unit=x_unit,
-            y_name=y_name,
-            y_unit=y_unit,
-            driver=driver if isinstance(driver, dict) else None,
-            series=xy_series,
-            probe_x=None,
-            region_x_min=None,
-        )
+        table_caption = f"{chosen.name}：{driver_name + '別の' if driver_name else ''}{x_name}と{y_name}の測定結果"
+        # NOTE: ImageAnalysis.caption is constrained (<=15 chars) for UI consistency; keep short & generic.
+        figure_caption = f"{y_name}-{x_name}測定"
 
-    chosen.quant_comment = ""
-    chosen.blocks.append(
-        TableBlock(
-            table=TableContent(
-                asset_upload_index=None,
-                label="",
-                caption=table_caption,
-                rows=table_rows,
-                quant_comment="",
+        observations: dict[str, Any] = {}
+        plot_x_label = ""
+        plot_y_label = ""
+        plot_title = ""
+
+        if xy_series:
+            x_unit = str(meta.get("x_unit") or "").strip()
+            y_unit = str(meta.get("y_unit") or "").strip()
+            plot_x_label = f"{x_name} [{x_unit}]".strip() if x_unit else x_name
+            plot_y_label = f"{y_name} [{y_unit}]".strip() if y_unit else y_name
+            plot_title = chosen.name
+            observations = build_xy_observations(
+                experiment_key=exp_key,
+                experiment_title=chosen.name,
+                x_name=x_name,
+                x_unit=x_unit,
+                y_name=y_name,
+                y_unit=y_unit,
+                driver=driver if isinstance(driver, dict) else None,
+                series=xy_series,
+                probe_x=None,
+                region_x_min=None,
             )
+
+        result_debug = MVPResultDebuginfo(
+            excel_id=str(excel_id or ""),
+            excel_filename=str(excel_filename or ""),
+            selection_type=str(getattr(selection, "selection_type", "") or ""),
+            chart_id=str(getattr(selection, "chart_id", "") or ""),
+            sheet=used_sheet,
+            a1_range=used_range,
+            rationale=str(getattr(selection, "rationale", "") or "").strip(),
+            table_markdown=table_to_markdown(table_rows, max_rows=40, max_cols=16),
+            table_rows=table_rows[:60],
+            plot_kind="",
+            plot_x_label=plot_x_label,
+            plot_y_label=plot_y_label,
+            plot_title=plot_title,
+            observations=observations,
         )
-    )
 
-    # 4) Generate plot from the table (best-effort).
-    if xy_series:
-        x_unit = str(meta.get("x_unit") or "").strip()
-        y_unit = str(meta.get("y_unit") or "").strip()
-        state.mvp.plot_x_label = f"{x_name} [{x_unit}]".strip() if x_unit else x_name
-        state.mvp.plot_y_label = f"{y_name} [{y_unit}]".strip() if y_unit else y_name
-        png = _render_vce_ic_plot_png(
-            series=xy_series,
-            title=chosen.name,
-            x_label=state.mvp.plot_x_label,
-            y_label=state.mvp.plot_y_label,
-        )
-
-        image_id = uuid.uuid4().hex
-        img_key = f"jobs/{state.job_meta.job_id}/generated/plots/{image_id}.png"
-        storage.put_bytes(img_key, png)
-
-        upload_index = state.job_meta.next_upload_index
-        state.job_meta.next_upload_index += 1
-
-        img_asset = ImageAsset(
-            image_id=image_id,
-            filename=f"{image_id}.png",
-            mime_type="image/png",
-            storage_key=img_key,
-            upload_index=upload_index,
-            analysis=ImageAnalysis(
-                caption=figure_caption,
-                quant_comment="",
-                belongs_to=[BelongsToCandidate(exp_key=exp_key, score=1.0, rationale="generated from selected table")],
-                result_summary="表データから傾向を可視化した。",
-                ocr_text="",
-                assigned_exp_key=exp_key,
-                assigned_score=1.0,
-                assigned_rationale="MVP: attach generated plot to the first experiment",
-            ),
-            assigned_to=exp_key,
-        )
-        state.assets_images.append(img_asset)
-        chosen.blocks.append(
-            FigureBlock(
-                figure=FigureContent(
-                    figure_image_id=image_id,
-                    asset_upload_index=upload_index,
+        table_blocks.append(
+            TableBlock(
+                table=TableContent(
+                    asset_upload_index=None,
                     label="",
-                    caption=figure_caption,
+                    caption=table_caption,
+                    rows=table_rows,
                     quant_comment="",
                 )
             )
         )
+
+        if xy_series:
+            png = _render_vce_ic_plot_png(
+                series=xy_series,
+                title=plot_title,
+                x_label=plot_x_label,
+                y_label=plot_y_label,
+            )
+
+            image_id = uuid.uuid4().hex
+            img_key = f"jobs/{state.job_meta.job_id}/generated/plots/{image_id}.png"
+            storage.put_bytes(img_key, png)
+
+            upload_index = state.job_meta.next_upload_index
+            state.job_meta.next_upload_index += 1
+
+            img_asset = ImageAsset(
+                image_id=image_id,
+                filename=f"{image_id}.png",
+                mime_type="image/png",
+                storage_key=img_key,
+                upload_index=upload_index,
+                analysis=ImageAnalysis(
+                    caption=figure_caption,
+                    quant_comment="",
+                    belongs_to=[BelongsToCandidate(exp_key=exp_key, score=1.0, rationale="generated from selected table")],
+                    result_summary="表データから傾向を可視化した。",
+                    ocr_text="",
+                    assigned_exp_key=exp_key,
+                    assigned_score=1.0,
+                    assigned_rationale="MVP: attach generated plot to the first experiment",
+                ),
+                assigned_to=exp_key,
+            )
+            state.assets_images.append(img_asset)
+            figure_blocks.append(
+                FigureBlock(
+                    figure=FigureContent(
+                        figure_image_id=image_id,
+                        asset_upload_index=upload_index,
+                        label="",
+                        caption=figure_caption,
+                        quant_comment="",
+                    )
+                )
+            )
+            result_debug.image_id = image_id
+            result_debug.image_source = "generated"
+        else:
+            if manual_images:
+                manual = manual_images.pop(0)
+                manual.analysis = ImageAnalysis(
+                    caption=figure_caption,
+                    quant_comment="",
+                    belongs_to=[BelongsToCandidate(exp_key=exp_key, score=1.0, rationale="user provided result image")],
+                    result_summary="ユーザー提供画像を結果図として使用。",
+                    ocr_text="",
+                    assigned_exp_key=exp_key,
+                    assigned_score=1.0,
+                    assigned_rationale="HITL: attach user-provided image",
+                )
+                manual.assigned_to = exp_key
+                figure_blocks.append(
+                    FigureBlock(
+                        figure=FigureContent(
+                            figure_image_id=manual.image_id,
+                            asset_upload_index=manual.upload_index,
+                            label="",
+                            caption=figure_caption,
+                            quant_comment="",
+                        )
+                    )
+                )
+                result_debug.image_id = manual.image_id
+                result_debug.image_source = "manual"
+            else:
+                result_debug.image_source = "none"
+
+        state.mvp.results.append(result_debug)
+
+        if idx == 1:
+            state.mvp.excel_filename = str(excel_filename or "")
+            state.mvp.excel_sheet = used_sheet
+            state.mvp.excel_range = used_range
+            state.mvp.excel_rationale = str(getattr(selection, "rationale", "") or "").strip()
+            state.mvp.excel_selection = selection_dump or {}
+            state.mvp.table_rows = table_rows[:60]
+            state.mvp.table_markdown = table_to_markdown(table_rows, max_rows=40, max_cols=16)
+            state.mvp.plot_x_label = plot_x_label
+            state.mvp.plot_y_label = plot_y_label
+            state.mvp.plot_title = plot_title
+            state.mvp.observations = observations
+
+    chosen.blocks = table_blocks + figure_blocks
+    chosen.quant_comment = ""
 
     state.job_meta.updated_at = now_iso()
     return state

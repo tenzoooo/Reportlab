@@ -1,0 +1,63 @@
+
+graph TD;
+        __start__([<p>__start__</p>]):::first
+        session_start(session_start)
+        snapshot_session_start(snapshot_session_start)
+        ingest(ingest)
+        snapshot_ingest(snapshot_ingest)
+        normalize_inputs(normalize_inputs)
+        snapshot_normalize_inputs(snapshot_normalize_inputs)
+        classify_assets(classify_assets)
+        snapshot_classify_assets(snapshot_classify_assets)
+        pdf_parse(pdf_parse)
+        snapshot_pdf_parse(snapshot_pdf_parse)
+        method_extract(method_extract)
+        snapshot_method_extract(snapshot_method_extract)
+        unit_init(unit_init)
+        snapshot_unit_init(snapshot_unit_init)
+        excel_mvp(excel_mvp)
+        snapshot_excel_mvp(snapshot_excel_mvp)
+        validate(validate)
+        snapshot_validate(snapshot_validate)
+        halt_mvp(halt_mvp)
+        quant_comment_mvp(quant_comment_mvp)
+        snapshot_quant_comment_mvp(snapshot_quant_comment_mvp)
+        render_markdown(render_markdown)
+        snapshot_render_markdown(snapshot_render_markdown)
+        review_markdown(review_markdown)
+        snapshot_review_markdown(snapshot_review_markdown)
+        render_docx_markdown(render_docx_markdown)
+        snapshot_render_docx(snapshot_render_docx)
+        __end__([<p>__end__</p>]):::last
+        __start__ --> session_start;
+        classify_assets --> snapshot_classify_assets;
+        excel_mvp --> snapshot_excel_mvp;
+        ingest --> snapshot_ingest;
+        method_extract --> snapshot_method_extract;
+        normalize_inputs --> snapshot_normalize_inputs;
+        pdf_parse --> snapshot_pdf_parse;
+        quant_comment_mvp --> snapshot_quant_comment_mvp;
+        render_docx_markdown --> snapshot_render_docx;
+        render_markdown --> snapshot_render_markdown;
+        review_markdown --> snapshot_review_markdown;
+        session_start --> snapshot_session_start;
+        snapshot_classify_assets --> pdf_parse;
+        snapshot_excel_mvp --> validate;
+        snapshot_ingest --> normalize_inputs;
+        snapshot_method_extract --> unit_init;
+        snapshot_normalize_inputs --> classify_assets;
+        snapshot_pdf_parse --> method_extract;
+        snapshot_quant_comment_mvp --> render_markdown;
+        snapshot_render_markdown --> review_markdown;
+        snapshot_review_markdown --> render_docx_markdown;
+        snapshot_session_start --> ingest;
+        snapshot_unit_init --> excel_mvp;
+        snapshot_validate -.-> halt_mvp;
+        snapshot_validate -.-> quant_comment_mvp;
+        unit_init --> snapshot_unit_init;
+        validate --> snapshot_validate;
+        halt_mvp --> __end__;
+        snapshot_render_docx --> __end__;
+        classDef default fill:#f2f0ff,line-height:1.2
+        classDef first fill-opacity:0
+        classDef last fill:#bfb6fc

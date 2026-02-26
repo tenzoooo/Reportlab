@@ -1,0 +1,289 @@
+# ===========================================
+# DIFY WORKFLOW DSL v1.0
+# App: 実験結果ページ自動生成
+# ===========================================
+
+version: "dify.workflow.dsl/1.0"
+
+app:
+  id: "exp-result-generator"
+  name: "実験結果ページ自動生成"
+  description: >
+    実験書PDF（方法まで）＋実験データ（表・画像）から
+    Wordテンプレート（中央揃え・Subdoc）で「実験結果」章を自動生成する。
+
+env:
+  RENDERER_URL: "${RENDERER_URL}"            # 例: http://localhost:8000/render
+  RESULT_TEMPLATE: "/mnt/data/実験結果_テンプレ_v3_centered.docx"
+  MAX_COMMENT_LEN: 500
+  PDF_ENGINE: "pymupdf"
+  LLM_PROVIDER: "openai"                     # dify側コネクタ名
+  LLM_MODEL: "gpt-4o-mini"                   # 任意のLLMに変更可
+
+io:
+  inputs:
+    pdf_manual:
+      type: file_or_url
+      required: true
+      description: 実験書PDF（「実験方法」までを含む正書）
+    exp_tables:
+      type: file[]
+      required: false
+      description: 実験結果の表（CSV/Excelなど、複数可）
+    exp_images:
+      type: file[]
+      required: false
+      description: 実験結果の図（PNG/JPGなど、複数可）
+    logs:
+      type: (file|text)[]
+      required: false
+      description: 測定ログ・メモ等
+    meta:
+      type: object
+      required: true
+      fields:
+        student_name: string
+        student_id: string
+        dept: string
+        experiment_title: string
+        date_experiment: string
+        date_submit: string
+    options:
+      type: object
+      required: false
+      fields:
+        force_chapter_number: (int|null)
+        max_comment_len: (int)
+        lang: (string)
+  outputs:
+    docx_bytes:
+      type: file
+      description: 生成されたWord（.docx）
+    manifest_json:
+      type: json
+      description: 採番・差し込みのマニフェスト
+
+models:
+  llm_default:
+    provider: "${LLM_PROVIDER}"
+    name: "${LLM_MODEL}"
+    temperature: 0.2
+    max_tokens: 2048
+
+resources:
+  templates:
+    result_docx: "${RESULT_TEMPLATE}"
+
+tools:
+  http:
+    renderer:
+      method: POST
+      url: "${RENDERER_URL}"
+      headers:
+        Content-Type: application/json
+
+nodes:
+
+  # 0) PDF見出し抽出器
+  - id: n0_pdf_outline
+    kind: code
+    name: "PDF見出し抽出器"
+    impl: builtin.pdf_outline_v1     # エンジン側実装／必要なら custom に置換
+    in:
+      pdf: "@input.pdf_manual"
+      engine: "${PDF_ENGINE}"
+    out:
+      manual_outline: outline
+      raw_text: text
+
+  # 1) 章番号リゾルバ（N = 「方法」章 + 1）
+  - id: n1_chapter_resolver
+    kind: code
+    name: "章番号リゾルバ"
+    impl: builtin.method_chapter_plus_one_v1
+    in:
+      outline: "@n0_pdf_outline.manual_outline"
+      force_chapter_number: "@input.options.force_chapter_number"
+    out:
+      chapter_number: int
+
+  # 2) データ資産インベントリ
+  - id: n2_assets_index
+    kind: code
+    name: "データ資産インベントリ"
+    impl: builtin.assets_indexer_v1
+    in:
+      tables: "@input.exp_tables"
+      images: "@input.exp_images"
+      logs: "@input.logs"
+    out:
+      assets_index: object     # {tables:[], figures:[], logs:[]}
+      assets_meta: object      # 各ファイルの推定メタ（列名・単位等）
+
+  # 3) 実験ユニット推定（N.i / N.i.j）
+  - id: n3_units_guess
+    kind: code
+    name: "実験ユニット推定"
+    impl: builtin.experiment_unit_guesser_v1
+    in:
+      assets_index: "@n2_assets_index.assets_index"
+      raw_text: "@n0_pdf_outline.raw_text"
+    out:
+      experiments_skeleton: array  # [{idx:int, subidx:int?, name:string}]
+
+  # 4) メトリクス計算（分野横断）
+  - id: n4_metrics
+    kind: code
+    name: "メトリクス計算"
+    impl: builtin.metrics_calc_v1
+    in:
+      tables: "@input.exp_tables"
+      logs: "@input.logs"
+    out:
+      metrics: object  # 実験ごとの統計・指標
+
+  # 5) 簡単説明ジェネレータ（2–3文・常体）
+  - id: n5_brief_llm
+    kind: llm
+    name: "簡単説明ジェネレータ"
+    model: llm_default
+    foreach: "@n3_units_guess.experiments_skeleton"
+    prompt:
+      role: system
+      content: |
+        目的：各実験ブロックの冒頭説明（2–3文、常体）。方法の要点・測定対象のみ。
+        数式や図表番号はここでは出さない。専門用語は簡潔に。
+    inputs:
+      unit: "@item"
+      raw_text: "@n0_pdf_outline.raw_text"
+      metrics: "@n4_metrics.metrics"
+    out:
+      description_brief: text
+
+  # 6) キャプションジェネレータ（表/図）
+  - id: n6_captions_llm
+    kind: llm
+    name: "キャプションジェネレータ"
+    model: llm_default
+    prompt:
+      role: system
+      content: |
+        あなたは研究レポートの図表キャプション編集者。以下の方針に従い日本語で簡潔に出力：
+        - 表: 測定条件/変数/単位を含めて簡潔に。中央揃え前提の文体。
+        - 図: 波形・周波数応答・段階数など条件を明記。中央揃え前提の文体。
+    inputs:
+      assets_meta: "@n2_assets_index.assets_meta"
+      metrics: "@n4_metrics.metrics"
+    out:
+      table_captions: array   # tables[].caption と同順
+      figure_captions: array  # figures[].caption と同順
+
+  # 7) 採番エンジン（図N.m/表N.k を章内通しで付与）
+  - id: n7_numbering
+    kind: code
+    name: "採番エンジン"
+    impl: builtin.figure_table_numbering_v1
+    in:
+      chapter: "@n1_chapter_resolver.chapter_number"
+      experiments_skeleton: "@n3_units_guess.experiments_skeleton"
+      assets_index: "@n2_assets_index.assets_index"
+      table_captions: "@n6_captions_llm.table_captions"
+      figure_captions: "@n6_captions_llm.figure_captions"
+    out:
+      experiments_struct: array  # experiments[*] with tables[].label/caption/doc, figures[].label/caption/image
+
+  # 5b) 定量コメントジェネレータ（~500字・図表参照込み）
+  - id: n5b_quant_comment_llm
+    kind: llm
+    name: "定量コメントジェネレータ"
+    model: llm_default
+    foreach: "@n7_numbering.experiments_struct"
+    prompt:
+      role: system
+      content: |
+        研究レポートの定量コメントを約${MAX_COMMENT_LEN}字で作成。
+        必ず「図N.m」「表N.k」を引用して、測定値→指標→理論整合→原因推定→まとめの順で論述。
+        文体は常体。冗長な前置きは不要。
+    inputs:
+      experiment: "@item"
+      metrics: "@n4_metrics.metrics"
+      chapter: "@n1_chapter_resolver.chapter_number"
+    out:
+      quant_comment: text
+
+  # 8) Wordレンダラ（/render）
+  - id: n8_renderer
+    kind: http
+    name: "Wordレンダラ"
+    tool: http.renderer
+    in:
+      body:
+        chapter: "@n1_chapter_resolver.chapter_number"
+        experiments: |
+          $map(@n7_numbering.experiments_struct, e, {
+            "idx": e.idx,
+            "subidx": e.subidx,
+            "name": e.name,
+            "description_brief": $get(@n5_brief_llm.description_brief, $index()),
+            "tables": e.tables,     # tables[].{label, caption, doc}
+            "figures": e.figures,   # figures[].{label, caption, image}
+            "quant_comment": $get(@n5b_quant_comment_llm.quant_comment, $index())
+          })
+        meta: "@input.meta"
+        template_path: "@resources.templates.result_docx"
+    out:
+      http_status: int
+      http_body: file     # .docx バイナリ
+      manifest: json
+
+  # 9) 成果返却
+  - id: n9_respond
+    kind: response
+    name: "成果返却"
+    in:
+      docx_bytes: "@n8_renderer.http_body"
+      manifest_json: "@n8_renderer.manifest"
+
+edges:
+  - from: n0_pdf_outline
+    to: [n1_chapter_resolver, n3_units_guess]
+  - from: n1_chapter_resolver
+    to: [n7_numbering, n5b_quant_comment_llm, n8_renderer]
+  - from: n2_assets_index
+    to: [n3_units_guess, n6_captions_llm, n7_numbering]
+  - from: n3_units_guess
+    to: [n5_brief_llm, n7_numbering]
+  - from: n4_metrics
+    to: [n5_brief_llm, n6_captions_llm, n5b_quant_comment_llm]
+  - from: n6_captions_llm
+    to: [n7_numbering]
+  - from: n7_numbering
+    to: [n5b_quant_comment_llm, n8_renderer]
+  - from: n5_brief_llm
+    to: [n8_renderer]
+  - from: n5b_quant_comment_llm
+    to: [n8_renderer]
+  - from: n8_renderer
+    to: [n9_respond]
+
+validators:
+  - rule: "@n8_renderer.http_status == 200"
+    message: "レンダラが200を返しませんでした。RENDERER_URL/テンプレートを確認してください。"
+
+ui:
+  overrides:
+    captions:
+      alignment: "centered"  # テンプレのCaptionCenteredスタイルを想定
+    tables:
+      render: "subdoc"       # 可変列×可変行
+    figures:
+      render: "inline_image"
+
+localization:
+  lang_default: "ja"
+  supports: ["ja"]
+
+notes:
+  - "章番号はPDFの『方法系』見出しの次番号（見出しが無い場合は force_chapter_number を必須）。"
+  - "図表番号は章内通し（表N.1…／図N.1…）。WordのSEQフィールドは不使用。"
+  - "テンプレ：/mnt/data/実験結果_テンプレ_v3_centered.docx（中央揃え・Subdoc方式）。"

@@ -1285,7 +1285,9 @@ workflow:
           \"\n    if isinstance(x, dict):\n        return x\n    if isinstance(x,\
           \ str):\n        try:\n            return json.loads(x)\n        except\
           \ Exception:\n            return {}\n    return {}\n\ndef unwrap_common_wrappers(d:\
-          \ Dict) -> Dict:\n    \"\"\"\n    Dify でありがちな result / output / data ラップを1段だけ剥がす。\n\
+          \ Dict) -> Dict:\n    \"\"\"\n    Dify でありがちな result / output / data ラップを1段だけ剥がす。
+
+\n\
           \    内側に summary / units / experiments のどれかがあれば優先的にそこを見る。\n    \"\"\"\n\
           \    if not isinstance(d, dict):\n        return {}\n\n    keys_of_interest\
           \ = {\"summary\", \"units\", \"experiments\", \"chapter\", \"total_count\"\

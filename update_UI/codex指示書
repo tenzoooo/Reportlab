@@ -235,7 +235,7 @@ tests/
 
 * `USE_REMOTE_PYTHON`：`true` のときリモート実行（現行では未使用なら無視でよいが、読み取って警告ログを出す）
 * `DOCX_DEBUG`：`1` のとき docx生成ログを詳細に
-* `ENABLE_DIFY_DEBUG_LOG`：`true` のとき解析デバッグログ（現行ではDify不要だが、互換でログレベルに反映可能）
+* `ENABLE_AI_DEBUG_LOG`：`true` のとき解析デバッグログ（現行ではAIバックエンドだが、互換でログレベルに反映可能）
 
 ### 3.2.4 URL / Vercel
 

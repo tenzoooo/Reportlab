@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import StandalonePageShell from "@/components/standalone-page-shell"
 
 export const metadata: Metadata = {
     title: "プライバシーポリシー | Reportlab",
@@ -7,11 +8,13 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
     return (
-        <div className="min-h-screen bg-background py-20">
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 className="text-3xl font-bold text-foreground mb-8 text-center">プライバシーポリシー</h1>
-
-                <div className="prose prose-gray dark:prose-invert max-w-none">
+        <StandalonePageShell
+            title="プライバシーポリシー"
+            subtitle="個人情報の取り扱いとデータ管理方針について"
+            badge="Legal"
+        >
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 sm:p-10 shadow-[0_30px_90px_-60px_rgba(59,130,246,0.6)]">
+                <div className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-white">
                     <p>
                         Reportlab（以下，「当社」といいます。）は，本ウェブサイト上で提供するサービス（以下，「本サービス」といいます。）における，ユーザーの個人情報の取扱いについて，以下のとおりプライバシーポリシー（以下，「本ポリシー」といいます。）を定めます。
                     </p>
@@ -172,6 +175,6 @@ export default function PrivacyPage() {
                     <p className="text-right mt-8">以上</p>
                 </div>
             </div>
-        </div>
+        </StandalonePageShell>
     )
 }

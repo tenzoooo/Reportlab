@@ -1,0 +1,321 @@
+{
+  "status": "running",
+  "job_meta": {
+    "job_id": "job",
+    "run_id": "55ae0e9d75954b43b183c108af357bc7",
+    "created_at": "2026-01-28T04:18:44.729973+00:00",
+    "updated_at": "2026-01-28T04:18:44.731655+00:00",
+    "retry_budgets": {
+      "image_analyze": 2,
+      "table_analyze": 1,
+      "table_parse": 1,
+      "discussion": 1,
+      "render": 1
+    },
+    "next_upload_index": 1,
+    "text_model": "dummy",
+    "vision_model": "dummy",
+    "template_path": "",
+    "run_mode": "update_mvp"
+  },
+  "pdf": {
+    "asset_id": "pdf:manual",
+    "filename": "manual.pdf",
+    "storage_key": "jobs/job/source/manual.pdf",
+    "pages": null,
+    "text": "",
+    "headings": [],
+    "page_texts": [],
+    "heading_positions": [],
+    "section_candidates": {},
+    "method_text": "",
+    "discussion_text": "",
+    "consideration_prompts": [],
+    "method_chapter": null,
+    "discussion_chapter": null,
+    "method_numbers": [],
+    "result_number_map": {},
+    "result_number_map_errors": [],
+    "discussion_section": null,
+    "theory_candidates": [],
+    "theory_formulas": [],
+    "needs_hitl_methods": false,
+    "needs_hitl_result_map": false,
+    "needs_hitl_discussion": false,
+    "needs_hitl_theory": false
+  },
+  "past_report": {
+    "report_id": "legacy",
+    "asset_id": "past_report:legacy",
+    "filename": "4234090_谷口天眞_OPアンプ.docx",
+    "storage_key": "jobs/job/source/report.docx",
+    "extracted_hint": "",
+    "hints": [],
+    "report_summary": {
+      "structure": [],
+      "data_points": [],
+      "visual_evidence": [],
+      "logic_audit": {
+        "theoretical_consistency": null,
+        "causal_factors": [],
+        "blind_spots": [],
+        "opportunity_cost": ""
+      }
+    },
+    "hints_ready": false,
+    "hints_error": "",
+    "upload_index": 0
+  },
+  "past_reports": [
+    {
+      "report_id": "legacy",
+      "asset_id": "past_report:legacy",
+      "filename": "4234090_谷口天眞_OPアンプ.docx",
+      "storage_key": "jobs/job/source/report.docx",
+      "extracted_hint": "",
+      "hints": [],
+      "report_summary": {
+        "structure": [],
+        "data_points": [],
+        "visual_evidence": [],
+        "logic_audit": {
+          "theoretical_consistency": null,
+          "causal_factors": [],
+          "blind_spots": [],
+          "opportunity_cost": ""
+        }
+      },
+      "hints_ready": false,
+      "hints_error": "",
+      "upload_index": 0
+    }
+  ],
+  "excel": {
+    "asset_id": "",
+    "filename": "",
+    "storage_key": "",
+    "sheet_names": []
+  },
+  "excel_files": [
+    {
+      "excel_id": "ac",
+      "asset_id": "excel:ac",
+      "filename": "OPアンプ AC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_ac.xlsx",
+      "upload_index": 1,
+      "sheet_names": []
+    },
+    {
+      "excel_id": "dc",
+      "asset_id": "excel:dc",
+      "filename": "OPアンプ DC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_dc.xlsx",
+      "upload_index": 2,
+      "sheet_names": []
+    }
+  ],
+  "input_assets": [
+    {
+      "asset_id": "pdf:manual",
+      "kind": "pdf",
+      "source_id": "manual",
+      "filename": "manual.pdf",
+      "storage_key": "jobs/job/source/manual.pdf",
+      "upload_index": 0
+    },
+    {
+      "asset_id": "excel:ac",
+      "kind": "excel",
+      "source_id": "ac",
+      "filename": "OPアンプ AC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_ac.xlsx",
+      "upload_index": 1
+    },
+    {
+      "asset_id": "excel:dc",
+      "kind": "excel",
+      "source_id": "dc",
+      "filename": "OPアンプ DC特性.xlsx",
+      "storage_key": "jobs/job/source/opamp_dc.xlsx",
+      "upload_index": 2
+    },
+    {
+      "asset_id": "past_report:legacy",
+      "kind": "past_report",
+      "source_id": "legacy",
+      "filename": "4234090_谷口天眞_OPアンプ.docx",
+      "storage_key": "jobs/job/source/report.docx",
+      "upload_index": 0
+    }
+  ],
+  "normalized_inputs": [],
+  "mvp": {
+    "first_experiment_exp_key": "",
+    "first_experiment_rationale": "",
+    "excel_filename": "",
+    "excel_sheet": "",
+    "excel_range": "",
+    "excel_rationale": "",
+    "excel_candidates": [],
+    "excel_charts": [],
+    "excel_selection": {},
+    "table_markdown": "",
+    "table_rows": [],
+    "plot_kind": "",
+    "plot_x_label": "",
+    "plot_y_label": "",
+    "plot_title": "",
+    "observations": {},
+    "results": [],
+    "hitl_required": false,
+    "hitl_code": "",
+    "hitl_message": ""
+  },
+  "method_tree": [],
+  "experiments": [],
+  "assets_images": [],
+  "assets_tables": [],
+  "result_groups": [],
+  "results_page": null,
+  "discussion_page": null,
+  "summary_page": null,
+  "references_page": null,
+  "required_outputs": [],
+  "required_outputs_hitl": {
+    "enabled": false,
+    "mode": "",
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "excel_inventory": [],
+  "excel_sheet_selections": [],
+  "table_column_bindings": [],
+  "theory_param_bindings": [],
+  "excel_sheet_hitl": {
+    "enabled": false,
+    "code": "",
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "column_unit_hitl": {
+    "enabled": false,
+    "codes": [],
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "theory_param_hitl": {
+    "enabled": false,
+    "code": "",
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "insert_asset_bindings": [],
+  "insert_asset_hitl": {
+    "enabled": false,
+    "codes": [],
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "graph_axis_bindings": [],
+  "axis_hitl": {
+    "enabled": false,
+    "code": "",
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "theory_compare_enabled": true,
+  "theory_compare_decided": false,
+  "theory_compare_hitl": {
+    "enabled": false,
+    "code": "",
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "theory_value_results": [],
+  "delta_error_results": [],
+  "slope_extreme_results": [],
+  "computation_hitl": {
+    "enabled": false,
+    "codes": [],
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "text_generation_hitl": {
+    "enabled": false,
+    "codes": [],
+    "message": "",
+    "html": "",
+    "payload": {},
+    "rewind_target": ""
+  },
+  "consideration": {
+    "units": [],
+    "references": [],
+    "reference_list_formatted": []
+  },
+  "summary": "",
+  "style_rules": {},
+  "compute_log": null,
+  "template_context": null,
+  "artifact_docx_key": null,
+  "artifact_markdown_key": null,
+  "artifact_markdown_raw_key": null,
+  "artifact_review_log_key": null,
+  "artifact_json_key": null,
+  "artifact_quality_report_key": null,
+  "review_log": {},
+  "validation_report": {
+    "errors": [],
+    "warnings": [],
+    "retry_targets": []
+  },
+  "markdown": {
+    "document": null,
+    "document_styled": null
+  },
+  "artifacts": {
+    "json_bundle": null
+  },
+  "rendered_docx": {
+    "path": "",
+    "local_path": "",
+    "omml_inserted": false,
+    "retry_count": 0,
+    "generated_at": null
+  },
+  "c_required_outputs": {
+    "by_result_no": {}
+  },
+  "e_excel": {
+    "sheet_selection_by_result_no": {},
+    "table_bindings_by_result_no": {},
+    "axis_bindings_by_result_no": {},
+    "param_bindings_by_result_no": {}
+  },
+  "f_assets": {
+    "assignments_by_result_no": {},
+    "assets_index": {}
+  },
+  "hitl_active": null,
+  "hitl_response": null,
+  "hitl_form_registry": {},
+  "hitl_queue": [],
+  "next_rewind_target": "",
+  "hitl_history": [],
+  "quality_report": {
+    "pass_gate": false,
+    "issues": []
+  },
+  "omml_insertion_plan": [],
+  "preformat_autofix_attempts": 0,
+  "next_action": "",
+  "snapshots": []
+}

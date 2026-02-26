@@ -2,6 +2,10 @@
 alter table profiles 
 add column if not exists credits integer default 0;
 
+-- Add theme preference to profiles table
+alter table profiles
+add column if not exists theme text default 'system';
+
 -- Create subscriptions table
 create table if not exists subscriptions (
   id text primary key, -- Stripe Subscription ID
@@ -9,6 +13,7 @@ create table if not exists subscriptions (
   status text not null, -- 'active', 'canceled', 'past_due', etc.
   price_id text not null,
   cancel_at_period_end boolean default false,
+  current_period_end timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -37,14 +42,22 @@ create policy "Users can view own credit transactions"
   using (auth.uid() = user_id);
 
 -- RPC function to increment credits
-create or replace function increment_credits(user_id_arg uuid, amount_arg int)
+create or replace function public.increment_credits(user_id_arg uuid, amount_arg int)
 returns void
 language plpgsql
 security definer
+set search_path = public
 as $$
 begin
-  update profiles
-  set credits = credits + amount_arg
+  -- Safety:
+  -- 1) If the profiles row doesn't exist, a plain UPDATE is a silent no-op.
+  -- 2) If credits is NULL, "credits + amount" becomes NULL forever.
+  insert into public.profiles (id, credits)
+  values (user_id_arg, 0)
+  on conflict (id) do nothing;
+
+  update public.profiles
+  set credits = coalesce(credits, 0) + amount_arg
   where id = user_id_arg;
 end;
 $$;

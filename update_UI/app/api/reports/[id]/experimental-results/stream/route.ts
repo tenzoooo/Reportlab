@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 
+import { getUserIdFromRequest, loadOwnedReport } from "@/app/api/reports/_shared/access"
 import { logError, logRequest } from "@/lib/server/logger"
-import { createClient, createServiceClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -18,23 +19,6 @@ const getReportAgentUrl = () => {
   const explicit = process.env.REPORT_AGENT_URL
   if (explicit) return explicit.replace(/\/$/, "")
   return "http://127.0.0.1:8000"
-}
-
-const getUserId = async (request: NextRequest) => {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (user) return user.id
-
-  const auth = request.headers.get("authorization") || ""
-  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : ""
-  if (!token) return null
-
-  const admin = createServiceClient()
-  const { data, error } = await admin.auth.getUser(token)
-  if (error || !data.user) return null
-  return data.user.id
 }
 
 const buildPayloadFromAnalysis = (analysis: any) => {
@@ -73,12 +57,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const { id: reportId } = await context.params
   logRequest(request, "reports:experimental-results:stream", { reportId })
 
-  const userId = await getUserId(request)
+  const userId = await getUserIdFromRequest(request)
   if (!userId) return NextResponse.json({ error: "ログインが必要です" }, { status: 401 })
 
   const admin = createServiceClient()
-  const { data: report } = await admin.from("reports").select("id, user_id").eq("id", reportId).maybeSingle()
-  if (!report || report.user_id !== userId) return NextResponse.json({ error: "レポートが見つかりません" }, { status: 404 })
+  const { errorMessage: reportError, report } = await loadOwnedReport<{ id: string; user_id: string | null }>({
+    admin,
+    reportId,
+    userId,
+    select: "id, user_id",
+  })
+  if (reportError) return NextResponse.json({ error: reportError }, { status: 500 })
+  if (!report) return NextResponse.json({ error: "レポートが見つかりません" }, { status: 404 })
 
   const key = analysisStorageKey(userId, reportId)
   let analysis: any

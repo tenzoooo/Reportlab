@@ -16,9 +16,21 @@ def _is_truthy(value: str | None) -> bool:
 
 
 def langsmith_enabled() -> bool:
-    return _is_truthy(os.environ.get("LANGSMITH_TRACING")) or _is_truthy(os.environ.get("LANGSMITH_TRACING_V2")) or _is_truthy(
-        os.environ.get("LANGCHAIN_TRACING_V2")
-    )
+    override = (os.environ.get("REPORT_AGENT_ENABLE_LANGSMITH") or "").strip().lower()
+    if override in {"1", "true", "yes", "y", "on"}:
+        return True
+    if override in {"0", "false", "no", "n", "off"}:
+        return False
+
+    trace_flags = [
+        os.environ.get("LANGSMITH_TRACING"),
+        os.environ.get("LANGSMITH_TRACING_V2"),
+        os.environ.get("LANGCHAIN_TRACING_V2"),
+    ]
+    explicit = [v.strip() for v in trace_flags if isinstance(v, str) and v.strip()]
+    if explicit:
+        return any(_is_truthy(v) for v in explicit)
+    return bool(os.environ.get("LANGSMITH_API_KEY") or os.environ.get("LANGCHAIN_API_KEY"))
 
 
 def traceable_if_enabled(
@@ -106,4 +118,3 @@ def summarize_state_for_trace(state: AgentState | None) -> dict[str, Any]:
             "vision_model": state.job_meta.vision_model,
         },
     }
-

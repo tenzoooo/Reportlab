@@ -1,0 +1,486 @@
+{
+  "status": "created",
+  "job_meta": {
+    "job_id": "job",
+    "run_id": "",
+    "created_at": "2026-02-02T05:21:02.103593+00:00",
+    "updated_at": "2026-02-02T05:26:47.092198+00:00",
+    "retry_budgets": {
+      "image_analyze": 2,
+      "table_analyze": 1,
+      "table_parse": 1,
+      "discussion": 1,
+      "render": 1
+    },
+    "next_upload_index": 1,
+    "text_model": "",
+    "vision_model": "",
+    "template_path": "",
+    "run_mode": "mvp"
+  },
+  "pdf": {
+    "asset_id": "",
+    "filename": "",
+    "storage_key": "",
+    "pages": null,
+    "text": "",
+    "page_texts": [],
+    "page_texts_key": "",
+    "heading_positions": [],
+    "heading_positions_cleaned": [],
+    "heading_positions_clean_report": [],
+    "structured_sections": [],
+    "section_candidates": {},
+    "marker_reason": "",
+    "method_text": "",
+    "discussion_text": "",
+    "consideration_prompts": [],
+    "method_chapter": null,
+    "discussion_chapter": null,
+    "method_numbers": [],
+    "method_units": [],
+    "experiment_index": {},
+    "result_number_map": {},
+    "result_number_map_errors": [],
+    "discussion_section": null,
+    "discussion_units": [],
+    "method_text_review": null,
+    "theory_candidates": [],
+    "theory_formulas": [],
+    "theory_formulas_llm": [],
+    "needs_hitl_methods": false,
+    "needs_hitl_result_map": false,
+    "needs_hitl_discussion": false,
+    "needs_hitl_theory": false
+  },
+  "report": {
+    "hints": [
+      {
+        "exp_key": "4.2.1",
+        "title": "反転増幅回路",
+        "result_hint": "無負荷時の入出力特性をグラフ化する。グラフ情報: 軸X=Vin(V), 軸Y=Vo(V), 系列名=No-load, 条件=Vin=-5〜+5 V、計測点は直線領域と非直線領域の区分を示す。キャプション=No-load 入出力特性。表としてはVin(V), Vo(V), V-(V)の列を用意し、V-は Rin, Rf を用いた計算値とする（V-は測定Voから推定して記述可能）。(1-2) 測定結果から算出した反転入力端子電圧V-の表を別表に含める。計算式の背景は「反転入力端子電流はほぼ0」として理論値と比較。 (1-3) 測定データから1次関数 y=ax+b に近似し、得られたa,bと決定係数R^2を示す。理論値との比較をコメント。近似に用いた点は明示的に除外したことを記述。 (1-4) 傾きaと切片bの理論値との差異の要因を要約し、それを小さくする方法を短く考察。 (2-1) RL1(3 kW負荷), RL2(1 kW負荷), RL1とRL2を並列接続したRL1//RL2(750 W負荷)の3つの負荷状態を含む入出力特性を測定。グラフ情報: 同一グラフまたは複数系列でVin(V)対Vo(V)を描く。軸・単位・系列名・条件を明記。キャプション=負荷状態別入出力特性。 (2-2) 無負荷時と各負荷状態の特性を比較する表を作成し、傾きa・切片b・差異の要因を比較記述する。"
+      }
+    ]
+  },
+  "past_report": {
+    "report_id": "",
+    "asset_id": "",
+    "filename": "",
+    "storage_key": "",
+    "extracted_hint": "",
+    "headings": [],
+    "result_section_headings": [],
+    "hints": [],
+    "result_structure_hints": [],
+    "result_structure_hints_ready": false,
+    "result_structure_hints_error": "",
+    "report_summary": {
+      "structure": [],
+      "data_points": [],
+      "visual_evidence": [],
+      "logic_audit": {
+        "theoretical_consistency": null,
+        "causal_factors": [],
+        "blind_spots": [],
+        "opportunity_cost": ""
+      }
+    },
+    "hints_ready": false,
+    "hints_error": "",
+    "upload_index": 0
+  },
+  "past_reports": [],
+  "excel": {
+    "asset_id": "",
+    "filename": "",
+    "storage_key": "",
+    "sheet_names": []
+  },
+  "excel_files": [],
+  "input_assets": [],
+  "normalized_inputs": [],
+  "mvp": {
+    "first_experiment_exp_key": "",
+    "first_experiment_rationale": "",
+    "excel_filename": "",
+    "excel_sheet": "",
+    "excel_range": "",
+    "excel_rationale": "",
+    "excel_candidates": [],
+    "excel_charts": [],
+    "excel_selection": {},
+    "table_markdown": "",
+    "table_rows": [],
+    "plot_kind": "",
+    "plot_x_label": "",
+    "plot_y_label": "",
+    "plot_title": "",
+    "observations": {},
+    "results": [],
+    "hitl_required": false,
+    "hitl_code": "",
+    "hitl_message": ""
+  },
+  "method_tree": [],
+  "experiments": [],
+  "assets_images": [],
+  "assets_tables": [],
+  "result_groups": [],
+  "results_page": null,
+  "discussion_page": null,
+  "summary_page": null,
+  "references_page": null,
+  "required_outputs": [
+    {
+      "exp_key": "4.2.1",
+      "title": "反転増幅回路",
+      "method_summary": "無負荷と3種の負荷状態で Vin-Vo を測定・グラフ化し、(1) 線形近似と理論比較、(2) V-表の作成、(3) 傾きaと切片bの理論差異と改善案、(4) 負荷別の入出力特性の比較表とグラフを作成する。",
+      "tables_count": 4,
+      "graphs_count": 3,
+      "photos_count": 0,
+      "table_expectations": [
+        {
+          "name": "入力電圧と出力電圧の対応表",
+          "hint": "Vin-Voutの対応"
+        },
+        {
+          "name": "反転入力端子電圧V-の一覧表",
+          "hint": "V-と Rin, Rf 計算値の対応（Voから推定可）"
+        },
+        {
+          "name": "1次近似パラメータ表",
+          "hint": "傾きa, 切片b, R^2, 理論値比較"
+        },
+        {
+          "name": "負荷状態別入出力特性の比較表",
+          "hint": "各負荷状態の a, b, 差異要因"
+        }
+      ],
+      "graph_expectations": [
+        {
+          "name": "No-load 入出力特性グラフ",
+          "hint": "Vin(V) vs Vo(V); No-load; Vin=-5〜+5 V; 直線領域と非直線領域を区分; キャプション=No-load 入出力特性"
+        },
+        {
+          "name": "負荷状態別入出力特性グラフ",
+          "hint": "RL1(3kW), RL2(1kW), RL1//RL2(750W)の3系列を同一グラフまたは複数グラフで描画"
+        },
+        {
+          "name": "近似直線グラフ",
+          "hint": "1次近似の直線とデータ点; R^2 を表示"
+        }
+      ],
+      "confidence": 0.72,
+      "rationale": "指示通りNo-load特性のグラフ、V-表、1次近似、負荷状態の比較表とグラフを作成する構成を想定。",
+      "evidence": [
+        "無負荷時の入出力特性",
+        "グラフ",
+        "表Vin Vo V-",
+        "V-計算値",
+        "R^2",
+        "近似直線"
+      ],
+      "candidates": []
+    }
+  ],
+  "required_outputs_hitl": {
+    "enabled": true,
+    "mode": "confirm",
+    "message": "Confirm required outputs for each experiment.",
+    "html": "<form data-hitl=\"required_outputs\"><section><h3>Experiment 4.2.1 反転増幅回路</h3><p>無負荷と3種の負荷状態で Vin-Vo を測定・グラフ化し、(1) 線形近似と理論比較、(2) V-表の作成、(3) 傾きaと切片bの理論差異と改善案、(4) 負荷別の入出力特性の比較表とグラフを作成する。</p><div><label><input type=\"radio\" name=\"candidate_0\" value=\"0\" checked> tables=4 graphs=3 photos=0 (conf=0.72) 指示通りNo-load特性のグラフ、V-表、1次近似、負荷状態の比較表とグラフを作成する構成を想定。 [evidence: 無負荷時の入出力特性, グラフ, 表Vin Vo V-, V-計算値, R^2, 近似直線]</label></div><div><label>Tables <input type=\"number\" name=\"tables_0\" value=\"4\" min=\"0\"></label> <label>Graphs <input type=\"number\" name=\"graphs_0\" value=\"3\" min=\"0\"></label> <label>Photos <input type=\"number\" name=\"photos_0\" value=\"0\" min=\"0\"></label></div></section></form>",
+    "payload": {
+      "experiments": [
+        {
+          "exp_key": "4.2.1",
+          "title": "反転増幅回路",
+          "method_summary": "無負荷と3種の負荷状態で Vin-Vo を測定・グラフ化し、(1) 線形近似と理論比較、(2) V-表の作成、(3) 傾きaと切片bの理論差異と改善案、(4) 負荷別の入出力特性の比較表とグラフを作成する。",
+          "default": {
+            "tables_count": 4,
+            "graphs_count": 3,
+            "photos_count": 0
+          },
+          "candidates": [
+            {
+              "tables_count": 4,
+              "graphs_count": 3,
+              "photos_count": 0,
+              "table_expectations": [],
+              "graph_expectations": [],
+              "confidence": 0.72,
+              "rationale": "指示通りNo-load特性のグラフ、V-表、1次近似、負荷状態の比較表とグラフを作成する構成を想定。",
+              "evidence": [
+                "無負荷時の入出力特性",
+                "グラフ",
+                "表Vin Vo V-",
+                "V-計算値",
+                "R^2",
+                "近似直線"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "excel_inventory": [],
+  "excel_sheet_selections": [],
+  "table_column_bindings": [],
+  "theory_param_bindings": [],
+  "excel_sheet_hitl": {
+    "enabled": true,
+    "code": "HITL_EXCEL_SHEET_UNKNOWN",
+    "message": "Excel sheet selection is missing.",
+    "html": "<form data-hitl=\"excel_sheet_select\"></form>",
+    "payload": {
+      "experiments": []
+    }
+  },
+  "column_unit_hitl": {
+    "enabled": false,
+    "codes": [],
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "theory_param_hitl": {
+    "enabled": false,
+    "code": "",
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "insert_asset_bindings": [],
+  "insert_asset_hitl": {
+    "enabled": false,
+    "codes": [],
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "graph_axis_bindings": [],
+  "axis_hitl": {
+    "enabled": false,
+    "code": "",
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "g_quant_comment_inputs": [],
+  "g_quant_comment_results": [],
+  "theory_compare_enabled": true,
+  "theory_compare_by_experiment": {},
+  "theory_compare_decided": false,
+  "theory_compare_hitl": {
+    "enabled": false,
+    "code": "",
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "theory_value_results": [],
+  "delta_error_results": [],
+  "slope_extreme_results": [],
+  "computation_hitl": {
+    "enabled": false,
+    "codes": [],
+    "message": "",
+    "html": "",
+    "payload": {}
+  },
+  "text_generation_hitl": {
+    "enabled": false,
+    "codes": [],
+    "message": "",
+    "html": "",
+    "payload": {},
+    "rewind_target": ""
+  },
+  "consideration": {
+    "units": [],
+    "references": [],
+    "reference_list_formatted": []
+  },
+  "summary": "",
+  "style_rules": {},
+  "compute_log": null,
+  "template_context": null,
+  "artifact_docx_key": null,
+  "artifact_markdown_key": null,
+  "artifact_markdown_raw_key": null,
+  "artifact_review_log_key": null,
+  "artifact_json_key": null,
+  "artifact_quality_report_key": null,
+  "review_log": {},
+  "validation_report": {
+    "errors": [],
+    "warnings": [],
+    "retry_targets": []
+  },
+  "markdown": {
+    "document": null,
+    "document_styled": null
+  },
+  "artifacts": {
+    "json_bundle": null
+  },
+  "rendered_docx": {
+    "path": "",
+    "local_path": "",
+    "omml_inserted": false,
+    "retry_count": 0,
+    "generated_at": null
+  },
+  "c_required_outputs": {
+    "by_result_no": {}
+  },
+  "e_excel": {
+    "sheet_selection_by_result_no": {},
+    "table_bindings_by_result_no": {},
+    "axis_bindings_by_result_no": {},
+    "param_bindings_by_result_no": {},
+    "range_selections": []
+  },
+  "f_assets": {
+    "assignments_by_result_no": {},
+    "assets_index": {}
+  },
+  "hitl_active": null,
+  "hitl_response": null,
+  "hitl_form_registry": {},
+  "hitl_queue": [],
+  "experiment_hitl_queue": [],
+  "next_rewind_target": "",
+  "hitl_history": [],
+  "quality_report": {
+    "pass_gate": false,
+    "issues": []
+  },
+  "omml_insertion_plan": [],
+  "preformat_autofix_attempts": 0,
+  "next_action": "",
+  "snapshots": [],
+  "b_layer_bundle": {
+    "method": {
+      "chapter": 4,
+      "items": [
+        {
+          "exp_key": "4.2",
+          "title": "直流特性の測定",
+          "level": 2,
+          "text": "製作した回路を使用して，OP アンプの直流利得特性を測定する。\n測定回路は，ワニ口クリップを用いて図13 の点線部分を接続することにより構成する。各測定回路\nは，「2. 基本的なOP アンプ回路と動作原理の概要」に示した図を参照する。このとき，抵抗の短絡や，\n入力端子の接地が必要な場合もある。\n具体的な測定内容は以下のようになる。入力電圧範囲や周波数範囲は，実験者自身が選定した抵抗値\nなどをもとにして，実験目的を満たすように必要適正範囲を検討して決める。以下に示す設定値はあく\nまでも目安である。\n\n4.2.1. 反転増幅回路\n製作した回路を用いて図2 の反転増幅回路を構成する。\n\n(1-1) 出力Eoを開放した無負荷状態において，入力電圧と出力電圧の関係を測定し，グラフを作成\nせよ。ただし，入力電圧は－5～＋5 V の範囲とし，グラフが直線的となる領域は1 V 刻み，曲\nがる領域では0.2 V 刻みなど，測定点が多くなりすぎないように工夫する。\n\n(1-2) OP アンプの反転入力端子電圧を測定結果から計算し，理論と比較せよ。ただしここでは，反\n転入力端子からOP アンプに流入する電流は零と考えてよい。\n(1-3) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値と比較せよ。ただし，明らかに直線近似で\nきない測定点は除外した上で近似すること。\n\n(1-4) 近似直線の傾きa とy 切片b がもつ理論値との差異について，その要因を考察せよ。同時に，\nこの差異を小さくする手法についても，それぞれ考察せよ。\n\n(2-1) 以下の3 つの負荷状態においても，無負荷状態と同様に，入力電圧と出力電圧の関係をそれぞ\nれ測定せよ。\n・ 出力EoにRL1を接続した3 kW負荷状態\n・ 出力Eoに RL2を接続した1 kW負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(2-2) 無負荷状態の入出力特性と各負荷状態の入出力特性を比較せよ。\n\n4.2.2. 非反転増幅回路\n製作した回路を用いて図6 の非反転増幅回路を構成する。\n\n(1-1) 以下の4 状態において，それぞれ入力電圧と出力電圧の関係を測定し，グラフを作成せよ。た\nだし，入力電圧は－5～＋5 V の範囲とし，4.2.1 と同様に測定点が多くなりすぎないように工\n夫する。\n・ 出力Eoを開放した無負荷状態\n・ 出力EoにRL1を接続した3 kW負荷状態\n・ 出力Eoに RL2を接続した1 kW負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(1-2) 無負荷状態でのOP アンプの反転入力端子電圧を測定結果から計算し，理論と比較せよ。ただ\nしここでは，反転入力端子からOP アンプに流入する電流は零と考えてよい。\n\n(1-3) 各状態における測定結果を1 次関数(y=ax+b の形)で近似し，理論値と比較せよ。ただし，明ら\nかに直線近似できない測定点は除外した上で近似すること。\n\n(1-4) 測定した非反転増幅回路の出力電圧が理論値と異なる理由について，負荷の有無や負荷の大き\nさに着目して考察せよ。\n\n4.2.3. ボルテージフォロワ\n製作した回路を用いて図7 のボルテージフォロワ回路を構成する。\n(1-1) 以下の2 状態において，それぞれ入力電圧と出力電圧の関係を測定し，グラフを作成せよ。た\nだし，入力電圧は－10～＋10 V の範囲とし，測定点が多くなりすぎないように工夫する。\n・ 出力Eoを開放した無負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(1-2) OP アンプの出力インピーダンスを概算せよ。ただし，計算精度は重要視しなくてよい。\n\n(2-1) 直流電圧発生器と入力Ei+の間に100 kW抵抗を直列接続し，以下の2 状態において，それぞれ\n入力電圧と出力電圧の関係を測定し，グラフを作成せよ。ただし，入力電圧は－10～＋10 V の\n範囲とし，測定点が多くなりすぎないように工夫する。\n・ 出力Eoを開放した無負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(2-2) OP アンプの入力インピーダンスを概算せよ。ただし，計算精度は重要視しなくてよい。\n4.2.4. 加算回路\n製作した回路を用いて図8 の加算回路を構成する。\n(1-1) 出力Eoを開放した無負荷状態において，2 つの入力電圧と出力電圧の関係を測定し，グラフを\n作成せよ。ただし，入力はEb1, Eb2の2 端子とし，一方の端子電圧固定，もう一方の端子電圧\nを－5～＋5 V の範囲で変化させる。Eb1, Eb2のそれぞれを固定した2 つの場合について計測を\n行うこと。このとき，測定点が多くなりすぎないように工夫する。\n\n(1-2) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値および反転増幅回路の近似結果と比較せよ。\nただし，明らかに直線近似できない測定点は除外した上で近似すること。\n\n4.2.5. 減算回路\n製作した回路を用いて図9 の減算回路を構成する。\n(1-1) 出力Eoを開放した無負荷状態において，2 つの入力電圧と出力電圧の関係を測定し，グラフを\n作成せよ。ただし，入力はEa, Eb1の2 端子とし，一方の端子電圧固定，もう一方の端子電圧を\n－5～＋5 V の範囲で変化させる。Ea, Eb1のそれぞれを固定した2 つの場合について計測を行う\nこと。このとき，測定点が多くなりすぎないように工夫する。\n\n(1-2) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値および反転増幅回路の近似結果と比較せよ。\nただし，明らかに直線近似できない測定点は除外した上で近似すること。",
+          "parent_exp_key": "",
+          "child_exp_keys": [
+            "4.2.1"
+          ]
+        },
+        {
+          "exp_key": "4.2.1",
+          "title": "反転増幅回路",
+          "level": 3,
+          "text": "製作した回路を用いて図2 の反転増幅回路を構成する。\n\n(1-1) 出力Eoを開放した無負荷状態において，入力電圧と出力電圧の関係を測定し，グラフを作成\nせよ。ただし，入力電圧は－5～＋5 V の範囲とし，グラフが直線的となる領域は1 V 刻み，曲\nがる領域では0.2 V 刻みなど，測定点が多くなりすぎないように工夫する。\n\n(1-2) OP アンプの反転入力端子電圧を測定結果から計算し，理論と比較せよ。ただしここでは，反\n転入力端子からOP アンプに流入する電流は零と考えてよい。\n(1-3) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値と比較せよ。ただし，明らかに直線近似で\nきない測定点は除外した上で近似すること。\n\n(1-4) 近似直線の傾きa とy 切片b がもつ理論値との差異について，その要因を考察せよ。同時に，\nこの差異を小さくする手法についても，それぞれ考察せよ。\n\n(2-1) 以下の3 つの負荷状態においても，無負荷状態と同様に，入力電圧と出力電圧の関係をそれぞ\nれ測定せよ。\n・ 出力EoにRL1を接続した3 kW負荷状態\n・ 出力Eoに RL2を接続した1 kW負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(2-2) 無負荷状態の入出力特性と各負荷状態の入出力特性を比較せよ。",
+          "parent_exp_key": "4.2",
+          "child_exp_keys": []
+        }
+      ],
+      "experiment_units": [
+        {
+          "exp_key": "4.2.1",
+          "title": "反転増幅回路",
+          "method_text": "製作した回路を用いて図2 の反転増幅回路を構成する。\n\n(1-1) 出力Eoを開放した無負荷状態において，入力電圧と出力電圧の関係を測定し，グラフを作成\nせよ。ただし，入力電圧は－5～＋5 V の範囲とし，グラフが直線的となる領域は1 V 刻み，曲\nがる領域では0.2 V 刻みなど，測定点が多くなりすぎないように工夫する。\n\n(1-2) OP アンプの反転入力端子電圧を測定結果から計算し，理論と比較せよ。ただしここでは，反\n転入力端子からOP アンプに流入する電流は零と考えてよい。\n(1-3) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値と比較せよ。ただし，明らかに直線近似で\nきない測定点は除外した上で近似すること。\n\n(1-4) 近似直線の傾きa とy 切片b がもつ理論値との差異について，その要因を考察せよ。同時に，\nこの差異を小さくする手法についても，それぞれ考察せよ。\n\n(2-1) 以下の3 つの負荷状態においても，無負荷状態と同様に，入力電圧と出力電圧の関係をそれぞ\nれ測定せよ。\n・ 出力EoにRL1を接続した3 kW負荷状態\n・ 出力Eoに RL2を接続した1 kW負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(2-2) 無負荷状態の入出力特性と各負荷状態の入出力特性を比較せよ。",
+          "level": 3,
+          "parent": {
+            "exp_key": "4.2",
+            "title": "直流特性の測定",
+            "method_text": "製作した回路を使用して，OP アンプの直流利得特性を測定する。\n測定回路は，ワニ口クリップを用いて図13 の点線部分を接続することにより構成する。各測定回路\nは，「2. 基本的なOP アンプ回路と動作原理の概要」に示した図を参照する。このとき，抵抗の短絡や，\n入力端子の接地が必要な場合もある。\n具体的な測定内容は以下のようになる。入力電圧範囲や周波数範囲は，実験者自身が選定した抵抗値\nなどをもとにして，実験目的を満たすように必要適正範囲を検討して決める。以下に示す設定値はあく\nまでも目安である。\n\n4.2.1. 反転増幅回路\n製作した回路を用いて図2 の反転増幅回路を構成する。\n\n(1-1) 出力Eoを開放した無負荷状態において，入力電圧と出力電圧の関係を測定し，グラフを作成\nせよ。ただし，入力電圧は－5～＋5 V の範囲とし，グラフが直線的となる領域は1 V 刻み，曲\nがる領域では0.2 V 刻みなど，測定点が多くなりすぎないように工夫する。\n\n(1-2) OP アンプの反転入力端子電圧を測定結果から計算し，理論と比較せよ。ただしここでは，反\n転入力端子からOP アンプに流入する電流は零と考えてよい。\n(1-3) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値と比較せよ。ただし，明らかに直線近似で\nきない測定点は除外した上で近似すること。\n\n(1-4) 近似直線の傾きa とy 切片b がもつ理論値との差異について，その要因を考察せよ。同時に，\nこの差異を小さくする手法についても，それぞれ考察せよ。\n\n(2-1) 以下の3 つの負荷状態においても，無負荷状態と同様に，入力電圧と出力電圧の関係をそれぞ\nれ測定せよ。\n・ 出力EoにRL1を接続した3 kW負荷状態\n・ 出力Eoに RL2を接続した1 kW負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(2-2) 無負荷状態の入出力特性と各負荷状態の入出力特性を比較せよ。\n\n4.2.2. 非反転増幅回路\n製作した回路を用いて図6 の非反転増幅回路を構成する。\n\n(1-1) 以下の4 状態において，それぞれ入力電圧と出力電圧の関係を測定し，グラフを作成せよ。た\nだし，入力電圧は－5～＋5 V の範囲とし，4.2.1 と同様に測定点が多くなりすぎないように工\n夫する。\n・ 出力Eoを開放した無負荷状態\n・ 出力EoにRL1を接続した3 kW負荷状態\n・ 出力Eoに RL2を接続した1 kW負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(1-2) 無負荷状態でのOP アンプの反転入力端子電圧を測定結果から計算し，理論と比較せよ。ただ\nしここでは，反転入力端子からOP アンプに流入する電流は零と考えてよい。\n\n(1-3) 各状態における測定結果を1 次関数(y=ax+b の形)で近似し，理論値と比較せよ。ただし，明ら\nかに直線近似できない測定点は除外した上で近似すること。\n\n(1-4) 測定した非反転増幅回路の出力電圧が理論値と異なる理由について，負荷の有無や負荷の大き\nさに着目して考察せよ。\n\n4.2.3. ボルテージフォロワ\n製作した回路を用いて図7 のボルテージフォロワ回路を構成する。\n(1-1) 以下の2 状態において，それぞれ入力電圧と出力電圧の関係を測定し，グラフを作成せよ。た\nだし，入力電圧は－10～＋10 V の範囲とし，測定点が多くなりすぎないように工夫する。\n・ 出力Eoを開放した無負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(1-2) OP アンプの出力インピーダンスを概算せよ。ただし，計算精度は重要視しなくてよい。\n\n(2-1) 直流電圧発生器と入力Ei+の間に100 kW抵抗を直列接続し，以下の2 状態において，それぞれ\n入力電圧と出力電圧の関係を測定し，グラフを作成せよ。ただし，入力電圧は－10～＋10 V の\n範囲とし，測定点が多くなりすぎないように工夫する。\n・ 出力Eoを開放した無負荷状態\n・ 出力EoにRL1,とRL2を並列接続した750 W負荷状態\n\n(2-2) OP アンプの入力インピーダンスを概算せよ。ただし，計算精度は重要視しなくてよい。\n4.2.4. 加算回路\n製作した回路を用いて図8 の加算回路を構成する。\n(1-1) 出力Eoを開放した無負荷状態において，2 つの入力電圧と出力電圧の関係を測定し，グラフを\n作成せよ。ただし，入力はEb1, Eb2の2 端子とし，一方の端子電圧固定，もう一方の端子電圧\nを－5～＋5 V の範囲で変化させる。Eb1, Eb2のそれぞれを固定した2 つの場合について計測を\n行うこと。このとき，測定点が多くなりすぎないように工夫する。\n\n(1-2) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値および反転増幅回路の近似結果と比較せよ。\nただし，明らかに直線近似できない測定点は除外した上で近似すること。\n\n4.2.5. 減算回路\n製作した回路を用いて図9 の減算回路を構成する。\n(1-1) 出力Eoを開放した無負荷状態において，2 つの入力電圧と出力電圧の関係を測定し，グラフを\n作成せよ。ただし，入力はEa, Eb1の2 端子とし，一方の端子電圧固定，もう一方の端子電圧を\n－5～＋5 V の範囲で変化させる。Ea, Eb1のそれぞれを固定した2 つの場合について計測を行う\nこと。このとき，測定点が多くなりすぎないように工夫する。\n\n(1-2) 測定結果を1 次関数(y=ax+b の形)で近似し，理論値および反転増幅回路の近似結果と比較せよ。\nただし，明らかに直線近似できない測定点は除外した上で近似すること。"
+          }
+        }
+      ]
+    },
+    "discussion": {
+      "chapter": null,
+      "section_number": "",
+      "title": "",
+      "heading_line": "",
+      "text": ""
+    },
+    "theory_formulas": [
+      {
+        "formula": "E_o = G (E_{i+} - E_{i-})",
+        "context": "OP アンプの開放ループ利得の定義を示す式。差動入力信号を開放ループで増幅した結果として出力が決まることを表す。",
+        "experiments": [
+          "4.2.1 反転増幅回路",
+          "4.2.2 非反転増幅回路",
+          "4.2.3 ボルテージフォロワ",
+          "4.2.4 加算回路",
+          "4.2.5 減算回路",
+          "4.3.1 積分回路",
+          "4.3.2 反転増幅回路の交流特性",
+          "4.3.3 加算回路の交流特性",
+          "4.3.4 減算回路の交流特性"
+        ]
+      },
+      {
+        "formula": "E_o = - \\frac{R_f}{R_{b1}} E_{b1}",
+        "context": "反転増幅回路における出力が入力信号に対して反転して増幅される関係を示す基本式。",
+        "experiments": [
+          "4.2.1 反転増幅回路",
+          "4.3.2 反転増幅回路の交流特性"
+        ]
+      },
+      {
+        "formula": "E_o = \\left(1 + \\frac{R_f}{R_{b1}}\\right) E_{a1}",
+        "context": "非反転増幅回路のゲインの定義。入力信号の正の利得を示す。",
+        "experiments": [
+          "4.2.2 非反転増幅回路",
+          "4.3.2 反転増幅回路の交流特性",
+          "4.3.3 加算回路の交流特性",
+          "4.3.4 減算回路の交流特性",
+          "4.2.4 加算回路"
+        ]
+      },
+      {
+        "formula": "E_o = - R_f \\sum_k \\left( \\frac{E_{bk}}{R_{bk}} \\right)",
+        "context": "加算回路における出力は、各入力の加重和として得られる。",
+        "experiments": [
+          "4.2.4 加算回路",
+          "4.3.3 加算回路の交流特性"
+        ]
+      },
+      {
+        "formula": "E_o = E_{a1} - E_{b1}",
+        "context": "減算回路で二つの入力の差を出力する方法。抵抗値を適切に選ぶと、差を実現できる。",
+        "experiments": [
+          "4.2.5 減算回路",
+          "4.3.4 減算回路の交流特性"
+        ]
+      },
+      {
+        "formula": "E_o = - \\frac{1}{R_{b1} C_f} \\int E_{b1} dt",
+        "context": "積分回路の出力は入力信号の積分として得られる。",
+        "experiments": [
+          "4.3.1 積分回路",
+          "4.3.2 反転増幅回路の交流特性",
+          "4.3.3 加算回路の交流特性"
+        ]
+      },
+      {
+        "formula": "E_o = - \\frac{E_{b1}}{j \\omega R_{b1} C_f}",
+        "context": "周波数領域における積分回路の出力。位相が-90度程度、利得は 1/(\\omega R_{b1} C_f) に比例する。",
+        "experiments": [
+          "4.3.1 積分回路",
+          "4.3.2 反転増幅回路の交流特性"
+        ]
+      },
+      {
+        "formula": "20 \\log_{10}\\left(\\frac{|E_o|}{|E_{b1}|}\\right) = -20 \\log_{10}\\left(2 \\pi f C_f R_{b1}\\right)",
+        "context": "積分回路の周波数特性をデシベルで表す。",
+        "experiments": [
+          "4.3.1 積分回路",
+          "4.3.2 反転増幅回路の交流特性",
+          "4.3.3 加算回路の交流特性",
+          "4.3.4 減算回路の交流特性"
+        ]
+      }
+    ]
+  }
+}

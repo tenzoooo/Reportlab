@@ -1,0 +1,124 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	session_start(session_start)
+	ingest(ingest)
+	normalize_inputs(normalize_inputs)
+	classify_assets(classify_assets)
+	extract_manual_text(extract_manual_text)
+	infer_required_outputs(infer_required_outputs)
+	required_outputs_gate(required_outputs_gate)
+	halt_required_outputs(halt_required_outputs)
+	inspect_excel(inspect_excel)
+	select_excel_sheet(select_excel_sheet)
+	sheet_selection_gate(sheet_selection_gate)
+	bind_table_columns(bind_table_columns)
+	column_unit_gate(column_unit_gate)
+	bind_theory_params(bind_theory_params)
+	param_binding_gate(param_binding_gate)
+	halt_excel_binding(halt_excel_binding)
+	halt_text_generation(halt_text_generation)
+	bind_insert_assets(bind_insert_assets)
+	generate_graphs(generate_graphs)
+	resolve_axes(resolve_axes)
+	decide_theory_compare_toggle(decide_theory_compare_toggle)
+	compute_theory_value(compute_theory_value)
+	compute_delta_and_abs_error(compute_delta_and_abs_error)
+	compute_slope_and_extreme(compute_slope_and_extreme)
+	summarize_method_to_overview_1(summarize_method_to_overview_1)
+	generate_result_description_1(generate_result_description_1)
+	generate_captions_1(generate_captions_1)
+	generate_quant_comment_text_1(generate_quant_comment_text_1)
+	summarize_method_to_overview_2(summarize_method_to_overview_2)
+	generate_result_description_2(generate_result_description_2)
+	generate_captions_2(generate_captions_2)
+	generate_quant_comment_text_2(generate_quant_comment_text_2)
+	assemble_experiment_result_group(assemble_experiment_result_group)
+	assemble_results_page(assemble_results_page)
+	build_discussion_page(build_discussion_page)
+	build_summary_page(build_summary_page)
+	build_references_page(build_references_page)
+	past_report_hints(past_report_hints)
+	parse_manual_structure(parse_manual_structure)
+	extract_method_numbers(extract_method_numbers)
+	extract_theory_formulas_llm(extract_theory_formulas_llm)
+	map_result_numbers(map_result_numbers)
+	locate_discussion_section(locate_discussion_section)
+	extract_theory_candidates(extract_theory_candidates)
+	normalize_ommlify_formula(normalize_ommlify_formula)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> session_start;
+	assemble_experiment_result_group -. &nbsp;end&nbsp; .-> __end__;
+	assemble_experiment_result_group -.-> assemble_results_page;
+	assemble_experiment_result_group -.-> halt_text_generation;
+	assemble_results_page -. &nbsp;end&nbsp; .-> __end__;
+	assemble_results_page -.-> build_discussion_page;
+	bind_insert_assets --> generate_graphs;
+	bind_table_columns --> column_unit_gate;
+	bind_theory_params --> param_binding_gate;
+	build_discussion_page -. &nbsp;end&nbsp; .-> __end__;
+	build_discussion_page -.-> build_summary_page;
+	build_discussion_page -.-> halt_text_generation;
+	build_summary_page -. &nbsp;end&nbsp; .-> __end__;
+	build_summary_page -.-> build_references_page;
+	classify_assets -.-> extract_manual_text;
+	classify_assets -.-> inspect_excel;
+	column_unit_gate -.-> bind_theory_params;
+	column_unit_gate -.-> halt_excel_binding;
+	compute_delta_and_abs_error -. &nbsp;end&nbsp; .-> __end__;
+	compute_delta_and_abs_error -.-> halt_excel_binding;
+	compute_delta_and_abs_error -.-> summarize_method_to_overview_1;
+	compute_slope_and_extreme -. &nbsp;end&nbsp; .-> __end__;
+	compute_slope_and_extreme -.-> halt_excel_binding;
+	compute_slope_and_extreme -.-> summarize_method_to_overview_1;
+	compute_theory_value --> compute_delta_and_abs_error;
+	decide_theory_compare_toggle -.-> compute_slope_and_extreme;
+	decide_theory_compare_toggle -.-> compute_theory_value;
+	decide_theory_compare_toggle -.-> halt_excel_binding;
+	extract_manual_text --> past_report_hints;
+	extract_method_numbers --> extract_theory_formulas_llm;
+	extract_theory_formulas_llm --> map_result_numbers;
+	extract_theory_candidates --> normalize_ommlify_formula;
+	generate_captions_1 --> generate_quant_comment_text_1;
+	generate_captions_2 --> generate_quant_comment_text_2;
+	generate_graphs --> resolve_axes;
+	generate_quant_comment_text_1 -. &nbsp;end&nbsp; .-> __end__;
+	generate_quant_comment_text_1 -.-> halt_text_generation;
+	generate_quant_comment_text_1 -.-> locate_discussion_section;
+	generate_quant_comment_text_2 -. &nbsp;end&nbsp; .-> __end__;
+	generate_quant_comment_text_2 -.-> assemble_experiment_result_group;
+	generate_quant_comment_text_2 -.-> halt_text_generation;
+	generate_result_description_1 --> generate_captions_1;
+	generate_result_description_2 --> generate_captions_2;
+	infer_required_outputs --> required_outputs_gate;
+	ingest --> normalize_inputs;
+	inspect_excel --> select_excel_sheet;
+	locate_discussion_section --> summarize_method_to_overview_2;
+	map_result_numbers --> extract_theory_candidates;
+	normalize_inputs --> classify_assets;
+	normalize_ommlify_formula --> infer_required_outputs;
+	param_binding_gate -.-> bind_insert_assets;
+	param_binding_gate -.-> halt_excel_binding;
+	parse_manual_structure --> extract_method_numbers;
+	past_report_hints --> parse_manual_structure;
+	required_outputs_gate -.-> halt_required_outputs;
+	required_outputs_gate -.-> inspect_excel;
+	resolve_axes -.-> decide_theory_compare_toggle;
+	resolve_axes -.-> halt_excel_binding;
+	select_excel_sheet --> sheet_selection_gate;
+	session_start --> ingest;
+	sheet_selection_gate -.-> bind_table_columns;
+	sheet_selection_gate -.-> halt_excel_binding;
+	summarize_method_to_overview_1 --> generate_result_description_1;
+	summarize_method_to_overview_2 --> generate_result_description_2;
+	build_references_page --> __end__;
+	halt_excel_binding --> __end__;
+	halt_required_outputs --> __end__;
+	halt_text_generation --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

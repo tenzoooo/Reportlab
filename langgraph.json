@@ -1,0 +1,5 @@
+{
+  "graphs": {
+    "update_mvp": "graph.update_mvp.langgraph_app:graph"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "exp_key": "4.1",
+  "table_captions": [
+    {
+      "asset_id": "tbl_4.1_1",
+      "caption": "部品リストと実装状態の対応表",
+      "error": ""
+    },
+    {
+      "asset_id": "tbl_4.1_2",
+      "caption": "抵抗値のカラーコードと実測値の対比表",
+      "error": ""
+    }
+  ],
+  "graph_captions": [
+    {
+      "asset_id": "fig_4.1_1",
+      "caption": "Vin-Vout特性グラフ",
+      "error": ""
+    }
+  ]
+}

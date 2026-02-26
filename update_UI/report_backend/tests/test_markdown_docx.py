@@ -62,3 +62,19 @@ def test_render_docx_from_markdown_with_table_and_image(tmp_path: Path):
     assert "a" in xml and "b" in xml
     assert "1" in xml and "2" in xml
     assert "cap" in xml
+
+
+def test_render_docx_from_markdown_draws_diagonal_for_empty_header_cell(tmp_path: Path):
+    storage = LocalStorage(root=tmp_path)
+
+    md = "\n".join(
+        [
+            "|  | b |",
+            "|---|---|",
+            "| 1 | 2 |",
+        ]
+    )
+
+    docx = render_docx_from_markdown(markdown=md, storage=storage, images_by_id={})
+    xml = _docx_xml(docx)
+    assert "w:tr2bl" in xml

@@ -1,0 +1,119 @@
+{
+  "experiments": [
+    {
+      "exp_key": "4.1",
+      "result_no": "",
+      "title": "回路の製作",
+      "method_summary": "OPアンプ回路の製作と部品表・PCBの観察を行い、実装手順の留意点を確認する。",
+      "parent_title": "",
+      "child_titles": []
+    },
+    {
+      "exp_key": "4.2.1",
+      "result_no": "",
+      "title": "反転増幅回路",
+      "method_summary": "製作回路の無負荷・負荷条件での入出力特性をグラフ化し、理論値と比較する。",
+      "parent_title": "直流特性の測定",
+      "child_titles": []
+    },
+    {
+      "exp_key": "4.2.2",
+      "result_no": "",
+      "title": "非反転増幅回路",
+      "method_summary": "非反転増幅回路の入出力測定を行い、得られたデータを直線近似して理論値と比較する。",
+      "parent_title": "直流特性の測定",
+      "child_titles": []
+    },
+    {
+      "exp_key": "4.2.3",
+      "result_no": "",
+      "title": "ボルテージフォロワ",
+      "method_summary": "ボルテージフォロワ回路の入出力特性を2つのグラフとして測定・閲覧する。",
+      "parent_title": "直流特性の測定",
+      "child_titles": []
+    },
+    {
+      "exp_key": "4.2.4",
+      "result_no": "",
+      "title": "加算回路",
+      "method_summary": "加算回路の入出力特性をグラフ化し、直線近似と比較する。",
+      "parent_title": "直流特性の測定",
+      "child_titles": []
+    },
+    {
+      "exp_key": "4.2.5",
+      "result_no": "",
+      "title": "減算回路",
+      "method_summary": "減算回路の入出力特性をグラフ化し、直線近似と比較する。",
+      "parent_title": "直流特性の測定",
+      "child_titles": []
+    },
+    {
+      "exp_key": "4.3.1",
+      "result_no": "",
+      "title": "積分回路",
+      "method_summary": "積分回路の入力・出力波形を観測・記録し、周波数特性のグラフを作成して理論と比較する。",
+      "parent_title": "交流特性の測定",
+      "child_titles": []
+    },
+    {
+      "exp_key": "4.3.2",
+      "result_no": "",
+      "title": "反転増幅回路の交流特性",
+      "method_summary": "反転増幅回路の周波数特性を測定・グラフ化し、理由の考察を行う。",
+      "parent_title": "交流特性の測定",
+      "child_titles": []
+    },
+    {
+      "exp_key": "4.3.3",
+      "result_no": "",
+      "title": "加算回路の交流特性",
+      "method_summary": "加算回路の波形を観測・保存し、動作を確認する。",
+      "parent_title": "交流特性の測定",
+      "child_titles": []
+    },
+    {
+      "exp_key": "4.3.4",
+      "result_no": "",
+      "title": "減算回路の交流特性",
+      "method_summary": "減算回路を用いた交流特性の観測・保存を行う。",
+      "parent_title": "交流特性の測定",
+      "child_titles": []
+    }
+  ],
+  "excel_files": [
+    {
+      "excel_id": "ac",
+      "filename": "OPアンプ AC特性.xlsx",
+      "sheet_names": [
+        "周東いる班(積分回路)",
+        "周東いる班(反転増幅回路の交流)",
+        "周東いる班(加算・減算回路の交流)",
+        "いない班(積分回路)",
+        "いない班(反転増幅回路の交流)",
+        "　いない班(加算・減算回路の交流) ",
+        "コピー元"
+      ]
+    },
+    {
+      "excel_id": "dc",
+      "filename": "OPアンプ DC特性.xlsx",
+      "sheet_names": [
+        "周東いる班(反転増幅回路)",
+        "周東いる班(非反転増幅回路)",
+        "周東いる班(ボルテージフォロワ) ",
+        "周東いる班(ボルテージフォロワ100kΩ)",
+        "周東いる班(加算回路)",
+        "周東いる班(減算回路)",
+        "いない班(反転増幅回路)",
+        "いない班(非反転増幅回路)",
+        "いない班(ボルテージフォロワ)",
+        "いない班(ボルテージフォロワ) (100kΩ直列)",
+        "いない班(加算回路)",
+        "　いない班(減算回路) ",
+        "Sheet1",
+        "コピー元"
+      ]
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 
+import { getUserIdFromRequest, loadOwnedReport } from "@/app/api/reports/_shared/access"
 import { logError, logRequest } from "@/lib/server/logger"
-import { createClient, createServiceClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -54,23 +55,6 @@ const resolveStorageUrl = async (
   throw error ?? new Error("署名付きURLの作成に失敗しました")
 }
 
-const getUserId = async (request: NextRequest) => {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (user) return user.id
-
-  const auth = request.headers.get("authorization") || ""
-  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length).trim() : ""
-  if (!token) return null
-
-  const admin = createServiceClient()
-  const { data, error } = await admin.auth.getUser(token)
-  if (error || !data.user) return null
-  return data.user.id
-}
-
 const buildDefaultAnalysis = (images: ImageFile[], tables: ExperimentDataRow[]) => {
   const figures = images.map((img, i) => ({
     label: `図 1-${i + 1}`,
@@ -98,17 +82,18 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const { id: reportId } = await context.params
   logRequest(request, "reports:analysis:get", { reportId })
 
-  const userId = await getUserId(request)
+  const userId = await getUserIdFromRequest(request)
   if (!userId) return NextResponse.json({ error: "ログインが必要です" }, { status: 401 })
 
   const admin = createServiceClient()
-  const { data: report, error: reportError } = await admin
-    .from("reports")
-    .select("id, user_id")
-    .eq("id", reportId)
-    .maybeSingle()
-  if (reportError) return NextResponse.json({ error: reportError.message }, { status: 500 })
-  if (!report || report.user_id !== userId) return NextResponse.json({ error: "レポートが見つかりません" }, { status: 404 })
+  const { errorMessage: reportError, report } = await loadOwnedReport<{ id: string; user_id: string | null }>({
+    admin,
+    reportId,
+    userId,
+    select: "id, user_id",
+  })
+  if (reportError) return NextResponse.json({ error: reportError }, { status: 500 })
+  if (!report) return NextResponse.json({ error: "レポートが見つかりません" }, { status: 404 })
 
   const { data: files, error: filesError } = await admin
     .from("experiment_data")
@@ -141,7 +126,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     if (error || !data) throw new Error(error?.message || "Missing analysis")
     const text = await data.text()
     const parsed = JSON.parse(text)
-    return NextResponse.json({ analysis: { dify_response: parsed }, images })
+    return NextResponse.json({ analysis: { ai_response: parsed }, images })
   } catch {
     const defaultAnalysis = buildDefaultAnalysis(images, tables)
     try {
@@ -152,7 +137,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     } catch (e) {
       logError("reports:analysis:get:save-default", e)
     }
-    return NextResponse.json({ analysis: { dify_response: defaultAnalysis }, images })
+    return NextResponse.json({ analysis: { ai_response: defaultAnalysis }, images })
   }
 }
 
@@ -160,7 +145,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
   const { id: reportId } = await context.params
   logRequest(request, "reports:analysis:put", { reportId })
 
-  const userId = await getUserId(request)
+  const userId = await getUserIdFromRequest(request)
   if (!userId) return NextResponse.json({ error: "ログインが必要です" }, { status: 401 })
 
   let body: any
@@ -170,16 +155,22 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     return NextResponse.json({ error: "JSON の形式が正しくありません" }, { status: 400 })
   }
 
-  const difyResponse = body?.dify_response
-  if (!difyResponse) return NextResponse.json({ error: "dify_response is required" }, { status: 400 })
+  const aiResponse = body?.ai_response ?? body?.dify_response
+  if (!aiResponse) return NextResponse.json({ error: "ai_response is required" }, { status: 400 })
 
   const admin = createServiceClient()
-  const { data: report } = await admin.from("reports").select("id, user_id").eq("id", reportId).maybeSingle()
-  if (!report || report.user_id !== userId) return NextResponse.json({ error: "レポートが見つかりません" }, { status: 404 })
+  const { errorMessage: reportError, report } = await loadOwnedReport<{ id: string; user_id: string | null }>({
+    admin,
+    reportId,
+    userId,
+    select: "id, user_id",
+  })
+  if (reportError) return NextResponse.json({ error: reportError }, { status: 500 })
+  if (!report) return NextResponse.json({ error: "レポートが見つかりません" }, { status: 404 })
 
   const key = analysisStorageKey(userId, reportId)
   try {
-    await admin.storage.from(EXPERIMENT_BUCKET).upload(normalizeStoragePath(key), JSON.stringify(difyResponse, null, 2), {
+    await admin.storage.from(EXPERIMENT_BUCKET).upload(normalizeStoragePath(key), JSON.stringify(aiResponse, null, 2), {
       contentType: "application/json",
       upsert: true,
     })

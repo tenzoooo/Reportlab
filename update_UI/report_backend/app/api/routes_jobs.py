@@ -12,10 +12,23 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
+from core.excel import validate_a1_range
 from core.jobs import load_state, save_state
 from core.storage import Storage
+from core.text import extract_docx_text, extract_report_hint_from_text
 from graph.build_graph import build_graph
-from graph.state import AgentState, JobMeta, JobStatus, ValidationIssue, now_iso
+from graph.state import (
+    AgentState,
+    ExcelFile,
+    ExcelSheetSelection,
+    ExcelSheetSelectionCandidate,
+    GraphAxisInfo,
+    JobMeta,
+    JobStatus,
+    PastReportData,
+    ValidationIssue,
+    now_iso,
+)
 from llm.client import LLMClient
 from models.contracts import ImageAsset, TableAsset
 from templating.renderer import render_docx_bytes
@@ -39,7 +52,15 @@ class AddTableResponse(BaseModel):
 
 
 class AddExcelResponse(BaseModel):
+    excel_id: str
     filename: str
+
+
+class AddPastReportResponse(BaseModel):
+    report_id: str
+    filename: str
+    hint_len: int
+    upload_index: int
 
 
 class RunJobResponse(BaseModel):
@@ -49,6 +70,45 @@ class RunJobResponse(BaseModel):
     artifact_markdown_key: Optional[str] = None
     errors: list[ValidationIssue] = Field(default_factory=list)
     warnings: list[ValidationIssue] = Field(default_factory=list)
+
+
+class SelectSheetExcelFile(BaseModel):
+    excel_id: str
+    filename: str
+    sheet_names: list[str] = Field(default_factory=list)
+
+
+class SelectSheetRequest(BaseModel):
+    job_id: str
+    exp_key: str
+    title: str
+    hints: str
+    excel_files: list[SelectSheetExcelFile] = Field(default_factory=list)
+
+
+class SelectSheetResponse(BaseModel):
+    excel_id: str
+    sheet_name: str
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    rationale: str = Field(default="")
+    evidence: list[str] = Field(default_factory=list)
+
+
+class SelectRangeRequest(BaseModel):
+    job_id: str
+    exp_key: str
+    title: str
+    hints: str
+    excel_id: str
+    sheet_name: str
+    preview_rows: list[list[str]] = Field(default_factory=list)
+
+
+class SelectRangeResponse(BaseModel):
+    a1_range: str
+    rationale: str = Field(default="")
+    has_graph: bool = False
+    graph_axes: GraphAxisInfo = Field(default_factory=GraphAxisInfo)
 
 
 def _ext_from_filename(filename: str) -> str:
@@ -61,13 +121,21 @@ def _ext_from_filename(filename: str) -> str:
 
 
 def _langsmith_enabled() -> bool:
-    value = (
-        os.environ.get("LANGSMITH_TRACING")
-        or os.environ.get("LANGSMITH_TRACING_V2")
-        or os.environ.get("LANGCHAIN_TRACING_V2")
-        or ""
-    ).strip().lower()
-    return value in {"1", "true", "yes", "y", "on"}
+    override = (os.environ.get("REPORT_AGENT_ENABLE_LANGSMITH") or "").strip().lower()
+    if override in {"1", "true", "yes", "y", "on"}:
+        return True
+    if override in {"0", "false", "no", "n", "off"}:
+        return False
+
+    trace_flags = [
+        os.environ.get("LANGSMITH_TRACING"),
+        os.environ.get("LANGSMITH_TRACING_V2"),
+        os.environ.get("LANGCHAIN_TRACING_V2"),
+    ]
+    explicit = [v.strip().lower() for v in trace_flags if isinstance(v, str) and v.strip()]
+    if explicit:
+        return any(v in {"1", "true", "yes", "y", "on"} for v in explicit)
+    return bool(os.environ.get("LANGSMITH_API_KEY") or os.environ.get("LANGCHAIN_API_KEY"))
 
 
 def _extract_pdf_text(pdf_bytes: bytes) -> str:
@@ -129,6 +197,18 @@ def _extract_pdf_text(pdf_bytes: bytes) -> str:
         chunks.append(page_text)
 
     return clean_pdf_text_for_llm(normalize_pdf_text("\n".join([c for c in chunks if c])))
+
+
+def _extract_past_report_hint(report_bytes: bytes, *, ext: str) -> str:
+    if not report_bytes:
+        return ""
+    if ext == ".pdf":
+        text = _extract_pdf_text(report_bytes)
+    elif ext == ".docx":
+        text = extract_docx_text(report_bytes)
+    else:
+        return ""
+    return extract_report_hint_from_text(text)
 
 
 def _shrink_text(text: str, *, max_chars: int = 120_000) -> str:
@@ -234,6 +314,162 @@ def build_router(*, storage: Storage, llm: LLMClient, template_path: str) -> API
             "X-Accel-Buffering": "no",
         }
         return StreamingResponse(gen(), media_type="text/event-stream; charset=utf-8", headers=headers)
+
+    class _SheetSelectLLMOutput(BaseModel):
+        excel_id: str = Field(default="")
+        sheet_name: str = Field(default="")
+        confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+        rationale: str = Field(default="")
+        evidence: list[str] = Field(default_factory=list)
+
+    @r.post("/excel/select-sheet", response_model=SelectSheetResponse)
+    async def _select_excel_sheet(req: SelectSheetRequest) -> SelectSheetResponse:
+        state = load_state(storage, job_id=req.job_id)
+        payload = {
+            "experiment": {"exp_key": req.exp_key, "title": req.title, "hints": req.hints},
+            "excel_files": [f.model_dump() for f in req.excel_files],
+        }
+        system = (
+            "あなたは実験結果に対応するExcelシートを選ぶ抽出器です。\n"
+            "出力はJSONのみ（説明文は禁止）。\n"
+            "# 入力\n"
+            "- experiment: {exp_key, title, hints}\n"
+            "- excel_files: [{excel_id, filename, sheet_names}]\n"
+            "# ルール\n"
+            "- excel_id と sheet_name は入力の候補から選ぶ。\n"
+            "- rationale は短く理由を書く。\n"
+            "- confidence は 0〜1。\n"
+            "- evidence は根拠語句。\n"
+        )
+        output = llm.parse(
+            _SheetSelectLLMOutput,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+            ],
+            attempts=2,
+        )
+        selection = ExcelSheetSelection(
+            exp_key=req.exp_key,
+            title=req.title,
+            selected_excel_id=output.excel_id,
+            selected_sheet=output.sheet_name,
+            confidence=output.confidence,
+            rationale=output.rationale or "",
+            evidence=list(output.evidence or []),
+            candidates=[
+                ExcelSheetSelectionCandidate(
+                    excel_id=output.excel_id,
+                    sheet_name=output.sheet_name,
+                    confidence=output.confidence,
+                    rationale=output.rationale or "",
+                    evidence=list(output.evidence or []),
+                )
+            ],
+            used_llm=True,
+        )
+        updated: list[ExcelSheetSelection] = []
+        replaced = False
+        for existing in state.excel_sheet_selections:
+            if existing.exp_key == req.exp_key:
+                updated.append(selection)
+                replaced = True
+            else:
+                updated.append(existing)
+        if not replaced:
+            updated.append(selection)
+        state.excel_sheet_selections = updated
+        state.job_meta.updated_at = now_iso()
+        save_state(storage, state)
+        return SelectSheetResponse(
+            excel_id=output.excel_id,
+            sheet_name=output.sheet_name,
+            confidence=output.confidence,
+            rationale=output.rationale or "",
+            evidence=list(output.evidence or []),
+        )
+
+    class _RangeSelectLLMOutput(BaseModel):
+        a1_range: str = Field(default="")
+        rationale: str = Field(default="")
+        has_graph: bool = False
+        graph_axes: GraphAxisInfo = Field(default_factory=GraphAxisInfo)
+
+    @r.post("/excel/select-range", response_model=SelectRangeResponse)
+    async def _select_excel_range(req: SelectRangeRequest) -> SelectRangeResponse:
+        state = load_state(storage, job_id=req.job_id)
+        payload = {
+            "experiment": {
+                "exp_key": req.exp_key,
+                "title": req.title,
+                "hints": req.hints,
+                "excel_id": req.excel_id,
+                "sheet_name": req.sheet_name,
+            },
+            "preview_rows": req.preview_rows,
+        }
+        system = (
+            "あなたはExcelのプレビューから表範囲とグラフ情報を選ぶ抽出器です。\n"
+            "出力はJSONのみ（説明文は禁止）。\n"
+            "# 入力\n"
+            "- experiment: {exp_key, title, hints, excel_id, sheet_name}\n"
+            "- preview_rows: 先頭プレビュー\n"
+            "# ルール\n"
+            "- a1_range は表範囲（A1:D20 など）。\n"
+            "- has_graph が true の場合は graph_axes を埋める。\n"
+            "- graph_axes には x/y 名称・単位・系列名・条件名を入れる。\n"
+        )
+        output = llm.parse(
+            _RangeSelectLLMOutput,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+            ],
+            attempts=2,
+        )
+        a1 = (output.a1_range or "").strip().upper().replace(" ", "")
+        if a1 and not validate_a1_range(a1):
+            a1 = ""
+
+        from graph.state import EExcelRangeSelection
+
+        result = {
+            "exp_key": req.exp_key,
+            "title": req.title,
+            "table_range": {"excel_id": req.excel_id, "sheet": req.sheet_name, "a1_range": a1},
+            "has_graph": bool(output.has_graph),
+            "graph_axes": output.graph_axes.model_dump(),
+        }
+        selection = EExcelRangeSelection(
+            exp_key=req.exp_key,
+            title=req.title,
+            excel_id=req.excel_id,
+            excel_filename="",
+            sheet=req.sheet_name,
+            a1_range=a1,
+            has_graph=bool(output.has_graph),
+            graph_axes=output.graph_axes,
+            result=result,
+        )
+        updated: list[EExcelRangeSelection] = []
+        replaced = False
+        for existing in state.e_excel.range_selections:
+            if existing.exp_key == req.exp_key:
+                updated.append(selection)
+                replaced = True
+            else:
+                updated.append(existing)
+        if not replaced:
+            updated.append(selection)
+        state.e_excel.range_selections = updated
+        state.job_meta.updated_at = now_iso()
+        save_state(storage, state)
+        return SelectRangeResponse(
+            a1_range=a1,
+            rationale=output.rationale or "",
+            has_graph=bool(output.has_graph),
+            graph_axes=output.graph_axes,
+        )
 
     @r.get("/debug/tracing")
     async def _debug_tracing():
@@ -517,24 +753,81 @@ def build_router(*, storage: Storage, llm: LLMClient, template_path: str) -> API
         if ext not in {".xlsx", ".xlsm"}:
             raise HTTPException(status_code=400, detail="Unsupported excel type (expected .xlsx or .xlsm)")
 
-        key = f"jobs/{job_id}/source/excel{ext}"
+        excel_id = uuid.uuid4().hex
+        key = f"jobs/{job_id}/source/excels/{excel_id}{ext or '.bin'}"
         storage.put_bytes(key, raw)
-        state.excel.filename = excel.filename or f"excel{ext}"
+        filename = excel.filename or f"excel{ext}"
+        state.excel.filename = filename
         state.excel.storage_key = key
+        upload_index = state.job_meta.next_upload_index
+        state.job_meta.next_upload_index += 1
+        state.excel_files.append(
+            ExcelFile(
+                excel_id=excel_id,
+                filename=filename,
+                storage_key=key,
+                upload_index=upload_index,
+            )
+        )
         state.job_meta.updated_at = now_iso()
         save_state(storage, state)
-        return AddExcelResponse(filename=state.excel.filename)
+        return AddExcelResponse(excel_id=excel_id, filename=filename)
 
-    @r.post("/jobs/{job_id}/run", response_model=RunJobResponse)
-    async def _run_job(job_id: str, mode: str = "full") -> RunJobResponse:
+    @r.post("/jobs/{job_id}/past-report", response_model=AddPastReportResponse)
+    async def _add_past_report(job_id: str, report: UploadFile = File(...)) -> AddPastReportResponse:
+        """
+        Upload a past report (PDF/DOCX). Store a compact preview hint.
+        Structured hints are extracted during MVP run.
+        """
         try:
             state = load_state(storage, job_id=job_id)
         except Exception:
             raise HTTPException(status_code=404, detail="Job not found")
 
-        resolved_mode = (mode or "full").strip().lower()
-        if resolved_mode not in {"full", "prepare", "mvp"}:
-            raise HTTPException(status_code=400, detail="Invalid mode (expected 'full' | 'prepare' | 'mvp')")
+        raw = await report.read()
+        if not raw:
+            raise HTTPException(status_code=400, detail="Empty past report upload")
+
+        ext = _ext_from_filename(report.filename or "")
+        if ext not in {".pdf", ".docx"}:
+            raise HTTPException(status_code=400, detail="Unsupported past report type (expected .pdf or .docx)")
+
+        report_id = uuid.uuid4().hex
+        key = f"jobs/{job_id}/source/past_reports/{report_id}{ext or '.bin'}"
+        storage.put_bytes(key, raw)
+
+        hint = _extract_past_report_hint(raw, ext=ext)
+        upload_index = state.job_meta.next_upload_index
+        state.job_meta.next_upload_index += 1
+        report_entry = PastReportData(
+            report_id=report_id,
+            filename=report.filename or f"past_report{ext}",
+            storage_key=key,
+            extracted_hint=hint,
+            upload_index=upload_index,
+        )
+        state.past_reports.append(report_entry)
+        state.past_report = report_entry
+        state.job_meta.updated_at = now_iso()
+        save_state(storage, state)
+        return AddPastReportResponse(
+            report_id=report_id,
+            filename=report_entry.filename,
+            hint_len=len(hint),
+            upload_index=upload_index,
+        )
+
+    @r.post("/jobs/{job_id}/run", response_model=RunJobResponse)
+    async def _run_job(job_id: str, mode: str = "update_mvp") -> RunJobResponse:
+        try:
+            state = load_state(storage, job_id=job_id)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        raw_mode = (mode or "update_mvp").strip().lower()
+        resolved_mode = "update_mvp" if raw_mode == "mvp" else raw_mode
+        if resolved_mode not in {"full", "prepare", "update_mvp"}:
+            raise HTTPException(status_code=400, detail="Invalid mode (expected 'full' | 'prepare' | 'update_mvp')")
 
         graph = build_graph(storage=storage, llm=llm, template_path=template_path, mode=resolved_mode)
         state.status = JobStatus.running

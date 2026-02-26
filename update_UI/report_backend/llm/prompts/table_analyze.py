@@ -7,6 +7,7 @@ TABLE_ANALYZE_SYSTEM = """
 
 要件:
 - 出力はJSONのみ（スキーマに準拠）
+- caption は必ず日本語で出力する
 - quant_comment は定量優先。難しい場合はその旨を明記して定性で述べる
 - belongs_to は推定できる場合のみ（空でもよい）
 """

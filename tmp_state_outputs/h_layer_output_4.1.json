@@ -1,0 +1,1141 @@
+{
+  "exp_key": "4.1",
+  "excel_sheet_selections": [
+    {
+      "exp_key": "4.1",
+      "result_no": "",
+      "title": "回路の製作",
+      "selected_excel_id": "dc",
+      "selected_sheet": "周東いる班(ボルテージフォロワ100kΩ)",
+      "confidence": 0.6,
+      "rationale": "sheet_name:token:1; header:token:1; excel_name:token:OP; numeric_density",
+      "evidence": [
+        "sheet_name:token:1",
+        "header:token:1",
+        "excel_name:token:OP",
+        "numeric_density"
+      ],
+      "candidates": [
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+          "confidence": 0.6,
+          "rationale": "sheet_name:token:1; header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "sheet_name:token:1",
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(ボルテージフォロワ) (100kΩ直列)",
+          "confidence": 0.6,
+          "rationale": "sheet_name:token:1; header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "sheet_name:token:1",
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "コピー元",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(反転増幅回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(非反転増幅回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(ボルテージフォロワ) ",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(加算回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "周東いる班(減算回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(反転増幅回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(非反転増幅回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(ボルテージフォロワ)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "いない班(加算回路)",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "　いない班(減算回路) ",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "コピー元",
+          "confidence": 0.4,
+          "rationale": "header:token:1; excel_name:token:OP; numeric_density",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP",
+            "numeric_density"
+          ]
+        },
+        {
+          "excel_id": "dc",
+          "sheet_name": "Sheet1",
+          "confidence": 0.35,
+          "rationale": "sheet_name:token:1; excel_name:token:OP",
+          "evidence": [
+            "sheet_name:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "周東いる班(積分回路)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "周東いる班(反転増幅回路の交流)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "周東いる班(加算・減算回路の交流)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "いない班(積分回路)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "いない班(反転増幅回路の交流)",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        },
+        {
+          "excel_id": "ac",
+          "sheet_name": "　いない班(加算・減算回路の交流) ",
+          "confidence": 0.3,
+          "rationale": "header:token:1; excel_name:token:OP",
+          "evidence": [
+            "header:token:1",
+            "excel_name:token:OP"
+          ]
+        }
+      ],
+      "used_llm": false
+    }
+  ],
+  "excel_range_selections": [],
+  "table_column_bindings": [
+    {
+      "exp_key": "4.1",
+      "result_no": "",
+      "excel_id": "dc",
+      "sheet_name": "周東いる班(ボルテージフォロワ100kΩ)",
+      "header_row_index": 1,
+      "columns": [
+        {
+          "column_index": 2,
+          "header": "入力電圧[V]",
+          "name": "入力電圧",
+          "unit": "V",
+          "confidence": 0.9,
+          "rationale": "column binding",
+          "evidence": [
+            "unit_in_header"
+          ]
+        },
+        {
+          "column_index": 3,
+          "header": "出力電圧[V]",
+          "name": "出力電圧",
+          "unit": "V",
+          "confidence": 0.9,
+          "rationale": "column binding",
+          "evidence": [
+            "unit_in_header"
+          ]
+        },
+        {
+          "column_index": 4,
+          "header": "反転入力端子電圧計算値[V]",
+          "name": "反転入力端子電圧計算値",
+          "unit": "V",
+          "confidence": 0.9,
+          "rationale": "column binding",
+          "evidence": [
+            "unit_in_header"
+          ]
+        },
+        {
+          "column_index": 5,
+          "header": "理論値[V]",
+          "name": "理論値",
+          "unit": "V",
+          "confidence": 0.9,
+          "rationale": "column binding",
+          "evidence": [
+            "unit_in_header"
+          ]
+        }
+      ],
+      "confidence": 0.9,
+      "missing_units": [],
+      "missing_mappings": [],
+      "used_llm": false
+    }
+  ],
+  "insert_asset_bindings": [
+    {
+      "exp_key": "4.1",
+      "result_no": "",
+      "tables_asset_ids": [
+        "tbl_4.1_1"
+      ],
+      "graphs_asset_ids": [
+        "fig_4.1_1",
+        "fig_4.1_2"
+      ],
+      "photos_asset_ids": [],
+      "required_tables": 2,
+      "required_graphs": 2,
+      "required_photos": 1,
+      "missing_tables": 1,
+      "missing_graphs": 0,
+      "missing_photos": 1,
+      "confidence": 0.95,
+      "rationale": "selected assets based on explicit assignment and filename heuristics",
+      "evidence": [
+        "explicit_table"
+      ],
+      "ambiguous": false,
+      "type_unknown": false
+    }
+  ],
+  "assets_tables": [
+    {
+      "asset_id": "tbl_4.1_1",
+      "table_id": "tbl_4.1_1",
+      "storage_key": "tables/55ae0e9d75954b43b183c108af357bc7/4.1/tbl_4.1_1.json",
+      "raw_csv": "入力電圧 (V),出力電圧 (V),反転入力端子電圧計算値 (V),理論値 (V)\r\n-10,-10,-10,0\r\n-9,-9,-9,0\r\n-8,-8,-8,0\r\n-7,-7,-7,0\r\n-6,-5.999,-5.9996666667,0\r\n-5,-4.999,-4.9996666667,0\r\n-4,-3.999,-3.9996666667,0\r\n-3,-2.999,-2.9996666667,0\r\n-2,-1.998,-1.9993333333,0\r\n-1,-0.998,-0.9993333333,0\r\n0,0.002,0.0006666667,0\r\n1,1.002,1.0006666667,0\r\n2,2.002,2.0006666667,0\r\n3,3.003,3.001,0\r\n4,4.003,4.001,0\r\n5,5.003,5.001,0\r\n6,6.003,6.001,0\r\n7,7.004,7.0013333333,0\r\n8,8.004,8.0013333333,0\r\n9,9.004,9.0013333333,0\r\n10,10.004,10.0013333333,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n,,0,0\r\n",
+      "upload_index": 1,
+      "rows": [
+        [
+          "入力電圧 (V)",
+          "出力電圧 (V)",
+          "反転入力端子電圧計算値 (V)",
+          "理論値 (V)"
+        ],
+        [
+          "-10",
+          "-10",
+          "-10",
+          "0"
+        ],
+        [
+          "-9",
+          "-9",
+          "-9",
+          "0"
+        ],
+        [
+          "-8",
+          "-8",
+          "-8",
+          "0"
+        ],
+        [
+          "-7",
+          "-7",
+          "-7",
+          "0"
+        ],
+        [
+          "-6",
+          "-5.999",
+          "-5.9996666667",
+          "0"
+        ],
+        [
+          "-5",
+          "-4.999",
+          "-4.9996666667",
+          "0"
+        ],
+        [
+          "-4",
+          "-3.999",
+          "-3.9996666667",
+          "0"
+        ],
+        [
+          "-3",
+          "-2.999",
+          "-2.9996666667",
+          "0"
+        ],
+        [
+          "-2",
+          "-1.998",
+          "-1.9993333333",
+          "0"
+        ],
+        [
+          "-1",
+          "-0.998",
+          "-0.9993333333",
+          "0"
+        ],
+        [
+          "0",
+          "0.002",
+          "0.0006666667",
+          "0"
+        ],
+        [
+          "1",
+          "1.002",
+          "1.0006666667",
+          "0"
+        ],
+        [
+          "2",
+          "2.002",
+          "2.0006666667",
+          "0"
+        ],
+        [
+          "3",
+          "3.003",
+          "3.001",
+          "0"
+        ],
+        [
+          "4",
+          "4.003",
+          "4.001",
+          "0"
+        ],
+        [
+          "5",
+          "5.003",
+          "5.001",
+          "0"
+        ],
+        [
+          "6",
+          "6.003",
+          "6.001",
+          "0"
+        ],
+        [
+          "7",
+          "7.004",
+          "7.0013333333",
+          "0"
+        ],
+        [
+          "8",
+          "8.004",
+          "8.0013333333",
+          "0"
+        ],
+        [
+          "9",
+          "9.004",
+          "9.0013333333",
+          "0"
+        ],
+        [
+          "10",
+          "10.004",
+          "10.0013333333",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ]
+      ],
+      "analysis": null,
+      "assigned_to": "4.1"
+    }
+  ],
+  "assets_images": [
+    {
+      "asset_id": "fig_4.1_1",
+      "image_id": "fig_4.1_1",
+      "filename": "fig_4.1_1.png",
+      "mime_type": "image/png",
+      "storage_key": "graphs/55ae0e9d75954b43b183c108af357bc7/4.1/fig_4.1_1.png",
+      "upload_index": 1001,
+      "rough_class": "graph",
+      "rough_class_confidence": 1.0,
+      "rough_class_method": "generated",
+      "rough_class_rationale": "generated from Excel table",
+      "analysis": null,
+      "assigned_to": "4.1",
+      "x_column_index": 1,
+      "y_column_indices": [
+        2
+      ],
+      "x_label": "入力電圧 (V)",
+      "y_label": "出力電圧 (V)",
+      "x_range": "-10~10",
+      "y_range": "-10~10.004"
+    },
+    {
+      "asset_id": "fig_4.1_2",
+      "image_id": "fig_4.1_2",
+      "filename": "fig_4.1_2.png",
+      "mime_type": "image/png",
+      "storage_key": "graphs/55ae0e9d75954b43b183c108af357bc7/4.1/fig_4.1_2.png",
+      "upload_index": 1002,
+      "rough_class": "graph",
+      "rough_class_confidence": 1.0,
+      "rough_class_method": "generated",
+      "rough_class_rationale": "generated from Excel table",
+      "analysis": null,
+      "assigned_to": "4.1",
+      "x_column_index": 1,
+      "y_column_indices": [
+        2
+      ],
+      "x_label": "入力電圧 (V)",
+      "y_label": "出力電圧 (V)",
+      "x_range": "-10~10",
+      "y_range": "-10~10.004"
+    }
+  ],
+  "insert_asset_hitl": {
+    "enabled": true,
+    "codes": [
+      "HITL_INSERT_ASSET_MISSING"
+    ],
+    "message": "Confirm assets to insert for each experiment.",
+    "html": "<form data-hitl=\"insert_assets\"><section><h3>Experiment 4.1</h3><label>Tables <select multiple name=\"tables_asset_ids_0\"><option value=\"tbl_4.1_1\">tbl_4.1_1</option></select></label><label>Graphs <select multiple name=\"graphs_asset_ids_0\"><option value=\"fig_4.1_1\">fig_4.1_1.png</option>\n<option value=\"fig_4.1_2\">fig_4.1_2.png</option></select></label><label>Photos <select multiple name=\"photos_asset_ids_0\"><option value=\"fig_4.1_1\">fig_4.1_1.png</option>\n<option value=\"fig_4.1_2\">fig_4.1_2.png</option></select></label></section></form>",
+    "payload": {
+      "targets": [
+        {
+          "exp_key": "4.1",
+          "result_no": "",
+          "selected": {
+            "tables_asset_ids": [
+              "tbl_4.1_1"
+            ],
+            "graphs_asset_ids": [
+              "fig_4.1_1",
+              "fig_4.1_2"
+            ],
+            "photos_asset_ids": []
+          }
+        }
+      ],
+      "tables": [
+        {
+          "id": "tbl_4.1_1",
+          "label": "tbl_4.1_1"
+        }
+      ],
+      "images": [
+        {
+          "id": "fig_4.1_1",
+          "label": "fig_4.1_1.png",
+          "rough_class": "graph"
+        },
+        {
+          "id": "fig_4.1_2",
+          "label": "fig_4.1_2.png",
+          "rough_class": "graph"
+        }
+      ]
+    }
+  },
+  "theory_formulas": [],
+  "quant_comment": [
+    {
+      "asset_id": "all_tables",
+      "kind": "tables",
+      "caption": "",
+      "quant_comment": "<m:oMath xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\"><m:r><m:t xml:space=\"preserve\">結論: 理論値は全行0 V（表の理論値列）ですが、出力電圧は入力電圧にほぼ追従しており、理論値0からの差が大きい。代表例として、入力10 Vで出力10.004 V（誤差 ≈ +10.004 V）、入力-10 Vで出力-10 V（誤差 ≈ -10 V）、入力0 V付近では出力0.002 V（誤差 ≈ +0.002 V）となる。従って理論通りには実験できていない。反転入力端子電圧計算値は-10 V〜+10 Vの範囲をとり、理論値0から大きく乖離している（例: 入力0 V時 0.0006667 V、1 V時 1.0006667 V、-1 V時 -0.9993333 V）。表は1つのみのため、表同士の比較は不要。誤差要因としては、回路が適切な負帰還を得ていない可能性（オープンループ状態・配線ミス）、非理想ゲイン・オフセット電圧・出力飽和、測定系の微小オフセットなどが考えられる。</m:t></m:r></m:oMath>",
+      "error": ""
+    }
+  ],
+  "graph_analysis": [
+    {
+      "image_id": "fig_4.1_1",
+      "analysis": {
+        "caption": "OPアンプ出力特性図",
+        "quant_comment": "出力は入力とほぼ直線 (傾き≈0.9)、入力±11V時の出力≈±9V、飽和なし",
+        "belongs_to": [
+          {
+            "exp_key": "4.1",
+            "score": 0.92,
+            "rationale": "4.1の測定結果と一致"
+          }
+        ],
+        "result_summary": "OPアンプの入力-出力特性を示す直線グラフ。傾き≈0.9、出力範囲は約±9V。",
+        "ocr_text": "",
+        "assigned_exp_key": "4.1",
+        "assigned_score": 0.92,
+        "assigned_rationale": "最も整合",
+        "evidence_refs": []
+      },
+      "error": ""
+    },
+    {
+      "image_id": "fig_4.1_2",
+      "analysis": {
+        "caption": "OPアンプ出力特性図",
+        "quant_comment": "ゲイン約1.0、オフセット0 V、-10〜+9 V入力範囲で入力-出力がほぼ一直線",
+        "belongs_to": [
+          {
+            "exp_key": "4.1",
+            "score": 0.92,
+            "rationale": "図13のOPアンプ出力特性と一致"
+          }
+        ],
+        "result_summary": "OPアンプの入力電圧と出力電圧がほぼ一直線で、ゲイン約1を示す。",
+        "ocr_text": "",
+        "assigned_exp_key": "4.1",
+        "assigned_score": 0.92,
+        "assigned_rationale": "最も適合する実験ユニットに割り当て",
+        "evidence_refs": []
+      },
+      "error": ""
+    }
+  ],
+  "experiment_number": "5.1",
+  "experiment_title": "回路の製作",
+  "experiment_name": "回路の製作",
+  "experiment_parent": null,
+  "method_summary": "私は図13に示したOPアンプ回路を図14のプリント基板(PCB)上に組み立てた。点線の配線を適切に組み合わせることで前述の回路を全て構成できるようにし、PCBの薄く色が薄い部分には内部に銅箔が貼られて電気的に接続され、銀色のパッドのついた穴はスルーホールとして部品面と半田面を互いに接続していることを確認した。使用部品は表1、OPアンプのピン配置は図15、抵抗のカラーコードは表2を参照した。製作上の注意点として、背の低い部品から実装し、こて台のスポンジを水で濡らしておく、半田付けは部品と基板を半田ごてでしっかり温めてから半田をつけることで行い、鉛フリー半田のため温度は高めにしたが、温めすぎて基板のパッドが剥がれないよう慎重を期した。OPアンプはICソケットを使用して回路製作後に取り付け、基板へ直接半田付けは行わなかった。電解コンデンサには極性があり、マイナス側には白いバーが印刷され、リード長も短いことを確認した。部品は本体に刻印された素子値を必ず確認し、同じ場所に異なる素子が混入していることがあるため注意した。図13で指示された抵抗値がない場合には最も近い値を適宜代用した。回路の接地は1点に集中させ数珠繋ぎにしなかった。図13の点線部分は半田付けせず、実験中にワニクリップ等で接続する予定を考慮して抵抗の位置を決定し、あとでワニクリップを接続できるよう配置を検討した。電源は±15Vで供給した。}",
+  "result_description": "本実験では、図13に示したOP アンプ回路と図14 のPCBを用いて回路を製作した。部品一覧は表1、OP アンプのピン配置は図15、抵抗のカラーコードは表2を参照した。実装は背の低い部品から順に行い、こて台のスポンジは水で濡らし、鉛フリー半田を用いて部品と基板を十分に温めてから半田を供給した。半田付けは溶接ではなく、部品と基板を適切に温めてから行い、温度が高すぎて基板のパッドがはがれないよう注意した。OP アンプはICソケットを使用し、回路完成後に挿入した。電解コンデンサには極性があるため、マイナス側を白いバーで識別しリードの長さが短い方を適用した。部品は本体に刻印された値を必ず確認し、同じ場所に異なる値が混入していることがある点にも留意した。図13で指示された抵抗値が揃わない場合は最も近い値で代用し、回路の接地は1点に集中させて数珠繋ぎを避けた。図13の点線で示された部分ははんだ付けせず、実験中はワニクリップ等で接続する計画を前提として抵抗の位置を決定した。以上の条件の下、図13の試作回路と図14のPCB配置は整い、今後の測定でOPアンプの挙動を評価するための安定した基盤が得られた。",
+  "table_labels": [
+    {
+      "table_id": "tbl_4.1_1",
+      "label": "表：5.1.1"
+    }
+  ],
+  "graph_labels": [
+    {
+      "image_id": "fig_4.1_1",
+      "label": "図：5.1.1"
+    },
+    {
+      "image_id": "fig_4.1_2",
+      "label": "図：5.1.2"
+    }
+  ],
+  "table_captions": [],
+  "graph_captions": [],
+  "tables": [
+    {
+      "table_id": "tbl_4.1_1",
+      "label": "表：5.1.1",
+      "caption": "",
+      "rows": [
+        [
+          "入力電圧 (V)",
+          "出力電圧 (V)",
+          "反転入力端子電圧計算値 (V)",
+          "理論値 (V)"
+        ],
+        [
+          "-10",
+          "-10",
+          "-10",
+          "0"
+        ],
+        [
+          "-9",
+          "-9",
+          "-9",
+          "0"
+        ],
+        [
+          "-8",
+          "-8",
+          "-8",
+          "0"
+        ],
+        [
+          "-7",
+          "-7",
+          "-7",
+          "0"
+        ],
+        [
+          "-6",
+          "-5.999",
+          "-5.9996666667",
+          "0"
+        ],
+        [
+          "-5",
+          "-4.999",
+          "-4.9996666667",
+          "0"
+        ],
+        [
+          "-4",
+          "-3.999",
+          "-3.9996666667",
+          "0"
+        ],
+        [
+          "-3",
+          "-2.999",
+          "-2.9996666667",
+          "0"
+        ],
+        [
+          "-2",
+          "-1.998",
+          "-1.9993333333",
+          "0"
+        ],
+        [
+          "-1",
+          "-0.998",
+          "-0.9993333333",
+          "0"
+        ],
+        [
+          "0",
+          "0.002",
+          "0.0006666667",
+          "0"
+        ],
+        [
+          "1",
+          "1.002",
+          "1.0006666667",
+          "0"
+        ],
+        [
+          "2",
+          "2.002",
+          "2.0006666667",
+          "0"
+        ],
+        [
+          "3",
+          "3.003",
+          "3.001",
+          "0"
+        ],
+        [
+          "4",
+          "4.003",
+          "4.001",
+          "0"
+        ],
+        [
+          "5",
+          "5.003",
+          "5.001",
+          "0"
+        ],
+        [
+          "6",
+          "6.003",
+          "6.001",
+          "0"
+        ],
+        [
+          "7",
+          "7.004",
+          "7.0013333333",
+          "0"
+        ],
+        [
+          "8",
+          "8.004",
+          "8.0013333333",
+          "0"
+        ],
+        [
+          "9",
+          "9.004",
+          "9.0013333333",
+          "0"
+        ],
+        [
+          "10",
+          "10.004",
+          "10.0013333333",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ],
+        [
+          "",
+          "",
+          "0",
+          "0"
+        ]
+      ],
+      "storage_key": "tables/55ae0e9d75954b43b183c108af357bc7/4.1/tbl_4.1_1.json"
+    }
+  ],
+  "graphs": [
+    {
+      "image_id": "fig_4.1_1",
+      "label": "図：5.1.1",
+      "caption": "OPアンプ出力特性図",
+      "storage_key": "graphs/55ae0e9d75954b43b183c108af357bc7/4.1/fig_4.1_1.png"
+    },
+    {
+      "image_id": "fig_4.1_2",
+      "label": "図：5.1.2",
+      "caption": "OPアンプ出力特性図",
+      "storage_key": "graphs/55ae0e9d75954b43b183c108af357bc7/4.1/fig_4.1_2.png"
+    }
+  ]
+}
